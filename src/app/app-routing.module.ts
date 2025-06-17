@@ -52,6 +52,12 @@ const routes: Routes = [
         (m) => m.CommunitiesModule
       ),
   },
+  {
+    path: 'admin',
+    canActivate: [AuthGuard],
+    loadChildren: () =>
+      import('./features/admin/admin.module').then((m) => m.AdminModule),
+  },
   { path: '**', redirectTo: '' },
 ];
 
