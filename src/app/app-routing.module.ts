@@ -36,6 +36,14 @@ const routes: Routes = [
         (m) => m.FavoritesModule
       ),
   },
+  {
+    path: 'messaging',
+    canActivate: [AuthGuard],
+    loadChildren: () =>
+      import('./features/messaging/messaging.module').then(
+        (m) => m.MessagingModule
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];
 

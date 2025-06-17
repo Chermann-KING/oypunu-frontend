@@ -1,0 +1,111 @@
+<!-- Modal Backdrop -->
+<div *ngIf="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
+  <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <!-- Overlay -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" (click)="onBackdropClick($event)"></div>
+
+    <!-- Modal Content -->
+    <div
+      class="inline-block align-bottom bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+      <!-- Header -->
+      <div class="bg-gray-800 px-6 py-4 border-b border-gray-700">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-medium text-white">Nouvelle conversation</h3>
+          <button (click)="onClose()" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div class="bg-gray-800 px-6 py-4">
+        <!-- Search Input -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-300 mb-2">
+            Rechercher un utilisateur
+          </label>
+          <div class="relative">
+            <input type="text" [formControl]="searchControl" placeholder="Tapez un nom d'utilisateur..."
+              class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <svg class="absolute right-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div *ngIf="loading" class="flex justify-center items-center py-8">
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+          <span class="ml-2 text-gray-400 text-sm">Recherche...</span>
+        </div>
+
+        <!-- Error State -->
+        <div *ngIf="error" class="bg-red-900/20 border border-red-500/50 rounded-lg p-3 mb-4">
+          <div class="flex items-center">
+            <svg class="w-4 h-4 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"></path>
+            </svg>
+            <span class="text-red-400 text-sm">{{ error }}</span>
+          </div>
+        </div>
+
+        <!-- Search Results -->
+        <div *ngIf="!loading && !error && searchResults.length > 0" class="max-h-64 overflow-y-auto">
+          <div class="space-y-2">
+            <div *ngFor="let user of searchResults" (click)="selectUser(user)"
+              class="flex items-center space-x-3 p-3 bg-gray-700/50 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors group">
+              <!-- Avatar -->
+              <div class="flex-shrink-0">
+                <div
+                  class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span class="text-white font-medium">
+                    {{ user.username.charAt(0).toUpperCase() }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- User Info -->
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-medium truncate">{{ user.username }}</p>
+                <p class="text-gray-400 text-sm truncate">{{ user.email }}</p>
+              </div>
+
+              <!-- Select Icon -->
+              <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          *ngIf="!loading && !error && searchControl.value && searchControl.value.length >= 2 && searchResults.length === 0"
+          class="text-center py-8">
+          <svg class="mx-auto h-12 w-12 text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <p class="text-gray-400 text-sm">Aucun utilisateur trouvé</p>
+        </div>
+
+        <!-- Instructions -->
+        <div *ngIf="!searchControl.value || searchControl.value.length < 2" class="text-center py-8">
+          <svg class="mx-auto h-12 w-12 text-gray-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <p class="text-gray-400 text-sm">Tapez au moins 2 caractères pour rechercher</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

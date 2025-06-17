@@ -1,0 +1,70 @@
+.messaging-container {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+
+  .flex {
+    height: 100%;
+  }
+
+  /* Sidebar responsive */
+  @media (max-width: 768px) {
+    .w-full.md\\:w-80 {
+      transition: transform 0.3s ease-in-out;
+    }
+  }
+
+  /* Animations pour les transitions mobiles */
+  .fixed.inset-0 {
+    animation: slideInFromRight 0.3s ease-out;
+  }
+}
+
+/* Animations */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Badge de notifications */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* États de chargement et transitions */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .messaging-container {
+    .hidden.md\\:flex {
+      display: none !important;
+    }
+  }
+}

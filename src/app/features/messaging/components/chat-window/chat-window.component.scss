@@ -1,0 +1,116 @@
+.chat-window {
+  background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);
+
+  .chat-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+  }
+
+  .messages-container {
+    background: transparent;
+
+    /* Scrollbar personnalisé */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(31, 41, 55, 0.3);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(107, 114, 128, 0.5);
+      border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(107, 114, 128, 0.7);
+    }
+
+    /* Animation pour les messages */
+    .flex {
+      animation: slideInMessage 0.3s ease-out;
+    }
+  }
+
+  .message-input-container {
+    backdrop-filter: blur(10px);
+
+    textarea {
+      min-height: 42px;
+      max-height: 120px;
+      transition: all 0.2s ease;
+
+      &:focus {
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      /* Ajustement automatique de la hauteur */
+      &:not(:focus) {
+        resize: none;
+      }
+    }
+
+    button {
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+      }
+
+      &:active:not(:disabled) {
+        transform: scale(0.95);
+      }
+    }
+  }
+}
+
+/* Animations */
+@keyframes slideInMessage {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* États de connexion */
+.online-indicator {
+  position: relative;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border: 2px solid #1f2937;
+    border-radius: 50%;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .chat-window {
+    .messages-container {
+      padding: 1rem;
+    }
+
+    .message-input-container {
+      padding: 1rem;
+    }
+
+    .max-w-xs {
+      max-width: 280px;
+    }
+  }
+}

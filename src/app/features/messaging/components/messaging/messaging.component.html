@@ -1,0 +1,59 @@
+<div class="messaging-container h-full bg-gray-900">
+  <div class="flex h-full">
+    <!-- Sidebar - Liste des conversations -->
+    <div class="w-full md:w-80 lg:w-96 border-r border-gray-700/50 bg-gray-900/90 backdrop-blur-sm">
+      <app-conversations-list (conversationSelected)="onConversationSelected($event)"
+        class="h-full block"></app-conversations-list>
+    </div>
+
+    <!-- Zone de chat principal -->
+    <div class="hidden md:flex flex-1 relative">
+      <app-chat-window [conversation]="selectedConversation" class="w-full h-full"></app-chat-window>
+
+      <!-- Badge de notifications non lues -->
+      <div *ngIf="unreadCount > 0"
+        class="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-lg animate-pulse">
+        {{ unreadCount > 99 ? '99+' : unreadCount }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Vue mobile - Chat en plein écran -->
+  <div *ngIf="selectedConversation" class="md:hidden fixed inset-0 bg-gray-900 z-50">
+    <div class="h-full flex flex-col">
+      <!-- Header mobile avec bouton retour -->
+      <div class="bg-gray-800/90 backdrop-blur-sm border-b border-gray-700/50 p-4">
+        <div class="flex items-center space-x-3">
+          <button (click)="selectedConversation = null" class="text-gray-400 hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+              </path>
+            </svg>
+          </button>
+          <div
+            class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center relative">
+            <span class="text-white font-medium text-sm">
+              {{ (selectedConversation.participants[0].username || '').charAt(0).toUpperCase() }}
+            </span>
+            <!-- Online indicator -->
+            <div *ngIf="selectedConversation.participants[0] && isUserOnline(selectedConversation.participants[0].id)"
+              class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full">
+            </div>
+          </div>
+          <div>
+            <h3 class="text-white font-medium">{{ selectedConversation.participants[0].username || 'Utilisateur' }}</h3>
+            <p class="text-gray-400 text-sm">
+              {{ (selectedConversation.participants[0] &&
+              isUserOnline(selectedConversation.participants[0].id)) ? 'En ligne' : 'Hors ligne' }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Zone de chat -->
+      <div class="flex-1">
+        <app-chat-window [conversation]="selectedConversation" class="w-full h-full"></app-chat-window>
+      </div>
+    </div>
+  </div>
+</div>

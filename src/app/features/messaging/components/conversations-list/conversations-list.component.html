@@ -1,0 +1,192 @@
+<div class="conversations-container">
+  <!-- En-tête principal avec titre et actions -->
+  <div class="conversations-header bg-gray-800/90 backdrop-blur-sm border-b border-gray-700/50 p-4">
+    <div class="flex items-center justify-between mb-0">
+      <div class="flex items-center space-x-3">
+        <h2 class="text-xl font-bold text-white">Messages</h2>
+
+        <!-- Indicateur WebSocket discret (seulement si problème) -->
+        <div *ngIf="!isWebSocketConnected" class="flex items-center space-x-1 px-2 py-1 bg-orange-600/20 rounded-full"
+          title="Connexion temps réel interrompue">
+          <div class="w-2 h-2 bg-orange-500 rounded-full"></div>
+          <span class="text-orange-400 text-xs">Reconnexion...</span>
+        </div>
+      </div>
+
+      <!-- Boutons d'action -->
+      <div class="flex items-center space-x-2">
+        <!-- Bouton Nouvelle conversation -->
+        <button (click)="openNewConversationModal()"
+          class="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
+          title="Nouvelle conversation">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
+            </path>
+          </svg>
+        </button>
+
+        <!-- Bouton Filtres -->
+        <button (click)="toggleFiltersMenu()"
+          class="p-2 text-gray-400 hover:text-white hover:bg-gray-700/50 rounded-lg transition-all duration-200"
+          title="Filtrer conversations">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z">
+            </path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de recherche séparée -->
+  <div class="search-bar bg-gray-800/50 px-4 py-3 border-b border-gray-700/30">
+    <div class="relative">
+      <input type="text" [formControl]="searchControl" placeholder="Rechercher ou démarrer une conversation..."
+        class="w-full px-4 py-2.5 pl-10 bg-gray-700/50 border border-gray-600/50 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+      <svg class="absolute left-3 top-3 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Menu de filtres (masqué par défaut) -->
+  <div *ngIf="showFiltersMenu" class="filters-menu bg-gray-800/95 border-b border-gray-700/50 p-3">
+    <div class="flex flex-wrap gap-2">
+      <button (click)="applyFilter('all')" [class.bg-blue-600]="currentFilter === 'all'"
+        [class.text-white]="currentFilter === 'all'" [class.text-gray-300]="currentFilter !== 'all'"
+        class="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 hover:bg-gray-700/50">
+        Toutes
+      </button>
+      <button (click)="applyFilter('unread')" [class.bg-blue-600]="currentFilter === 'unread'"
+        [class.text-white]="currentFilter === 'unread'" [class.text-gray-300]="currentFilter !== 'unread'"
+        class="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 hover:bg-gray-700/50">
+        Non lues
+      </button>
+      <button (click)="applyFilter('favorites')" [class.bg-blue-600]="currentFilter === 'favorites'"
+        [class.text-white]="currentFilter === 'favorites'" [class.text-gray-300]="currentFilter !== 'favorites'"
+        class="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 hover:bg-gray-700/50">
+        Favoris
+      </button>
+      <button (click)="applyFilter('contacts')" [class.bg-blue-600]="currentFilter === 'contacts'"
+        [class.text-white]="currentFilter === 'contacts'" [class.text-gray-300]="currentFilter !== 'contacts'"
+        class="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 hover:bg-gray-700/50">
+        Contacts
+      </button>
+      <button (click)="applyFilter('groups')" [class.bg-blue-600]="currentFilter === 'groups'"
+        [class.text-white]="currentFilter === 'groups'" [class.text-gray-300]="currentFilter !== 'groups'"
+        class="px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 hover:bg-gray-700/50">
+        Groupes
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="flex justify-center items-center py-8">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+    <span class="ml-2 text-gray-400">Chargement...</span>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="bg-red-900/20 border border-red-500/50 rounded-lg p-4 mb-4">
+    <div class="flex items-center">
+      <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd"
+          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+          clip-rule="evenodd"></path>
+      </svg>
+      <span class="text-red-400">{{ error }}</span>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && !error && filteredConversations.length === 0 && conversations.length === 0"
+    class="text-center py-12">
+    <svg class="mx-auto h-16 w-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M8 12h.01M12 12h.01M16 12h.01M21 16c0 2.21 0 4 0 4s1.79 0 4 0 4-1.79 4-4-1.79-4-4-4-4 1.79-4 4z"></path>
+    </svg>
+    <h3 class="text-lg font-medium text-gray-400 mb-2">Aucune conversation</h3>
+    <p class="text-gray-500">Commencez une conversation en envoyant un message à un autre utilisateur.</p>
+  </div>
+
+  <!-- No results for search/filter -->
+  <div *ngIf="!loading && !error && filteredConversations.length === 0 && conversations.length > 0"
+    class="text-center py-12">
+    <svg class="mx-auto h-16 w-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+    </svg>
+    <h3 class="text-lg font-medium text-gray-400 mb-2">Aucun résultat</h3>
+    <p class="text-gray-500">Aucune conversation ne correspond à votre recherche ou filtre.</p>
+  </div>
+
+  <!-- Conversations List -->
+  <div *ngIf="!loading && !error && filteredConversations.length > 0" class="conversations-list">
+    <div *ngFor="let conversation of filteredConversations" (click)="selectConversation(conversation)"
+      class="conversation-item group cursor-pointer bg-gray-800/50 hover:bg-gray-700/50 rounded-lg p-4 mb-2 transition-all duration-300 border border-transparent hover:border-gray-600/50 transform hover:scale-[1.02] hover:shadow-lg">
+      <div class="flex items-start space-x-3">
+        <!-- Avatar -->
+        <div class="flex-shrink-0 relative">
+          <div
+            class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <span class="text-white font-medium text-lg">
+              {{ getOtherParticipant(conversation)?.username?.charAt(0)?.toUpperCase() }}
+            </span>
+          </div>
+          <!-- Indicateurs de statut -->
+          <!-- En ligne -->
+          <div *ngIf="getOtherParticipant(conversation) && isUserOnline(getOtherParticipant(conversation).id)"
+            class="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-3 border-gray-900 rounded-full shadow-lg animate-pulse"
+            title="En ligne">
+          </div>
+          <!-- Hors ligne -->
+          <div *ngIf="getOtherParticipant(conversation) && !isUserOnline(getOtherParticipant(conversation).id)"
+            class="absolute -bottom-1 -right-1 w-5 h-5 bg-gray-500 border-3 border-gray-900 rounded-full shadow-lg"
+            title="Hors ligne">
+          </div>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="text-white font-medium truncate">
+              {{ getOtherParticipant(conversation)?.username }}
+            </h3>
+            <span *ngIf="conversation.lastMessage" class="text-xs text-gray-500 flex-shrink-0">
+              {{ formatLastMessageDate(conversation.lastMessage.createdAt) }}
+            </span>
+          </div>
+
+          <!-- Last message preview -->
+          <div *ngIf="conversation.lastMessage" class="flex items-center justify-between">
+            <p class="text-sm text-gray-400 truncate flex-1 mr-2">
+              <span *ngIf="conversation.lastMessage.senderId.username" class="font-medium">
+                {{ conversation.lastMessage.senderId.username }}:
+              </span>
+              {{ truncateMessage(conversation.lastMessage.content) }}
+            </p>
+            <!-- Badge de messages non lus amélioré -->
+            <div class="flex items-center space-x-2 flex-shrink-0">
+              <div *ngIf="!conversation.lastMessage.isRead"
+                class="flex items-center justify-center min-w-[20px] h-5 bg-blue-500 text-white text-xs font-bold rounded-full px-1.5 animate-pulse">
+                1
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!conversation.lastMessage" class="text-sm text-gray-500 italic">
+            Aucun message
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de nouvelle conversation -->
+<app-new-conversation-modal [isOpen]="showNewConversationModal" (close)="closeNewConversationModal()"
+  (userSelected)="onUserSelected($event)">
+</app-new-conversation-modal>
