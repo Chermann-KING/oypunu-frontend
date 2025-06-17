@@ -1,0 +1,74 @@
+// Styles pour la carte de mot
+:host {
+  display: block;
+}
+
+.bg-gray-950 {
+  background-color: #111827; // Couleur plus foncée pour correspondre au design
+}
+
+.bg-gray-900 {
+  background-color: #1f2937;
+}
+
+.bg-gray-800 {
+  background-color: #2d3748;
+}
+
+.bg-gray-700 {
+  background-color: #374151;
+}
+
+.text-gray-300 {
+  color: #d1d5db;
+}
+
+.text-gray-400 {
+  color: #9ca3af;
+}
+
+.text-gray-500 {
+  color: #6b7280;
+}
+
+.text-yellow-500 {
+  color: #f59e0b;
+}
+
+.text-white {
+  color: #ffffff;
+}
+
+// Taille de police spécifique pour le titre du mot
+h3 {
+  font-size: 2rem;
+  line-height: 1.2;
+  margin-bottom: 0.25rem;
+}
+
+// Animations et effets
+.hover\:shadow-lg:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.hover\:text-yellow-500:hover {
+  color: #f59e0b;
+}
+
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-shadow {
+  transition-property: box-shadow;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.hover\:bg-gray-900:hover {
+  background-color: #1f2937;
+  transition: background-color 0.2s ease;
+}

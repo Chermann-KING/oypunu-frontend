@@ -1,0 +1,71 @@
+// Styles pour le menu profil
+.profile-dropdown {
+  .dropdown-link {
+    transition: all 0.2s ease-in-out;
+    position: relative;
+
+    &:hover {
+      background-color: #374151; // gray-700
+      transform: translateX(2px);
+    }
+
+    // Style spécial pour le lien Administration
+    &.admin-link {
+      border-top: 1px solid #374151;
+      margin-top: 0.25rem;
+
+      svg {
+        color: #60a5fa; // blue-400
+      }
+
+      &:hover {
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #93c5fd; // blue-300
+
+        svg {
+          color: #93c5fd;
+          transform: rotate(90deg);
+        }
+      }
+    }
+  }
+}
+
+// Animation du dropdown
+.dropdown-menu {
+  animation: slideDown 0.2s ease-out;
+  transform-origin: top right;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Style pour l'avatar
+.profile-avatar {
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    background-color: #4b5563; // gray-600
+    transform: scale(1.05);
+  }
+}
+
+// Indicateur de notification (badge)
+.notification-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #ef4444; // red-500
+  border-radius: 50%;
+  border: 2px solid #1f2937; // gray-800
+}

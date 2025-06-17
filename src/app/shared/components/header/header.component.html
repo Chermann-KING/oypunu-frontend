@@ -1,0 +1,12 @@
+<header class="bg-gray-900 text-white p-4 border-b border-gray-800">
+  <div class="container mx-auto flex justify-between items-center">
+    <!-- Logo -->
+    <app-logo></app-logo>
+
+    <!-- Navigation (visible uniquement si authentifié) -->
+    <app-main-nav *ngIf="isAuthenticated"></app-main-nav>
+
+    <!-- Profil  (visible uniquement si authentifié) -->
+    <app-profile *ngIf="isAuthenticated"></app-profile>
+  </div>
+</header>

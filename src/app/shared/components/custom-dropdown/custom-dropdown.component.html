@@ -1,0 +1,32 @@
+<div class="custom-dropdown" (click)="onDropdownClick($event)">
+  <label *ngIf="label" class="block text-sm font-medium text-gray-400 mb-1">{{ label }}</label>
+
+  <div
+    class="dropdown-header relative w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none hover:border-gray-600 cursor-pointer"
+    [class.focus-border]="isOpen" (click)="toggleDropdown()">
+    <div class="selected-text truncate">{{ getSelectedLabels() }}</div>
+    <div class="dropdown-icon absolute inset-y-0 right-0 flex items-center pr-2">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"
+        [class.rotate-180]="isOpen">
+        <path fill-rule="evenodd"
+          d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+          clip-rule="evenodd" />
+      </svg>
+    </div>
+  </div>
+
+  <div *ngIf="isOpen"
+    class="dropdown-options absolute z-10 mt-1 w-full bg-gray-800 border border-gray-700 rounded-md shadow-lg max-h-36 overflow-y-auto">
+    <div *ngFor="let option of options"
+      class="dropdown-option px-3 py-2 hover:bg-gray-700 cursor-pointer flex items-center"
+      (click)="toggleOption(option.value, $event)">
+      <div class="flex-grow truncate">{{ option.label }}</div>
+      <svg *ngIf="isSelected(option.value)" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-purple-500"
+        viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd"
+          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+          clip-rule="evenodd" />
+      </svg>
+    </div>
+  </div>
+</div>

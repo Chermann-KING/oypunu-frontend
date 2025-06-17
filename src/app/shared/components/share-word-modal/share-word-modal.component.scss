@@ -1,0 +1,26 @@
+// Styles spécifiques au modal de partage si nécessaire
+// La plupart des styles sont gérés par Tailwind CSS
+
+:host {
+  display: block;
+}
+
+input {
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+  }
+}
+
+.fixed {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
