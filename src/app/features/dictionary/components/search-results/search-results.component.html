@@ -1,0 +1,67 @@
+<div>
+  <!-- Indicateur de chargement -->
+  <div *ngIf="isLoading" class="flex justify-center my-12">
+    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+  </div>
+
+  <!-- Résultats de recherche -->
+  <div *ngIf="results && !isLoading">
+    <h2 class="text-2xl font-semibold mb-6">
+      Résultats pour "{{ query }}"
+      <span class="text-lg font-normal text-gray-400 ml-2">{{ results.total }} résultats</span>
+    </h2>
+
+    <!-- Liste des résultats -->
+    <div *ngIf="results.words.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+      <app-word-card *ngFor="let word of results.words" [word]="word"
+        (favoriteToggle)="onFavoriteToggle(word)"></app-word-card>
+    </div>
+
+    <!-- Message aucun résultat -->
+    <div *ngIf="results.words.length === 0" class="bg-gray-800 rounded-lg p-8 text-center">
+      <p class="text-xl text-gray-400 mb-4">Aucun résultat pour "{{ query }}"</p>
+      <p class="text-gray-500">Essayez de modifier vos critères de recherche ou d'utiliser des mots-clés différents.</p>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="results.totalPages > 1" class="flex justify-center mt-8">
+      <nav class="inline-flex rounded-md shadow">
+        <!-- Bouton précédent -->
+        <button [disabled]="currentPage === 1" (click)="onPageChange(currentPage - 1)"
+          class="px-3 py-2 rounded-l-md border border-gray-700 bg-gray-800 text-gray-400 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+              clip-rule="evenodd" />
+          </svg>
+        </button>
+
+        <!-- Pages numérotées -->
+        <ng-container *ngFor="let page of paginationArray">
+          <!-- Séparateur (ellipsis) -->
+          <span *ngIf="page === -1" class="px-4 py-2 border-t border-b border-gray-700 bg-gray-800 text-gray-400">
+            ...
+          </span>
+
+          <!-- Bouton de page -->
+          <button *ngIf="page !== -1" (click)="onPageChange(page)" [class.bg-purple-600]="currentPage === page"
+            [class.text-white]="currentPage === page" [class.bg-gray-800]="currentPage !== page"
+            [class.text-gray-400]="currentPage !== page"
+            class="px-4 py-2 border-t border-b border-r border-gray-700 hover:bg-gray-700">
+            {{ page }}
+          </button>
+        </ng-container>
+
+        <!-- Bouton suivant -->
+        <button [disabled]="currentPage === results.totalPages" (click)="onPageChange(currentPage + 1)"
+          class="px-3 py-2 rounded-r-md border border-gray-700 bg-gray-800 text-gray-400 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+              clip-rule="evenodd" />
+          </svg>
+        </button>
+      </nav>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,92 @@
+<div class="min-h-screen bg-gray-950 text-white">
+  <!-- En-tête de recherche -->
+  <div class="bg-gray-900 py-12 px-4 sm:px-6 lg:px-8 border-b border-gray-800">
+    <div class="max-w-7xl mx-auto">
+      <h1 class="text-3xl font-bold text-center mb-8">Votre dictionnaire social multilingue</h1>
+      <div class="max-w-3xl mx-auto">
+        <form [formGroup]="searchForm" (ngSubmit)="onSearch()" class="space-y-4">
+          <!-- Champ de recherche principal -->
+          <div class="relative">
+            <input type="text" formControlName="query" placeholder="Recherchez un mot..."
+              class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 pr-10" />
+            <button type="submit"
+              class="absolute inset-y-0 right-0 px-4 flex items-center bg-purple-600 rounded-r-lg hover:bg-purple-700 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                  clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Filtres de recherche -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Langues -->
+            <div>
+              <app-custom-dropdown formControlName="languages" [options]="languageOptions" [label]="'Langues'"
+                [multiple]="true" [placeholder]="'Toutes les langues'" [closeOnSelect]="true">
+              </app-custom-dropdown>
+            </div>
+
+            <!-- Catégories -->
+            <div>
+              <app-custom-dropdown formControlName="categories" [options]="categoryOptions" [label]="'Catégories'"
+                [multiple]="true" [placeholder]="'Toutes les catégories'" [closeOnSelect]="true">
+              </app-custom-dropdown>
+            </div>
+
+            <!-- Parties du discours -->
+            <div>
+              <app-custom-dropdown formControlName="partsOfSpeech" [options]="partOfSpeechOptions"
+                [label]="'Type de mot'" [multiple]="true" [placeholder]="'Tous les types'" [closeOnSelect]="true">
+              </app-custom-dropdown>
+            </div>
+          </div>
+        </form>
+
+        <!-- Recherches récentes -->
+        <div *ngIf="recentSearches.length > 0 && !searchResults" class="mt-4">
+          <h3 class="text-sm font-medium text-gray-400 mb-2">Recherches récentes</h3>
+          <div class="flex flex-wrap gap-2">
+            <button *ngFor="let search of recentSearches" (click)="onRecentSearchClick(search)"
+              class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-800 hover:bg-gray-700 transition-colors">
+              {{ search }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <!-- Résultats de recherche -->
+    <app-search-results *ngIf="searchResults || isSearching" [results]="searchResults" [isLoading]="isSearching"
+      [query]="searchForm.get('query')?.value" [currentPage]="currentPage" (pageChange)="onPageChange($event)"
+      (favoriteToggle)="toggleFavorite($event)"></app-search-results>
+
+    <!-- Contenu par défaut (si pas de recherche) -->
+    <div *ngIf="!searchResults && !isSearching">
+      <!-- Mots en vedette -->
+      <section>
+        <h2 class="text-2xl font-semibold mb-6">Mots en vedette</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <app-word-card *ngFor="let word of featuredWords" [word]="word"
+            (favoriteToggle)="toggleFavorite(word)"></app-word-card>
+        </div>
+      </section>
+
+      <!-- Appel à l'action -->
+      <section class="mt-16 bg-gradient-to-r from-purple-800 to-indigo-800 rounded-lg p-8 text-center">
+        <h2 class="text-2xl font-bold mb-4">Contribuez à notre dictionnaire</h2>
+        <p class="text-lg text-gray-200 mb-6">Vous connaissez un mot qui n'est pas dans notre dictionnaire ? Contribuez
+          en l'ajoutant dès maintenant !</p>
+        <a [routerLink]="['/dictionary/add']"
+          class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-purple-700 bg-white hover:bg-gray-100 transition-colors">
+          Ajouter un mot
+        </a>
+      </section>
+    </div>
+  </div>
+</div>

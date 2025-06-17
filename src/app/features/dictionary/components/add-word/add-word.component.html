@@ -1,0 +1,228 @@
+<div class="min-h-screen bg-gray-950 text-white">
+  <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <!-- En-tête -->
+    <div class="mb-8">
+      <a routerLink="/dictionary" class="inline-flex items-center text-gray-400 hover:text-gray-300 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd"
+            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+            clip-rule="evenodd" />
+        </svg>
+        Retour au dictionnaire
+      </a>
+      <h1 class="text-3xl font-bold">Ajouter un nouveau mot</h1>
+      <p class="text-gray-400 mt-2">Contribuez au dictionnaire en ajoutant un nouveau mot</p>
+    </div>
+
+    <!-- Messages d'erreur et de succès -->
+    <div *ngIf="errorMessage" class="bg-red-900/50 rounded-lg p-4 mb-6 text-red-200 border border-red-800">
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="successMessage" class="bg-green-900/50 rounded-lg p-4 mb-6 text-green-200 border border-green-800">
+      {{ successMessage }}
+    </div>
+
+    <!-- Formulaire d'ajout de mot -->
+    <form [formGroup]="wordForm" (ngSubmit)="onSubmit()"
+      class="space-y-6 bg-gray-900 p-6 rounded-lg border border-gray-800">
+      <!-- Informations de base -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Mot -->
+        <div>
+          <label for="word" class="block text-sm font-medium text-gray-300 mb-1">Mot*</label>
+          <input type="text" id="word" formControlName="word"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            [ngClass]="{'border-red-500': wordForm.get('word')?.invalid && wordForm.get('word')?.touched}" />
+          <div *ngIf="wordForm.get('word')?.invalid && wordForm.get('word')?.touched" class="text-red-500 text-xs mt-1">
+            Le mot est requis
+          </div>
+        </div>
+
+        <!-- Langue -->
+        <div>
+          <label for="language" class="block text-sm font-medium text-gray-300 mb-1">Langue*</label>
+          <select id="language" formControlName="language"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            [ngClass]="{'border-red-500': wordForm.get('language')?.invalid && wordForm.get('language')?.touched}">
+            <option value="" disabled>Sélectionnez une langue</option>
+            <option *ngFor="let language of languages" [value]="language.code">{{ language.name }}</option>
+          </select>
+          <div *ngIf="wordForm.get('language')?.invalid && wordForm.get('language')?.touched"
+            class="text-red-500 text-xs mt-1">
+            La langue est requise
+          </div>
+        </div>
+
+        <!-- Prononciation -->
+        <div>
+          <label for="pronunciation" class="block text-sm font-medium text-gray-300 mb-1">Prononciation</label>
+          <input type="text" id="pronunciation" formControlName="pronunciation"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="ex: /ɪgˈzæmpəl/" />
+          <div class="text-xs text-gray-500 mt-1">
+            Notation phonétique internationale (facultative)
+          </div>
+        </div>
+
+        <!-- Catégorie -->
+        <div>
+          <label for="categoryId" class="block text-sm font-medium text-gray-300 mb-1">Catégorie</label>
+          <select id="categoryId" formControlName="categoryId"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <option [ngValue]="''">Sélectionnez une catégorie (facultatif)</option>
+            <option *ngFor="let category of categories" [ngValue]="category.id">{{ category.name }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Étymologie -->
+      <div>
+        <label for="etymology" class="block text-sm font-medium text-gray-300 mb-1">Étymologie</label>
+        <textarea id="etymology" formControlName="etymology" rows="2"
+          class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+          placeholder="Origine et histoire du mot (facultatif)"></textarea>
+      </div>
+
+      <!-- Définitions et sens du mot -->
+      <div class="space-y-4">
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-medium">Sens et définitions*</h3>
+          <button type="button" (click)="addMeaning()"
+            class="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+            + Ajouter un sens
+          </button>
+        </div>
+
+        <div formArrayName="meanings">
+          <div *ngFor="let meaning of meanings.controls; let i = index" [formGroupName]="i"
+            class="border border-gray-800 rounded-lg p-4 mb-6">
+            <!-- En-tête du sens -->
+            <div class="flex justify-between items-center mb-4">
+              <h4 class="font-medium">Sens #{{ i + 1 }}</h4>
+              <button *ngIf="meanings.length > 1" type="button" (click)="removeMeaning(i)"
+                class="text-red-400 hover:text-red-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Partie du discours -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Partie du discours*</label>
+              <select formControlName="partOfSpeech"
+                class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                [ngClass]="{'border-red-500': meaning.get('partOfSpeech')?.invalid && meaning.get('partOfSpeech')?.touched}">
+                <option value="" disabled>Sélectionnez une partie du discours</option>
+                <option *ngFor="let pos of partsOfSpeech" [value]="pos.code">{{ pos.name }}</option>
+              </select>
+              <div *ngIf="meaning.get('partOfSpeech')?.invalid && meaning.get('partOfSpeech')?.touched"
+                class="text-red-500 text-xs mt-1">
+                La partie du discours est requise
+              </div>
+            </div>
+
+            <!-- Définitions -->
+            <div class="mb-4">
+              <div class="flex justify-between items-center mb-2">
+                <h5 class="text-sm font-medium text-gray-300">Définitions*</h5>
+                <button type="button" (click)="addDefinition(i)"
+                  class="px-2 py-1 bg-gray-700 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 text-xs">
+                  + Ajouter
+                </button>
+              </div>
+
+              <div formArrayName="definitions">
+                <div *ngFor="let def of getDefinitions(i).controls; let j = index" [formGroupName]="j"
+                  class="mb-3 pb-3 border-b border-gray-800">
+                  <div class="flex gap-2">
+                    <div class="flex-grow">
+                      <label class="block text-xs text-gray-400 mb-1">Définition*</label>
+                      <textarea formControlName="definition" rows="2"
+                        class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        [ngClass]="{'border-red-500': def.get('definition')?.invalid && def.get('definition')?.touched}"
+                        placeholder="Définition du mot"></textarea>
+                      <div *ngIf="def.get('definition')?.invalid && def.get('definition')?.touched"
+                        class="text-red-500 text-xs mt-1">
+                        La définition est requise
+                      </div>
+                    </div>
+                    <div *ngIf="getDefinitions(i).length > 1" class="pt-6">
+                      <button type="button" (click)="removeDefinition(i, j)" class="text-red-400 hover:text-red-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fill-rule="evenodd"
+                            d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                            clip-rule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="mt-2">
+                    <label class="block text-xs text-gray-400 mb-1">Exemples (séparés par des virgules)</label>
+                    <textarea formControlName="examples" rows="2"
+                      class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Exemple 1, Exemple 2, Exemple 3"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Synonymes -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Synonymes (séparés par des virgules)</label>
+              <input type="text" formControlName="synonyms"
+                class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="mot1, mot2, mot3" />
+            </div>
+
+            <!-- Antonymes -->
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-300 mb-1">Antonymes (séparés par des virgules)</label>
+              <input type="text" formControlName="antonyms"
+                class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="mot1, mot2, mot3" />
+            </div>
+
+            <!-- Exemples additionnels -->
+            <div>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Exemples additionnels (séparés par des
+                virgules)</label>
+              <textarea formControlName="examples" rows="2"
+                class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Phrase d'exemple 1, Phrase d'exemple 2"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bouton de soumission -->
+      <div class="flex justify-end">
+        <button type="submit" [disabled]="isSubmitting || wordForm.invalid"
+          class="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+          <span *ngIf="!isSubmitting">Soumettre le mot</span>
+          <span *ngIf="isSubmitting" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
+            </svg>
+            Soumission...
+          </span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Note informative -->
+    <div class="mt-8 p-4 bg-gray-900 rounded-lg border border-gray-800">
+      <h3 class="text-lg font-medium mb-2">Information importante</h3>
+      <p class="text-gray-400">Les mots soumis sont examinés par notre équipe avant d'être ajoutés au dictionnaire.
+        Assurez-vous que les informations fournies sont précises et bien documentées.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,237 @@
+<div class="min-h-screen bg-gray-950 text-white">
+  <div class="max-w-5xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <!-- Indicateur de chargement -->
+    <div *ngIf="isLoading" class="flex justify-center my-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+    </div>
+
+    <!-- Message d'erreur -->
+    <div *ngIf="error && !isLoading" class="bg-red-900/50 rounded-lg p-6 text-center">
+      <p class="text-xl text-red-200 mb-4">{{ error }}</p>
+      <button routerLink="/dictionary"
+        class="inline-flex items-center px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd"
+            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+            clip-rule="evenodd" />
+        </svg>
+        Retour à la recherche
+      </button>
+    </div>
+
+    <!-- Détails du mot -->
+    <div *ngIf="word && !isLoading" class="space-y-8">
+      <!-- En-tête -->
+      <div class="flex justify-between items-start">
+        <div>
+          <a routerLink="/dictionary" class="inline-flex items-center text-gray-400 hover:text-gray-300 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                clip-rule="evenodd" />
+            </svg>
+            Retour à la recherche
+          </a>
+          <h1 class="text-4xl font-bold">{{ word.word }}</h1>
+          <div class="flex items-center mt-2 space-x-3">
+            <span class="text-lg text-gray-400">{{ getLanguageName(word.language) }}</span>
+            <span *ngIf="word.pronunciation" class="flex items-center text-gray-400">
+              <span class="text-lg">/{{ word.pronunciation }}/</span>
+              <button *ngIf="word.meanings?.[0]?.phonetics?.[0]?.audio"
+                (click)="playAudio(word.meanings?.[0]?.phonetics?.[0]?.audio || '')"
+                class="ml-2 p-1 rounded-full bg-gray-800 hover:bg-gray-700 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
+            </span>
+          </div>
+        </div>
+        <button (click)="toggleFavorite()" class="text-gray-400 hover:text-yellow-500 p-2 cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" [class.text-yellow-500]="word.isFavorite"
+            fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Onglets -->
+      <div class="border-b border-gray-800">
+        <nav class="-mb-px flex space-x-8">
+          <button (click)="switchTab('definitions')" [class.border-purple-500]="activeTab === 'definitions'"
+            [class.text-purple-400]="activeTab === 'definitions'"
+            [class.border-transparent]="activeTab !== 'definitions'" [class.text-gray-400]="activeTab !== 'definitions'"
+            class="border-b-2 py-4 px-1 font-medium text-sm cursor-pointer">
+            Définitions
+          </button>
+          <button (click)="switchTab('examples')" [class.border-purple-500]="activeTab === 'examples'"
+            [class.text-purple-400]="activeTab === 'examples'" [class.border-transparent]="activeTab !== 'examples'"
+            [class.text-gray-400]="activeTab !== 'examples'"
+            class="border-b-2 py-4 px-1 font-medium text-sm  cursor-pointer">
+            Exemples
+          </button>
+          <button (click)="switchTab('related')" [class.border-purple-500]="activeTab === 'related'"
+            [class.text-purple-400]="activeTab === 'related'" [class.border-transparent]="activeTab !== 'related'"
+            [class.text-gray-400]="activeTab !== 'related'"
+            class="border-b-2 py-4 px-1 font-medium text-sm  cursor-pointer">
+            Mots associés
+          </button>
+        </nav>
+      </div>
+
+      <!-- Contenu des onglets -->
+      <div class="space-y-8">
+        <!-- Définitions -->
+        <div *ngIf="activeTab === 'definitions'">
+          <div *ngIf="word.meanings && word.meanings.length > 0" class="space-y-8">
+            <div *ngFor="let meaning of word.meanings" class="space-y-4">
+              <h3 class="text-xl font-semibold flex items-center">
+                <span class="px-3 py-1 bg-gray-800 rounded-md text-purple-400 text-sm mr-3">{{
+                  getPartOfSpeechName(meaning.partOfSpeech) }}</span>
+              </h3>
+
+              <div *ngIf="meaning.definitions && meaning.definitions.length > 0"
+                class="space-y-4 pl-4 border-l-2 border-gray-800">
+                <div *ngFor="let definition of meaning.definitions; let i = index" class="space-y-2">
+                  <p class="text-lg">
+                    <span class="text-gray-400 mr-2">{{ i + 1 }}.</span>
+                    {{ definition.definition }}
+                  </p>
+                  <div *ngIf="definition.examples && definition.examples.length > 0"
+                    class="pl-6 border-l border-gray-700">
+                    <p *ngFor="let example of definition.examples" class="text-gray-400 italic">
+                      "{{ example }}"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!word.meanings || word.meanings.length === 0" class="text-center py-8">
+            <p class="text-lg text-gray-400">Aucune définition disponible pour ce mot.</p>
+          </div>
+        </div>
+
+        <!-- Exemples -->
+        <div *ngIf="activeTab === 'examples'">
+          <div *ngIf="word.meanings && word.meanings.length > 0" class="space-y-6">
+            <div *ngFor="let meaning of word.meanings">
+              <h3 *ngIf="meaning.examples && meaning.examples.length > 0"
+                class="text-xl font-semibold mb-4 flex items-center">
+                <span class="px-3 py-1 bg-gray-800 rounded-md text-purple-400 text-sm mr-3">{{
+                  getPartOfSpeechName(meaning.partOfSpeech) }}</span>
+                Exemples
+              </h3>
+
+              <div *ngIf="meaning.examples && meaning.examples.length > 0"
+                class="space-y-4 pl-4 border-l-2 border-gray-800">
+                <p *ngFor="let example of meaning.examples; let i = index" class="text-lg">
+                  <span class="text-gray-400 mr-2">{{ i + 1 }}.</span>
+                  "{{ example }}"
+                </p>
+              </div>
+
+              <div *ngIf="!meaning.examples || meaning.examples.length === 0" class="text-gray-400 italic">
+                Aucun exemple disponible pour cette définition.
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!word.meanings || word.meanings.length === 0" class="text-center py-8">
+            <p class="text-lg text-gray-400">Aucun exemple disponible pour ce mot.</p>
+          </div>
+        </div>
+
+        <!-- Mots associés -->
+        <div *ngIf="activeTab === 'related'">
+          <div *ngIf="word.meanings && word.meanings.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Synonymes -->
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Synonymes</h3>
+              <div *ngIf="hasSynonyms()" class="space-y-4">
+                <div *ngFor="let meaning of word.meanings">
+                  <div *ngIf="meaning.synonyms && meaning.synonyms.length > 0">
+                    <h4 class="text-lg font-medium text-gray-400 mb-2">{{ getPartOfSpeechName(meaning.partOfSpeech) }}
+                    </h4>
+                    <div class="flex flex-wrap gap-2">
+                      <span *ngFor="let synonym of meaning.synonyms"
+                        class="px-3 py-1 bg-gray-800 rounded-full text-purple-400 hover:bg-gray-700 transition-colors cursor-pointer">
+                        {{ synonym }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p *ngIf="!hasSynonyms()" class="text-gray-400">
+                Aucun synonyme disponible pour ce mot.
+              </p>
+            </div>
+
+            <!-- Antonymes -->
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Antonymes</h3>
+              <div *ngIf="hasAntonyms()" class="space-y-4">
+                <div *ngFor="let meaning of word.meanings">
+                  <div *ngIf="meaning.antonyms && meaning.antonyms.length > 0">
+                    <h4 class="text-lg font-medium text-gray-400 mb-2">{{ getPartOfSpeechName(meaning.partOfSpeech) }}
+                    </h4>
+                    <div class="flex flex-wrap gap-2">
+                      <span *ngFor="let antonym of meaning.antonyms"
+                        class="px-3 py-1 bg-gray-800 rounded-full text-purple-400 hover:bg-gray-700 transition-colors cursor-pointer">
+                        {{ antonym }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p *ngIf="!hasAntonyms()" class="text-gray-400">
+                Aucun antonyme disponible pour ce mot.
+              </p>
+            </div>
+          </div>
+
+          <div *ngIf="!word.meanings || word.meanings.length === 0" class="text-center py-8">
+            <p class="text-lg text-gray-400">Aucun mot associé disponible.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Informations supplémentaires -->
+      <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+        <h3 class="text-xl font-semibold mb-4">Informations supplémentaires</h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Étymologie -->
+          <div>
+            <h4 class="text-lg font-medium text-gray-400 mb-2">Étymologie</h4>
+            <p *ngIf="word.etymology" class="text-gray-300">{{ word.etymology }}</p>
+            <p *ngIf="!word.etymology" class="text-gray-500">Aucune information étymologique disponible.</p>
+          </div>
+
+          <!-- Informations sur le mot -->
+          <div>
+            <h4 class="text-lg font-medium text-gray-400 mb-2">Informations sur le mot</h4>
+            <ul class="space-y-2 text-gray-300">
+              <li *ngIf="word.createdBy" class="flex items-center">
+                <span class="text-gray-500 mr-2">Ajouté par:</span>
+                {{ getCreatedBy(word.createdBy) }}
+              </li>
+              <li *ngIf="word.createdAt" class="flex items-center">
+                <span class="text-gray-500 mr-2">Ajouté le:</span>
+                {{ word.createdAt | date:'dd/MM/yyyy' }}
+              </li>
+              <li *ngIf="word.updatedAt" class="flex items-center">
+                <span class="text-gray-500 mr-2">Dernière mise à jour:</span>
+                {{ word.updatedAt | date:'dd/MM/yyyy' }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

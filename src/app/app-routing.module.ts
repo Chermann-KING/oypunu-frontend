@@ -20,6 +20,14 @@ const routes: Routes = [
     loadChildren: () =>
       import('./features/profile/profile.module').then((m) => m.ProfileModule),
   },
+  {
+    path: 'dictionary',
+    canActivate: [AuthGuard],
+    loadChildren: () =>
+      import('./features/dictionary/dictionary.module').then(
+        (m) => m.DictionaryModule
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];
 
