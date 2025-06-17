@@ -1,0 +1,211 @@
+<div class="min-h-screen bg-gray-950 text-white">
+  <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <!-- Chargement -->
+    <div *ngIf="isLoading" class="flex justify-center my-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+    </div>
+
+    <!-- Message d'erreur -->
+    <div *ngIf="errorMessage && !isLoading" class="bg-red-900/50 rounded-lg p-6 mb-6">
+      <p class="text-xl text-red-200">{{ errorMessage }}</p>
+      <button (click)="loadCommunityData()" class="mt-4 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-md">
+        Réessayer
+      </button>
+    </div>
+
+    <!-- Détails de la communauté -->
+    <div *ngIf="community && !isLoading" class="space-y-8">
+      <!-- En-tête -->
+      <div class="relative">
+        <!-- Bannière -->
+        <div *ngIf="community.coverImage" class="h-48 w-full bg-cover bg-center rounded-lg"
+          [style.background-image]="'url(' + community.coverImage + ')'"></div>
+        <div *ngIf="!community.coverImage" class="h-48 w-full bg-gradient-to-r from-purple-800 to-blue-700 rounded-lg">
+        </div>
+
+        <!-- Actions -->
+        <div class="absolute top-4 right-4 flex space-x-3">
+          <!-- Bouton Rejoindre (visible si non membre et authentifié) -->
+          <button *ngIf="!isMember && authService.isAuthenticated()" (click)="joinCommunity()"
+            class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md shadow-lg flex items-center"
+            [disabled]="loadingAction">
+            <div *ngIf="loadingAction"
+              class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+            Rejoindre
+          </button>
+
+          <!-- Bouton Quitter (visible si membre) -->
+          <button *ngIf="isMember" (click)="leaveCommunity()"
+            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md shadow-lg flex items-center"
+            [disabled]="loadingAction">
+            <div *ngIf="loadingAction"
+              class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+            Quitter
+          </button>
+
+          <!-- Bouton Modifier (visible si admin) -->
+          <button *ngIf="isAdmin()" routerLink="/communities/{{community._id}}/edit"
+            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md shadow-lg">
+            Modifier
+          </button>
+        </div>
+
+        <!-- Informations de la communauté -->
+        <div class="bg-gray-800 rounded-lg p-6 mt-6">
+          <div class="flex items-start justify-between">
+            <div>
+              <h1 class="text-3xl font-bold text-white">{{ community.name }}</h1>
+              <div class="flex items-center mt-2 space-x-3">
+                <span class="px-2 py-1 rounded bg-gray-700 text-sm">
+                  {{ community.language === 'fr' ? 'Français' : (community.language === 'en' ? 'Anglais' :
+                  community.language) }}
+                </span>
+                <span class="text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  {{ community.memberCount }} membre{{ community.memberCount > 1 ? 's' : '' }}
+                </span>
+                <span *ngIf="community.isPrivate" class="text-gray-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Privée
+                </span>
+              </div>
+            </div>
+            <div *ngIf="userRole" class="px-3 py-1 rounded bg-purple-800 text-sm">
+              {{ userRole === 'admin' ? 'Administrateur' : (userRole === 'moderator' ? 'Modérateur' : 'Membre') }}
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <p class="text-gray-300">{{ community.description }}</p>
+          </div>
+
+          <div *ngIf="community.tags && community.tags.length > 0" class="flex flex-wrap gap-2 mt-4">
+            <span *ngFor="let tag of community.tags" class="px-2 py-1 rounded bg-gray-700 text-xs text-gray-300">
+              {{ tag }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onglets -->
+      <div class="bg-gray-800 rounded-lg overflow-hidden">
+        <div class="flex border-b border-gray-700">
+          <button (click)="setActiveTab('discussions')" class="px-6 py-3 text-sm font-medium transition-all relative"
+            [ngClass]="activeTab === 'discussions' ? 'text-white' : 'text-gray-400 hover:text-white'">
+            Discussions
+            <div *ngIf="activeTab === 'discussions'" class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-500"></div>
+          </button>
+          <button (click)="setActiveTab('members')" class="px-6 py-3 text-sm font-medium transition-all relative"
+            [ngClass]="activeTab === 'members' ? 'text-white' : 'text-gray-400 hover:text-white'">
+            Membres
+            <div *ngIf="activeTab === 'members'" class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-500"></div>
+          </button>
+          <button (click)="setActiveTab('about')" class="px-6 py-3 text-sm font-medium transition-all relative"
+            [ngClass]="activeTab === 'about' ? 'text-white' : 'text-gray-400 hover:text-white'">
+            À propos
+            <div *ngIf="activeTab === 'about'" class="absolute bottom-0 left-0 w-full h-0.5 bg-purple-500"></div>
+          </button>
+        </div>
+
+        <!-- Contenu des onglets -->
+        <!-- Section des discussions -->
+        <div *ngIf="activeTab === 'discussions'" class="p-6">
+          <app-community-posts></app-community-posts>
+        </div>
+        <!-- ?Ou avec un système de routage plus propre -->
+        <!-- <div *ngIf="activeTab === 'discussions'" class="p-6">
+          <router-outlet></router-outlet>
+          <div *ngIf="community">
+            <a [routerLink]="['/communities', community._id, 'posts']">Voir toutes les discussions</a>
+          </div>
+        </div> -->
+
+        <!-- Section des membres -->
+        <div *ngIf="activeTab === 'members'" class="p-6">
+          <h2 class="text-xl font-bold mb-4">Membres ({{ members.length }})</h2>
+
+          <div *ngIf="members.length === 0" class="text-gray-400">
+            Aucun membre trouvé.
+          </div>
+
+          <div *ngIf="members.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div *ngFor="let member of members" class="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="bg-gray-600 rounded-full h-10 w-10 flex items-center justify-center mr-3">
+                  <span *ngIf="!member.userId.profilePicture" class="text-gray-300 text-lg font-bold">
+                    {{ member.userId.username.charAt(0).toUpperCase() }}
+                  </span>
+                  <img *ngIf="member.userId.profilePicture" [src]="member.userId.profilePicture" alt="Profile picture"
+                    class="h-10 w-10 rounded-full object-cover">
+                </div>
+                <div>
+                  <p class="font-medium">{{ member.userId.username }}</p>
+                  <p class="text-xs text-gray-400">
+                    {{ member.role === 'admin' ? 'Administrateur' : (member.role === 'moderator' ? 'Modérateur' :
+                    'Membre') }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Actions pour les admins -->
+              <div *ngIf="isAdmin() && member.userId._id !== currentUser?._id" class="relative">
+                <button class="text-gray-400 hover:text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section à propos -->
+        <div *ngIf="activeTab === 'about'" class="p-6">
+          <h2 class="text-xl font-bold mb-4">À propos</h2>
+          <div class="space-y-4">
+            <div>
+              <h3 class="text-lg font-medium mb-2">Description</h3>
+              <p class="text-gray-300">{{ community.description || 'Aucune description disponible.' }}</p>
+            </div>
+            <div>
+              <h3 class="text-lg font-medium mb-2">Langue</h3>
+              <p class="text-gray-300">
+                {{ getLanguageName(community.language) }}
+              </p>
+            </div>
+            <div *ngIf="community?.tags && community.tags!.length > 0">
+              <h3 class="text-lg font-medium mb-2">Tags</h3>
+              <div class="flex flex-wrap gap-2">
+                <span *ngFor="let tag of community.tags" class="px-2 py-1 rounded bg-gray-700 text-xs text-gray-300">
+                  {{ tag }}
+                </span>
+              </div>
+            </div>
+            <div>
+              <h3 class="text-lg font-medium mb-2">Créée par</h3>
+              <p class="text-gray-300" *ngIf="community?.createdBy">
+                {{ community.createdBy.username }}
+              </p>
+            </div>
+            <div>
+              <h3 class="text-lg font-medium mb-2">Date de création</h3>
+              <p class="text-gray-300" *ngIf="community?.createdAt">
+                {{ community.createdAt ? formatDate(community.createdAt) : 'Date inconnue' }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

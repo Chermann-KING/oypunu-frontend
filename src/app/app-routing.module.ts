@@ -44,6 +44,14 @@ const routes: Routes = [
         (m) => m.MessagingModule
       ),
   },
+  {
+    path: 'communities',
+    canActivate: [AuthGuard],
+    loadChildren: () =>
+      import('./features/communities/communities.module').then(
+        (m) => m.CommunitiesModule
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];
 
