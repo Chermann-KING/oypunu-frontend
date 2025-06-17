@@ -21,7 +21,7 @@ export class NewConversationModalComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
-  constructor(private usersService: UsersService) {}
+  constructor(private _usersService: UsersService) {}
 
   ngOnInit() {
     this.searchControl.valueChanges
@@ -34,7 +34,7 @@ export class NewConversationModalComponent implements OnInit {
           }
           this.loading = true;
           this.error = null;
-          return this.usersService.searchUsers(query.trim());
+          return this._usersService.searchUsers(query.trim());
         })
       )
       .subscribe({
