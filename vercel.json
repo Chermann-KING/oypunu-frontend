@@ -1,15 +1,8 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "dist/oypunu-frontend/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/dist/oypunu-frontend/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
