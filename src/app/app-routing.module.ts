@@ -28,6 +28,14 @@ const routes: Routes = [
         (m) => m.DictionaryModule
       ),
   },
+  {
+    path: 'favorites',
+    canActivate: [AuthGuard],
+    loadChildren: () =>
+      import('./features/favorites/favorites.module').then(
+        (m) => m.FavoritesModule
+      ),
+  },
   { path: '**', redirectTo: '' },
 ];
 
