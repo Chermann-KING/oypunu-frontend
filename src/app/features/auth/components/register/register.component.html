@@ -1,0 +1,207 @@
+<div class="min-h-screen bg-gray-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <h2 class="mt-6 text-center text-3xl font-extrabold text-white">
+      Bienvenue sur O'Ypunu
+    </h2>
+    <p class="mt-2 text-center text-sm text-gray-400">
+      Entrez en contact avec des passionnés de langues du monde entier
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <!-- Onglets Login/Register -->
+      <div class="flex justify-center mb-6 border-b border-gray-700">
+        <button class="px-4 py-2 text-gray-400 font-medium cursor-pointer" [routerLink]="['/auth/login']">
+          Connexion
+        </button>
+        <button class="px-4 py-2 text-white font-medium border-b-2 border-purple-500 cursor-pointer"
+          [routerLink]="['/auth/register']">
+          Inscription
+        </button>
+      </div>
+
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-6">
+        <!-- Username -->
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-300">
+            Nom d'utilisateur
+          </label>
+          <div class="mt-1">
+            <input id="username" name="username" type="text" formControlName="username"
+              class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 bg-gray-700 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+              placeholder="JohnDoe">
+            <div *ngIf="registerForm.get('username')?.invalid && registerForm.get('username')?.touched"
+              class="text-red-500 text-xs mt-1">
+              Le nom d'utilisateur est requis
+            </div>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-300">
+            Adresse e-mail
+          </label>
+          <div class="mt-1">
+            <input id="email" name="email" type="email" formControlName="email" autocomplete="email"
+              class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 bg-gray-700 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+              placeholder="votre@email.com">
+            <div *ngIf="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+              class="text-red-500 text-xs mt-1">
+              L'adresse e-mail est requise et doit être valide
+            </div>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-300">
+            Mot de passe
+          </label>
+          <div class="mt-1">
+            <input id="password" name="password" type="password" formControlName="password" autocomplete="new-password"
+              class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 bg-gray-700 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+              placeholder="••••••••">
+            <div *ngIf="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+              class="text-red-500 text-xs mt-1">
+              Le mot de passe doit contenir au moins 6 caractères
+            </div>
+          </div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div>
+          <label for="confirmPassword" class="block text-sm font-medium text-gray-300">
+            Confirmer le mot de passe
+          </label>
+          <div class="mt-1">
+            <input id="confirmPassword" name="confirmPassword" type="password" formControlName="confirmPassword"
+              autocomplete="new-password"
+              class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 bg-gray-700 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+              placeholder="••••••••">
+            <div *ngIf="registerForm.errors?.['passwordMismatch'] && registerForm.get('confirmPassword')?.touched"
+              class="text-red-500 text-xs mt-1">
+              Les mots de passe ne correspondent pas
+            </div>
+          </div>
+        </div>
+
+        <!-- Native Language -->
+        <div>
+          <label for="nativeLanguage" class="block text-sm font-medium text-gray-300">
+            Langue maternelle
+          </label>
+          <div class="mt-1">
+            <select id="nativeLanguage" name="nativeLanguage" formControlName="nativeLanguage"
+              class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 bg-gray-700 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
+              <option value="" disabled>Sélectionnez votre langue maternelle</option>
+              <option value="fr">Français</option>
+              <option value="en">Anglais</option>
+              <option value="es">Espagnol</option>
+              <!-- Autres langues... -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Terms & Conditions -->
+        <div class="flex items-center">
+          <input id="terms" name="terms" type="checkbox" formControlName="terms"
+            class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-700 rounded bg-gray-700">
+          <label for="terms" class="ml-2 block text-sm text-gray-300">
+            J'accepte les <a href="#" class="text-purple-400 hover:text-purple-300">conditions d'utilisation</a> et la
+            <a href="#" class="text-purple-400 hover:text-purple-300">politique de confidentialité</a>
+          </label>
+        </div>
+        <div *ngIf="registerForm.get('terms')?.invalid && registerForm.get('terms')?.touched"
+          class="text-red-500 text-xs">
+          Vous devez accepter les conditions d'utilisation
+        </div>
+
+        <!-- Submit Button -->
+        <div>
+          <button type="submit" [disabled]="registerForm.invalid || isSubmitting "
+            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span *ngIf="isSubmitting " class="mr-2">
+              <!-- Loading spinner SVG -->
+              <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+              </svg>
+            </span>
+            S'inscrire
+          </button>
+        </div>
+      </form>
+
+      <!-- Success Message -->
+      <div *ngIf="successMessage" class="mt-4 p-4 bg-green-900 text-green-100 rounded-md">
+        {{ successMessage }}
+      </div>
+
+      <!-- Error Message -->
+      <div *ngIf="errorMessage" class="mt-4 p-4 bg-red-900 text-red-100 rounded-md">
+        {{ errorMessage }}
+      </div>
+
+      <!-- Social Login -->
+      <div class="mt-6">
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-700"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-gray-800 text-gray-400">Ou continuer avec</span>
+          </div>
+        </div>
+
+        <div class="mt-6 grid grid-cols-3 gap-3">
+          <div>
+            <a href="#"
+              class="w-full inline-flex justify-center py-2 px-4 border border-gray-700 rounded-md shadow-sm bg-gray-700 text-sm font-medium text-white hover:bg-gray-600">
+              <svg class="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  d="M19.6 10.23c0-.67-.06-1.33-.17-1.97H10v3.74h5.54a4.75 4.75 0 01-2.06 3.12v2.6h3.3c1.93-1.78 3.04-4.4 3.04-7.49z">
+                </path>
+                <path
+                  d="M10 20c2.7 0 4.96-.89 6.6-2.42l-3.3-2.6c-.92.62-2.1.99-3.3.99-2.54 0-4.69-1.71-5.46-4.01H1.15v2.5A9.99 9.99 0 0010 20z">
+                </path>
+                <path
+                  d="M4.54 11.96A5.98 5.98 0 014 10c0-.67.11-1.32.31-1.96V5.54H1.15A9.98 9.98 0 000 10c0 1.6.38 3.13 1.15 4.46l3.39-2.5z">
+                </path>
+                <path
+                  d="M10 4.04c1.48 0 2.8.51 3.84 1.52l2.86-2.86C14.96.78 12.7 0 10 0A9.99 9.99 0 001.15 5.54l3.39 2.5C5.31 5.75 7.46 4.04 10 4.04z">
+                </path>
+              </svg>
+            </a>
+          </div>
+
+          <div>
+            <a href="#"
+              class="w-full inline-flex justify-center py-2 px-4 border border-gray-700 rounded-md shadow-sm bg-gray-700 text-sm font-medium text-white hover:bg-gray-600">
+              <svg class="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  d="M18.9 0H1.1C.49 0 0 .49 0 1.1v17.8c0 .61.49 1.1 1.1 1.1H10v-7.73H7.57V8.88H10V6.65c0-2.41 1.47-3.74 3.62-3.74 1.03 0 1.91.08 2.16.11v2.5h-1.48c-1.16 0-1.38.55-1.38 1.36v1.8h2.75l-.36 3.39h-2.4V20h4.71c.61 0 1.1-.49 1.1-1.1V1.1c0-.61-.49-1.1-1.1-1.1z">
+                </path>
+              </svg>
+            </a>
+          </div>
+
+          <div>
+            <a href="#"
+              class="w-full inline-flex justify-center py-2 px-4 border border-gray-700 rounded-md shadow-sm bg-gray-700 text-sm font-medium text-white hover:bg-gray-600">
+              <svg class="h-5 w-5" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84">
+                </path>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
