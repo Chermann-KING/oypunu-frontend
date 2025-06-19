@@ -5,7 +5,7 @@ import { RegisterComponent } from './components/register/register.component';
 import { ForgotPasswordComponent } from './components/forgot-password/forgot-password.component';
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { VerifyEmailComponent } from './components/verify-email/verify-email.component';
-import { NonAuthGuard } from '../../core/gards/non-auth.guard';
+import { NonAuthGuard } from '../../core/guards/non-auth.guard';
 import { SocialAuthComponent } from './components/social-auth/social-auth.component';
 
 const routes: Routes = [

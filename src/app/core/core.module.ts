@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './interceptors/auth.interceptor';
-import { AuthGuard } from './gards/auth.guard';
-import { NonAuthGuard } from './gards/non-auth.guard';
+import { AuthGuard } from './guards/auth.guard';
+import { NonAuthGuard } from './guards/non-auth.guard';
 
 @NgModule({
   declarations: [],

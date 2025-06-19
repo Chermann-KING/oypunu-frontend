@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { AuthGuard } from './core/gards/auth.guard';
+import { AuthGuard } from './core/guards/auth.guard';
 
 const routes: Routes = [
   {
@@ -14,6 +14,11 @@ const routes: Routes = [
     loadChildren: () =>
       import('./features/auth/auth.module').then((m) => m.AuthModule),
   },
+  // {
+  //   path: 'verify-email/:token',
+  //   loadChildren: () =>
+  //     import('./features/auth/auth.module').then((m) => m.AuthModule),
+  // },
   {
     path: 'profile',
     canActivate: [AuthGuard],

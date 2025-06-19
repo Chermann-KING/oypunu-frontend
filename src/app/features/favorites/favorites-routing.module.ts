@@ -1,7 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { FavoriteWordsComponent } from './components/favorite-words/favorite-words.component';
-import { AuthGuard } from '../../core/gards/auth.guard';
+import { AuthGuard } from '../../core/guards/auth.guard';
 
 const routes: Routes = [
   {

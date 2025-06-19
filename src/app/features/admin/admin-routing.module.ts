@@ -2,7 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AdminGuard } from './guards/admin.guard';
 import { RoleGuard } from '../../core/guards/role.guard';
-import { AuthGuard } from '../../core/gards/auth.guard';
+import { AuthGuard } from '../../core/guards/auth.guard';
 import { UserRole } from '../../core/models/admin';
 
 // Import des composants
