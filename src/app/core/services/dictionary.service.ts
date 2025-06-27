@@ -20,6 +20,36 @@ interface MongoDBCategory {
   language: string;
 }
 
+// Interfaces pour les révisions
+export interface UpdateWordDto {
+  pronunciation?: string;
+  etymology?: string;
+  meanings?: any[];
+  translations?: any[];
+  revisionNotes?: string;
+  forceRevision?: boolean;
+}
+
+export interface RevisionHistory {
+  _id: string;
+  wordId: string;
+  version: number;
+  previousVersion: any;
+  modifiedBy: any;
+  modifiedAt: Date;
+  changes: any[];
+  status: 'pending' | 'approved' | 'rejected';
+  adminApprovedBy?: any;
+  adminApprovedAt?: Date;
+  adminNotes?: string;
+  rejectionReason?: string;
+}
+
+export interface EditPermissionsResponse {
+  canEdit: boolean;
+  message?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -329,18 +359,206 @@ export class DictionaryService {
   }
 
   // Soumettre un nouveau mot
-  submitWord(wordData: Partial<Word>): Observable<Word | null> {
+  submitWord(wordData: Partial<Word> | FormData): Observable<Word | null> {
     if (!this._authService.isAuthenticated()) {
       return of(null);
     }
 
-    return this._http.post<any>(`${this._WORDS_API_URL}`, wordData).pipe(
+    const url =
+      wordData instanceof FormData
+        ? `${this._WORDS_API_URL}/with-audio`
+        : `${this._WORDS_API_URL}`;
+
+    return this._http.post<any>(url, wordData).pipe(
       map((response) => (response ? this._normalizeId(response) : null)),
       catchError((error) => {
         console.error('Error submitting new word:', error);
         return of(null);
       })
     );
+  }
+
+  // Méthodes pour la gestion des révisions
+  canUserEditWord(wordId: string): Observable<EditPermissionsResponse> {
+    if (!this._authService.isAuthenticated()) {
+      return of({ canEdit: false, message: 'Vous devez être connecté' });
+    }
+
+    return this._http
+      .get<EditPermissionsResponse>(`${this._WORDS_API_URL}/${wordId}/can-edit`)
+      .pipe(
+        catchError((error) => {
+          console.error('Error checking edit permissions:', error);
+          return of({
+            canEdit: false,
+            message: 'Erreur lors de la vérification des permissions',
+          });
+        })
+      );
+  }
+
+  updateWord(
+    wordId: string,
+    updateData: UpdateWordDto
+  ): Observable<Word | null> {
+    if (!this._authService.isAuthenticated()) {
+      return of(null);
+    }
+
+    // Récupérer l'utilisateur courant
+    const currentUser = this._authService.getCurrentUser();
+    const isAdmin =
+      currentUser &&
+      (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+    const forceRevision = !!updateData.forceRevision;
+
+    // Liste des propriétés du schéma Mongoose
+    const allowedProps = [
+      'pronunciation',
+      'etymology',
+      'meanings',
+      'translations',
+      'languageVariants',
+      'audioFiles',
+      'status',
+    ];
+
+    let payload: any = { ...updateData };
+
+    // Si l'utilisateur est admin/superadmin ET ne force pas la révision, on nettoie le payload
+    if (isAdmin && !forceRevision) {
+      payload = {};
+      for (const key of allowedProps) {
+        if (updateData[key as keyof UpdateWordDto] !== undefined) {
+          payload[key] = updateData[key as keyof UpdateWordDto];
+        }
+      }
+    }
+    // Sinon, on laisse revisionNotes et forceRevision pour la logique métier backend
+
+    return this._http
+      .patch<any>(`${this._WORDS_API_URL}/${wordId}`, payload)
+      .pipe(
+        map((response) => (response ? this._normalizeId(response) : null)),
+        catchError((error) => {
+          console.error('Error updating word:', error);
+          throw error;
+        })
+      );
+  }
+
+  uploadAudio(
+    wordId: string,
+    accent: string,
+    audioFile: File
+  ): Observable<Word | null> {
+    if (!this._authService.isAuthenticated()) {
+      return of(null);
+    }
+
+    const formData = new FormData();
+    formData.append('audioFile', audioFile, audioFile.name);
+    formData.append('accent', accent);
+
+    return this._http
+      .post<any>(`${this._WORDS_API_URL}/${wordId}/audio`, formData)
+      .pipe(
+        map((response) => (response ? this._normalizeId(response) : null)),
+        catchError((error) => {
+          console.error('Error uploading audio file:', error);
+          throw error;
+        })
+      );
+  }
+
+  getRevisionHistory(wordId: string): Observable<RevisionHistory[]> {
+    if (!this._authService.isAuthenticated()) {
+      return of([]);
+    }
+
+    return this._http
+      .get<RevisionHistory[]>(`${this._WORDS_API_URL}/${wordId}/revisions`)
+      .pipe(
+        catchError((error) => {
+          console.error('Error fetching revision history:', error);
+          return of([]);
+        })
+      );
+  }
+
+  // Méthodes pour les admins
+  getPendingRevisions(
+    page = 1,
+    limit = 10
+  ): Observable<{
+    revisions: RevisionHistory[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    if (!this._authService.isAuthenticated()) {
+      return of({ revisions: [], total: 0, page, limit, totalPages: 0 });
+    }
+
+    const params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    return this._http
+      .get<any>(`${this._WORDS_API_URL}/revisions/pending`, { params })
+      .pipe(
+        catchError((error) => {
+          console.error('Error fetching pending revisions:', error);
+          return of({ revisions: [], total: 0, page, limit, totalPages: 0 });
+        })
+      );
+  }
+
+  approveRevision(
+    wordId: string,
+    revisionId: string,
+    notes?: string
+  ): Observable<Word | null> {
+    if (!this._authService.isAuthenticated()) {
+      return of(null);
+    }
+
+    const payload = notes ? { notes } : {};
+    return this._http
+      .post<any>(
+        `${this._WORDS_API_URL}/${wordId}/revisions/${revisionId}/approve`,
+        payload
+      )
+      .pipe(
+        map((response) => (response ? this._normalizeId(response) : null)),
+        catchError((error) => {
+          console.error('Error approving revision:', error);
+          throw error;
+        })
+      );
+  }
+
+  rejectRevision(
+    wordId: string,
+    revisionId: string,
+    reason: string
+  ): Observable<void> {
+    if (!this._authService.isAuthenticated()) {
+      return of(void 0);
+    }
+
+    return this._http
+      .post<void>(
+        `${this._WORDS_API_URL}/${wordId}/revisions/${revisionId}/reject`,
+        { reason }
+      )
+      .pipe(
+        catchError((error) => {
+          console.error('Error rejecting revision:', error);
+          throw error;
+        })
+      );
   }
 
   // Méthodes privées pour gérer les recherches récentes et les favoris

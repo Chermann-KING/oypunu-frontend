@@ -1,0 +1,124 @@
+<div class="bg-white shadow rounded-lg">
+  <div class="px-6 py-4 border-b border-gray-200">
+    <h3 class="text-lg font-medium text-gray-900">Historique des révisions</h3>
+    <p class="mt-1 text-sm text-gray-600">
+      Suivi des modifications apportées à ce mot
+    </p>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="px-6 py-8 text-center">
+    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+    <p class="mt-2 text-sm text-gray-500">Chargement de l'historique...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !isLoading" class="px-6 py-4">
+    <div class="bg-red-50 border border-red-200 rounded-md p-4">
+      <div class="flex">
+        <div class="flex-shrink-0">
+          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+              clip-rule="evenodd" />
+          </svg>
+        </div>
+        <div class="ml-3">
+          <p class="text-sm text-red-700">{{ error }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!isLoading && !error" class="px-6 py-4">
+    <div *ngIf="revisions.length === 0" class="text-center py-8">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">Aucune révision</h3>
+      <p class="mt-1 text-sm text-gray-500">
+        Ce mot n'a pas encore été modifié.
+      </p>
+    </div>
+
+    <div *ngIf="revisions.length > 0" class="space-y-6">
+      <div *ngFor="let revision of revisions" class="border border-gray-200 rounded-lg p-4">
+        <!-- Revision Header -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-sm font-medium text-gray-900">Version {{ revision.version }}</span>
+              <span
+                [class]="'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' + getStatusBadgeClass(revision.status)">
+                {{ getStatusText(revision.status) }}
+              </span>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <div class="text-sm text-gray-900">{{ revision.modifiedBy?.username }}</div>
+            <div class="text-xs text-gray-500">{{ revision.modifiedAt | date:'dd/MM/yyyy HH:mm' }}</div>
+          </div>
+        </div>
+
+        <!-- Changes -->
+        <div *ngIf="hasSignificantChanges(revision.changes)" class="mb-4">
+          <h4 class="text-sm font-medium text-gray-700 mb-2">Modifications apportées :</h4>
+          <div class="space-y-2">
+            <div *ngFor="let change of revision.changes" class="flex items-start space-x-2 p-2 bg-gray-50 rounded">
+              <svg class="w-4 h-4 mt-0.5 flex-shrink-0" [class]="getChangeTypeColor(change.changeType)" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  [attr.d]="getChangeTypeIcon(change.changeType)"></path>
+              </svg>
+
+              <div class="flex-1 min-w-0">
+                <div class="text-sm">
+                  <span class="font-medium text-gray-900">{{ formatFieldName(change.field) }}</span>
+                  <span [class]="'ml-2 text-xs font-medium ' + getChangeTypeColor(change.changeType)">
+                    {{ getChangeTypeText(change.changeType) }}
+                  </span>
+                </div>
+
+                <div *ngIf="change.oldValue !== undefined" class="text-xs text-gray-600 mt-1">
+                  <span class="font-medium">Ancienne valeur :</span>
+                  <span class="ml-1">{{ formatValue(change.oldValue) }}</span>
+                </div>
+
+                <div *ngIf="change.newValue !== undefined" class="text-xs text-gray-600">
+                  <span class="font-medium">Nouvelle valeur :</span>
+                  <span class="ml-1">{{ formatValue(change.newValue) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin Notes -->
+        <div *ngIf="revision.adminNotes" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
+          <h4 class="text-sm font-medium text-blue-900 mb-1">Notes de l'administrateur :</h4>
+          <p class="text-sm text-blue-800">{{ revision.adminNotes }}</p>
+        </div>
+
+        <!-- Rejection Reason -->
+        <div *ngIf="revision.rejectionReason" class="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+          <h4 class="text-sm font-medium text-red-900 mb-1">Raison du rejet :</h4>
+          <p class="text-sm text-red-800">{{ revision.rejectionReason }}</p>
+        </div>
+
+        <!-- Admin Approval Info -->
+        <div *ngIf="revision.adminApprovedBy" class="text-xs text-gray-500">
+          <span *ngIf="revision.status === 'approved'">
+            Approuvé par {{ revision.adminApprovedBy.username }}
+            le {{ revision.adminApprovedAt | date:'dd/MM/yyyy HH:mm' }}
+          </span>
+          <span *ngIf="revision.status === 'rejected'">
+            Rejeté par {{ revision.adminApprovedBy.username }}
+            le {{ revision.adminApprovedAt | date:'dd/MM/yyyy HH:mm' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -11,6 +11,7 @@ import { CustomDropdownComponent } from './components/custom-dropdown/custom-dro
 import { CapitalizePipe } from '../pipes/capitalize.pipe';
 import { WordCardComponent } from './components/word-card/word-card.component';
 import { ShareWordModalComponent } from './components/share-word-modal/share-word-modal.component';
+import { AudioRecorderComponent } from './components/audio-recorder/audio-recorder.component';
 
 @NgModule({
   declarations: [
@@ -23,6 +24,7 @@ import { ShareWordModalComponent } from './components/share-word-modal/share-wor
     WordCardComponent,
     CapitalizePipe,
     ShareWordModalComponent,
+    AudioRecorderComponent,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
   exports: [

@@ -13,4 +13,5 @@ export interface Word {
   status: 'approved' | 'pending' | 'rejected';
   meanings?: Meaning[];
   isFavorite?: boolean;
+  audioFiles?: { [key: string]: { url: string } };
 }

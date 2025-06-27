@@ -1,0 +1,100 @@
+// Styles pour le composant d'historique des révisions
+
+.revision-item {
+  @apply border border-gray-200 rounded-lg p-4 transition-colors;
+
+  &:hover {
+    @apply border-gray-300;
+  }
+}
+
+.change-item {
+  @apply flex items-start space-x-2 p-2 bg-gray-50 rounded transition-colors;
+
+  &:hover {
+    @apply bg-gray-100;
+  }
+}
+
+.status-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+
+  &.pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  &.approved {
+    @apply bg-green-100 text-green-800;
+  }
+
+  &.rejected {
+    @apply bg-red-100 text-red-800;
+  }
+}
+
+.change-type-icon {
+  @apply w-4 h-4 mt-0.5 flex-shrink-0;
+
+  &.added {
+    @apply text-green-600;
+  }
+
+  &.modified {
+    @apply text-blue-600;
+  }
+
+  &.removed {
+    @apply text-red-600;
+  }
+}
+
+.admin-notes {
+  @apply p-3 bg-blue-50 border border-blue-200 rounded;
+
+  h4 {
+    @apply text-sm font-medium text-blue-900 mb-1;
+  }
+
+  p {
+    @apply text-sm text-blue-800;
+  }
+}
+
+.rejection-reason {
+  @apply p-3 bg-red-50 border border-red-200 rounded;
+
+  h4 {
+    @apply text-sm font-medium text-red-900 mb-1;
+  }
+
+  p {
+    @apply text-sm text-red-800;
+  }
+}
+
+.empty-state {
+  @apply text-center py-8;
+
+  svg {
+    @apply mx-auto h-12 w-12 text-gray-400;
+  }
+
+  h3 {
+    @apply mt-2 text-sm font-medium text-gray-900;
+  }
+
+  p {
+    @apply mt-1 text-sm text-gray-500;
+  }
+}
+
+// Responsive design
+@media (max-width: 640px) {
+  .revision-header {
+    @apply flex-col items-start space-y-2;
+  }
+
+  .change-item {
+    @apply flex-col items-start space-y-2;
+  }
+}

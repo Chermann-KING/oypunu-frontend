@@ -1,4 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  OnDestroy,
+  ViewChild,
+  ElementRef,
+} from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -53,6 +59,11 @@ export class AddWordComponent implements OnInit, OnDestroy {
   private _destroy$ = new Subject<void>();
 
   informationRecue = '';
+
+  audioFile: File | null = null;
+  audioFileName: string = '';
+  audioPreviewUrl: string | null = null;
+  @ViewChild('audioPlayer') audioPlayer!: ElementRef<HTMLAudioElement>;
 
   constructor(
     private _fb: FormBuilder,
@@ -192,7 +203,6 @@ export class AddWordComponent implements OnInit, OnDestroy {
 
   // Soumission du formulaire
   onSubmit(): void {
-    // Vérification de la validité du formulaire
     if (this.wordForm.invalid) {
       this._markFormGroupTouched(this.wordForm);
       return;
@@ -204,6 +214,144 @@ export class AddWordComponent implements OnInit, OnDestroy {
 
     const submitData = this._prepareSubmitData();
 
+    console.log('Submit data prepared:', submitData);
+
+    // Si un fichier audio est présent, on utilise FormData
+    if (this.audioFile) {
+      const formData = new FormData();
+
+      // S'assurer que les champs requis ne sont pas vides
+      if (!submitData.word || submitData.word.trim() === '') {
+        this.errorMessage = 'Le mot est requis';
+        this.isSubmitting = false;
+        return;
+      }
+
+      if (!submitData.language || submitData.language.trim() === '') {
+        this.errorMessage = 'La langue est requise';
+        this.isSubmitting = false;
+        return;
+      }
+
+      // Validation des meanings
+      if (
+        !submitData.meanings ||
+        !Array.isArray(submitData.meanings) ||
+        submitData.meanings.length === 0
+      ) {
+        this.errorMessage = 'Au moins une signification est requise';
+        this.isSubmitting = false;
+        return;
+      }
+
+      // Validation de chaque meaning
+      for (let i = 0; i < submitData.meanings.length; i++) {
+        const meaning = submitData.meanings[i];
+        if (!meaning.partOfSpeech || meaning.partOfSpeech.trim() === '') {
+          this.errorMessage = `La partie du discours est requise pour le sens #${
+            i + 1
+          }`;
+          this.isSubmitting = false;
+          return;
+        }
+
+        if (
+          !meaning.definitions ||
+          !Array.isArray(meaning.definitions) ||
+          meaning.definitions.length === 0
+        ) {
+          this.errorMessage = `Au moins une définition est requise pour le sens #${
+            i + 1
+          }`;
+          this.isSubmitting = false;
+          return;
+        }
+
+        for (let j = 0; j < meaning.definitions.length; j++) {
+          const definition = meaning.definitions[j];
+          if (!definition.definition || definition.definition.trim() === '') {
+            this.errorMessage = `La définition #${j + 1} du sens #${
+              i + 1
+            } ne peut pas être vide`;
+            this.isSubmitting = false;
+            return;
+          }
+        }
+      }
+
+      // Construction du FormData avec validation
+      formData.append('word', submitData.word.trim());
+      formData.append('language', submitData.language.trim());
+      formData.append('pronunciation', submitData.pronunciation || '');
+      formData.append('etymology', submitData.etymology || '');
+
+      if (submitData.categoryId && submitData.categoryId.trim() !== '') {
+        formData.append('categoryId', submitData.categoryId.trim());
+      }
+
+      // Stringifier les meanings avec validation
+      try {
+        const meaningsJson = JSON.stringify(submitData.meanings);
+        formData.append('meanings', meaningsJson);
+        console.log('Meanings JSON:', meaningsJson);
+      } catch (error) {
+        this.errorMessage = 'Erreur lors de la préparation des significations';
+        this.isSubmitting = false;
+        return;
+      }
+
+      formData.append('audioFile', this.audioFile);
+
+      console.log('FormData prepared, submitting...');
+
+      // !Log pour debug (ne pas faire en production)
+      for (let pair of formData.entries()) {
+        console.log(
+          pair[0] + ': ' + (pair[1] instanceof File ? 'FILE' : pair[1])
+        );
+      }
+
+      this._dictionaryService
+        .submitWord(formData)
+        .pipe(takeUntil(this._destroy$))
+        .subscribe({
+          next: (word) => {
+            this.isSubmitting = false;
+            if (word) {
+              this.successMessage = 'Le mot a été ajouté avec succès!';
+              this._resetForm();
+              setTimeout(() => {
+                this._router.navigate(['/dictionary/word', word.id]);
+              }, 2000);
+            } else {
+              this.errorMessage =
+                "Une erreur est survenue lors de l'ajout du mot";
+            }
+          },
+          error: (error) => {
+            this.isSubmitting = false;
+            console.error('Error submitting word:', error);
+
+            // Gestion d'erreur améliorée
+            if (error.error && error.error.message) {
+              if (Array.isArray(error.error.message)) {
+                this.errorMessage = error.error.message.join(', ');
+              } else {
+                this.errorMessage = error.error.message;
+              }
+            } else if (error.message) {
+              this.errorMessage = error.message;
+            } else {
+              this.errorMessage =
+                "Une erreur est survenue lors de l'ajout du mot";
+            }
+          },
+        });
+
+      return;
+    }
+
+    // ?Soumission classique sans fichier audio
     this._dictionaryService
       .submitWord(submitData)
       .pipe(takeUntil(this._destroy$))
@@ -212,11 +360,7 @@ export class AddWordComponent implements OnInit, OnDestroy {
           this.isSubmitting = false;
           if (word) {
             this.successMessage = 'Le mot a été ajouté avec succès!';
-
-            // Réinitialiser le formulaire juste après l'ajout réussi
             this._resetForm();
-
-            // Rediriger après un délai
             setTimeout(() => {
               this._router.navigate(['/dictionary/word', word.id]);
             }, 2000);
@@ -227,9 +371,20 @@ export class AddWordComponent implements OnInit, OnDestroy {
         },
         error: (error) => {
           this.isSubmitting = false;
-          this.errorMessage =
-            error.message || "Une erreur est survenue lors de l'ajout du mot";
           console.error('Error submitting word:', error);
+
+          if (error.error && error.error.message) {
+            if (Array.isArray(error.error.message)) {
+              this.errorMessage = error.error.message.join(', ');
+            } else {
+              this.errorMessage = error.error.message;
+            }
+          } else if (error.message) {
+            this.errorMessage = error.message;
+          } else {
+            this.errorMessage =
+              "Une erreur est survenue lors de l'ajout du mot";
+          }
         },
       });
   }
@@ -305,5 +460,20 @@ export class AddWordComponent implements OnInit, OnDestroy {
     // Marquer le formulaire comme pristine et untouched
     this.wordForm.markAsPristine();
     this.wordForm.markAsUntouched();
+  }
+
+  onAudioFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      this.audioFile = input.files[0];
+      this.audioFileName = this.audioFile.name;
+      this.audioPreviewUrl = URL.createObjectURL(this.audioFile);
+    }
+  }
+
+  playAudio() {
+    if (this.audioPlayer && this.audioPreviewUrl) {
+      this.audioPlayer.nativeElement.play();
+    }
   }
 }

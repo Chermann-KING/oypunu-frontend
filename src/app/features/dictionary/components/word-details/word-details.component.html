@@ -37,9 +37,9 @@
             <span class="text-lg text-gray-400">{{ getLanguageName(word.language) }}</span>
             <span *ngIf="word.pronunciation" class="flex items-center text-gray-400">
               <span class="text-lg">/{{ word.pronunciation }}/</span>
-              <button *ngIf="word.meanings?.[0]?.phonetics?.[0]?.audio"
-                (click)="playAudio(word.meanings?.[0]?.phonetics?.[0]?.audio || '')"
-                class="ml-2 p-1 rounded-full bg-gray-800 hover:bg-gray-700 cursor-pointer">
+              <button *ngIf="hasAudioFiles()" (click)="playAudio(getFirstAudioUrl() || '')"
+                class="ml-2 p-1 rounded-full bg-gray-800 hover:bg-gray-700 cursor-pointer"
+                title="Écouter la prononciation">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fill-rule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
@@ -49,13 +49,26 @@
             </span>
           </div>
         </div>
-        <button (click)="toggleFavorite()" class="text-gray-400 hover:text-yellow-500 p-2 cursor-pointer">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" [class.text-yellow-500]="word.isFavorite"
-            fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round"
-              d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-          </svg>
-        </button>
+        <div class="flex items-center space-x-2">
+          <!-- Bouton de modification -->
+          <button *ngIf="canEdit" (click)="onEditWord()"
+            class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-md transition-colors duration-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Modifier
+          </button>
+          <!-- Bouton favori -->
+          <button (click)="toggleFavorite()" class="text-gray-400 hover:text-yellow-500 p-2 cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" [class.text-yellow-500]="word.isFavorite"
+              fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Onglets -->
@@ -229,6 +242,37 @@
                 {{ word.updatedAt | date:'dd/MM/yyyy' }}
               </li>
             </ul>
+          </div>
+        </div>
+
+        <!-- Section Audio -->
+        <div *ngIf="hasAudioFiles()" class="mt-6 pt-6 border-t border-gray-800">
+          <h4 class="text-lg font-medium text-gray-400 mb-4 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M3 7a1 1 0 011-1h8a1 1 0 110 2H4a1 1 0 01-1-1zM3 11a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM4 15a1 1 0 100 2h8a1 1 0 100-2H4z"
+                clip-rule="evenodd" />
+            </svg>
+            Prononciations disponibles
+          </h4>
+          <div class="space-y-3">
+            <div *ngFor="let audioFile of getAudioAccents()"
+              class="flex items-center justify-between bg-gray-800 rounded-lg p-3 hover:bg-gray-750 transition-colors">
+              <div class="flex items-center">
+                <span class="text-sm font-medium text-purple-400 mr-3">{{ audioFile.accent }}</span>
+                <span class="text-sm text-gray-400">Audio disponible</span>
+              </div>
+              <button (click)="playAudio(audioFile.url)"
+                class="inline-flex items-center px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-md transition-colors"
+                title="Écouter cette prononciation">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                    clip-rule="evenodd" />
+                </svg>
+                Écouter
+              </button>
+            </div>
           </div>
         </div>
       </div>

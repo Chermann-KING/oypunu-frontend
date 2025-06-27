@@ -19,6 +19,8 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
   error = '';
   isAuthenticated = false;
   activeTab: 'definitions' | 'examples' | 'related' = 'definitions';
+  canEdit = false;
+  currentUser: any = null;
 
   // Options pour les parties du discours
   partsOfSpeech = {
@@ -72,6 +74,8 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       }
     });
+
+    this.currentUser = this._authService.getCurrentUser();
   }
 
   ngOnDestroy(): void {
@@ -88,6 +92,7 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
         next: (word) => {
           if (word) {
             this.word = word;
+            this._checkEditPermissions();
           } else {
             this.error = 'Mot non trouvé';
           }
@@ -177,8 +182,110 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
     );
   }
 
+  /**
+   * Récupère la première URL audio disponible
+   */
+  getFirstAudioUrl(): string | null {
+    if (!this.word?.audioFiles) return null;
+
+    const audioEntries = Object.entries(this.word.audioFiles);
+    if (audioEntries.length === 0) return null;
+
+    // Prendre la première entrée audio disponible
+    const [accent, audioData] = audioEntries[0];
+    return audioData?.url || null;
+  }
+
+  /**
+   * Vérifie s'il y a des fichiers audio disponibles
+   */
+  hasAudioFiles(): boolean {
+    if (!this.word?.audioFiles) return false;
+    return Object.keys(this.word.audioFiles).length > 0;
+  }
+
+  /**
+   * Récupère tous les accents audio disponibles
+   */
+  getAudioAccents(): Array<{ accent: string; url: string }> {
+    if (!this.word?.audioFiles) return [];
+
+    return Object.entries(this.word.audioFiles).map(([accent, audioData]) => ({
+      accent,
+      url: audioData.url,
+    }));
+  }
+
   getCreatedBy(createdBy: any): string {
     if (!createdBy) return 'anonyme';
     return typeof createdBy === 'object' ? createdBy.username : createdBy;
+  }
+
+  private _checkEditPermissions(): void {
+    this.canEdit = false;
+    if (this.currentUser && this.word) {
+      if (
+        this.currentUser.role === 'admin' ||
+        this.currentUser.role === 'superadmin'
+      ) {
+        this.canEdit = true;
+        return;
+      }
+
+      const createdById =
+        this.word.createdBy && typeof this.word.createdBy === 'object'
+          ? (this.word.createdBy as any)._id || (this.word.createdBy as any).id
+          : this.word.createdBy;
+
+      if (
+        createdById &&
+        (this.currentUser as any)._id &&
+        createdById === (this.currentUser as any)._id &&
+        this.word.status !== 'rejected'
+      ) {
+        this.canEdit = true;
+        return;
+      }
+    }
+  }
+
+  onEditWord(): void {
+    if (this.word && this.canEdit) {
+      this._router.navigate(['/dictionary/edit', this.word.id]);
+    }
+  }
+
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'pending_revision':
+        return 'bg-blue-100 text-blue-800';
+      case 'revision_approved':
+        return 'bg-purple-100 text-purple-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  getStatusText(status: string): string {
+    switch (status) {
+      case 'approved':
+        return 'Approuvé';
+      case 'pending':
+        return 'En attente';
+      case 'rejected':
+        return 'Rejeté';
+      case 'pending_revision':
+        return 'En révision';
+      case 'revision_approved':
+        return 'Révision approuvée';
+      default:
+        return status;
+    }
   }
 }

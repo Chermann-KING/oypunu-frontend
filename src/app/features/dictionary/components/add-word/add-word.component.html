@@ -65,6 +65,18 @@
           </div>
         </div>
 
+        <!-- Prononciation vocale (audio) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-1">Prononciation vocale</label>
+          <input type="file" accept="audio/*" (change)="onAudioFileSelected($event)"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white" />
+          <div *ngIf="audioFileName" class="text-xs text-gray-400 mt-1 flex items-center gap-2">
+            <span>Fichier sélectionné : {{ audioFileName }}</span>
+            <button type="button" (click)="playAudio()" class="text-blue-400 underline">Écouter</button>
+          </div>
+          <audio #audioPlayer [src]="audioPreviewUrl" class="hidden"></audio>
+        </div>
+
         <!-- Catégorie -->
         <div>
           <label for="categoryId" class="block text-sm font-medium text-gray-300 mb-1">Catégorie</label>
@@ -219,10 +231,18 @@
     </form>
 
     <!-- Note informative -->
-    <div class="mt-8 p-4 bg-gray-900 rounded-lg border border-gray-800">
-      <h3 class="text-lg font-medium mb-2">Information importante</h3>
-      <p class="text-gray-400">Les mots soumis sont examinés par notre équipe avant d'être ajoutés au dictionnaire.
-        Assurez-vous que les informations fournies sont précises et bien documentées.</p>
+    <div class="mt-8 p-4 bg-yellow-900/60 border border-yellow-700 rounded-lg flex items-start gap-3">
+      <svg class="h-6 w-6 text-yellow-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" />
+      </svg>
+      <div>
+        <h3 class="text-lg font-medium text-yellow-100 mb-1">Information importante</h3>
+        <p class="text-yellow-100">
+          Les mots soumis sont examinés par notre équipe avant d'être ajoutés au dictionnaire.
+          Assurez-vous que les informations fournies sont précises et bien documentées.
+        </p>
+      </div>
     </div>
   </div>
 </div>
