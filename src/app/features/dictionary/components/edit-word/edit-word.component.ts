@@ -297,25 +297,58 @@ export class EditWordComponent implements OnInit {
         forceRevision: this.editWordForm.value.forceRevision,
       };
 
-      this._dictionaryService.updateWord(this.wordId, updateData).subscribe({
-        next: (updatedWord: Word | null) => {
-          if (updatedWord) {
-            this.successMessage = 'Mot modifié avec succès !';
-            this.isSaving = false;
+      // Vérifier si un fichier audio est présent pour modification
+      if (this.audioFile) {
+        console.log('🎵 Mise à jour avec audio détectée');
 
-            // Rediriger vers les détails du mot après un délai
-            setTimeout(() => {
-              this._router.navigate(['/dictionary/word', this.wordId]);
-            }, 2000);
-          }
-        },
-        error: (error: any) => {
-          this.errorMessage =
-            error.error?.message || 'Erreur lors de la modification du mot';
-          this.isSaving = false;
-          console.error('Error updating word:', error);
-        },
-      });
+        // Utiliser la méthode unifiée pour modification avec audio
+        this._dictionaryService
+          .updateWordWithAudio(this.wordId, updateData, this.audioFile)
+          .subscribe({
+            next: (updatedWord: Word | null) => {
+              if (updatedWord) {
+                this.successMessage = 'Mot et audio modifiés avec succès !';
+                this.isSaving = false;
+                this.audioFile = null; // Réinitialiser le fichier audio
+
+                // Rediriger vers les détails du mot après un délai
+                setTimeout(() => {
+                  this._router.navigate(['/dictionary/word', this.wordId]);
+                }, 2000);
+              }
+            },
+            error: (error: any) => {
+              this.errorMessage =
+                error.error?.message ||
+                'Erreur lors de la modification du mot avec audio';
+              this.isSaving = false;
+              console.error('Error updating word with audio:', error);
+            },
+          });
+      } else {
+        console.log('📝 Mise à jour textuelle uniquement');
+
+        // Utiliser la méthode standard pour modification textuelle seulement
+        this._dictionaryService.updateWord(this.wordId, updateData).subscribe({
+          next: (updatedWord: Word | null) => {
+            if (updatedWord) {
+              this.successMessage = 'Mot modifié avec succès !';
+              this.isSaving = false;
+
+              // Rediriger vers les détails du mot après un délai
+              setTimeout(() => {
+                this._router.navigate(['/dictionary/word', this.wordId]);
+              }, 2000);
+            }
+          },
+          error: (error: any) => {
+            this.errorMessage =
+              error.error?.message || 'Erreur lors de la modification du mot';
+            this.isSaving = false;
+            console.error('Error updating word:', error);
+          },
+        });
+      }
     }
   }
 

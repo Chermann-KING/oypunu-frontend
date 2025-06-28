@@ -471,6 +471,54 @@ export class DictionaryService {
       );
   }
 
+  /**
+   * Met à jour un mot avec fichier audio en une seule requête
+   */
+  updateWordWithAudio(
+    wordId: string,
+    updateData: UpdateWordDto,
+    audioFile: File
+  ): Observable<Word | null> {
+    if (!this._authService.isAuthenticated()) {
+      return of(null);
+    }
+
+    const formData = new FormData();
+
+    // Ajouter les données textuelles
+    if (updateData.pronunciation) {
+      formData.append('pronunciation', updateData.pronunciation);
+    }
+    if (updateData.etymology) {
+      formData.append('etymology', updateData.etymology);
+    }
+    if (updateData.meanings) {
+      formData.append('meanings', JSON.stringify(updateData.meanings));
+    }
+    if (updateData.translations) {
+      formData.append('translations', JSON.stringify(updateData.translations));
+    }
+    if (updateData.revisionNotes) {
+      formData.append('revisionNotes', updateData.revisionNotes);
+    }
+    if (updateData.forceRevision !== undefined) {
+      formData.append('forceRevision', updateData.forceRevision.toString());
+    }
+
+    // Ajouter le fichier audio
+    formData.append('audioFile', audioFile, audioFile.name);
+
+    return this._http
+      .patch<any>(`${this._WORDS_API_URL}/${wordId}/with-audio`, formData)
+      .pipe(
+        map((response) => (response ? this._normalizeId(response) : null)),
+        catchError((error) => {
+          console.error('Error updating word with audio:', error);
+          throw error;
+        })
+      );
+  }
+
   getRevisionHistory(wordId: string): Observable<RevisionHistory[]> {
     if (!this._authService.isAuthenticated()) {
       return of([]);
