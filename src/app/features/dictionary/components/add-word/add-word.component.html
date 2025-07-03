@@ -23,6 +23,67 @@
       {{ successMessage }}
     </div>
 
+    <!-- Indicateur de vérification de similarité -->
+    <div *ngIf="isCheckingSimilarity"
+      class="bg-blue-900/50 rounded-lg p-4 mb-6 text-blue-200 border border-blue-800 flex items-center">
+      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400 mr-3"></div>
+      <span>🧠 Vérification de mots similaires en cours...</span>
+    </div>
+
+    <!-- Alerte de mots similaires détectés -->
+    <div *ngIf="showSimilarityWarning && similarWords.length > 0"
+      class="bg-orange-900/50 rounded-lg p-4 mb-6 text-orange-200 border border-orange-800">
+      <div class="flex items-start">
+        <div class="flex-shrink-0">
+          <span class="text-2xl">⚠️</span>
+        </div>
+        <div class="ml-3 flex-1">
+          <h4 class="text-lg font-medium text-orange-100 mb-2">Mots similaires détectés</h4>
+          <p class="text-sm mb-4">
+            Nous avons trouvé des mots similaires dans d'autres langues. Voulez-vous ajouter une traduction au lieu de
+            créer un nouveau mot ?
+          </p>
+
+          <div class="space-y-2 mb-4">
+            <div *ngFor="let suggestion of similarWords"
+              class="bg-orange-800/30 rounded-md p-3 cursor-pointer hover:bg-orange-800/50 transition-colors"
+              (click)="selectSimilarWord(suggestion)">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="font-medium">{{ suggestion.word }}</span>
+                  <span class="text-orange-300 ml-2">({{ getLanguageName(suggestion.language) }})</span>
+                  <span class="text-xs text-orange-400 ml-2">{{ suggestion.categoryName || 'Sans catégorie' }}</span>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs text-orange-300">Similarité: {{ (suggestion.similarityScore * 100 |
+                    number:'1.0-0') }}%</div>
+                  <div class="text-xs text-orange-400">{{ suggestion.suggestedAction }}</div>
+                </div>
+              </div>
+              <div *ngIf="suggestion.definition" class="text-sm text-orange-300 mt-1 italic">
+                {{ suggestion.definition }}
+              </div>
+              <div *ngIf="suggestion.sharedKeywords && suggestion.sharedKeywords.length > 0"
+                class="text-xs text-orange-400 mt-1">
+                Mots-clés partagés: {{ suggestion.sharedKeywords.join(', ') }}
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3">
+            <button type="button" (click)="ignoreSuggestions()"
+              class="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors text-sm">
+              Ignorer et continuer
+            </button>
+            <button type="button" *ngIf="selectedSimilarWord"
+              class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm">
+              Ajouter comme traduction
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Formulaire d'ajout de mot -->
     <form [formGroup]="wordForm" (ngSubmit)="onSubmit()"
       class="space-y-6 bg-gray-900 p-6 rounded-lg border border-gray-800">
@@ -42,15 +103,39 @@
         <!-- Langue -->
         <div>
           <label for="language" class="block text-sm font-medium text-gray-300 mb-1">Langue*</label>
-          <select id="language" formControlName="language"
+          <!-- Debug: Affichage du nombre de langues -->
+          <div class="text-xs text-blue-400 mb-1" *ngIf="languages.length === 0">
+            ⚠️ Debug: Aucune langue chargée ({{ languages.length }})
+          </div>
+          <div class="text-xs text-green-400 mb-1" *ngIf="languages.length > 0">
+            ✅ Debug: {{ languages.length }} langues chargées
+          </div>
+          
+          <select id="language" formControlName="languageId"
             class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-            [ngClass]="{'border-red-500': wordForm.get('language')?.invalid && wordForm.get('language')?.touched}">
-            <option value="" disabled>Sélectionnez une langue</option>
-            <option *ngFor="let language of languages" [value]="language.code">{{ language.name }}</option>
+            [ngClass]="{'border-red-500': wordForm.get('languageId')?.invalid && wordForm.get('languageId')?.touched}">
+            <option value="" disabled>Sélectionnez une langue ({{ languages.length }} disponibles)</option>
+            <option *ngFor="let language of languages; trackBy: trackByLanguageId" [value]="language.id">
+              {{ language.name }} ({{ language.wordCount || 0 }} mots)
+            </option>
           </select>
-          <div *ngIf="wordForm.get('language')?.invalid && wordForm.get('language')?.touched"
+          <div *ngIf="wordForm.get('languageId')?.invalid && wordForm.get('languageId')?.touched"
             class="text-red-500 text-xs mt-1">
             La langue est requise
+          </div>
+          
+          <!-- Lien pour proposer une nouvelle langue -->
+          <div class="mt-2">
+            <a routerLink="/admin/languages/add" 
+               class="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Votre langue n'est pas listée ? Proposez-la ici
+            </a>
+            <p class="text-xs text-gray-500 mt-1">
+              Les langues proposées seront examinées par nos modérateurs avant d'être ajoutées.
+            </p>
           </div>
         </div>
 
@@ -206,6 +291,174 @@
               <textarea formControlName="examples" rows="2"
                 class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                 placeholder="Phrase d'exemple 1, Phrase d'exemple 2"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section Traductions (Nouvelle) -->
+      <div class="space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h3 class="text-lg font-medium">🌐 Traductions</h3>
+            <p class="text-sm text-gray-400">Ajoutez des traductions de ce mot dans d'autres langues</p>
+          </div>
+          <button type="button" (click)="toggleTranslationSection()"
+            class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+            {{ showTranslationSection ? '➖ Masquer' : '➕ Ajouter des traductions' }}
+          </button>
+        </div>
+
+        <div *ngIf="showTranslationSection" class="space-y-4">
+          <div class="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+            <div class="flex items-center mb-3">
+              <span class="text-blue-400 mr-2">💡</span>
+              <span class="text-sm text-gray-300">
+                Ajoutez des traductions maintenant pour créer un groupe de mots liés automatiquement
+              </span>
+            </div>
+
+            <div formArrayName="translations">
+              <div *ngFor="let translation of translations.controls; let i = index" [formGroupName]="i"
+                class="border border-gray-600 rounded-lg p-4 mb-4">
+
+                <div class="flex justify-between items-center mb-3">
+                  <h5 class="font-medium text-gray-200">Traduction #{{ i + 1 }}</h5>
+                  <button type="button" (click)="removeTranslation(i)" class="text-red-400 hover:text-red-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd"
+                        d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                        clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Langue de traduction -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Langue*</label>
+                    <select formControlName="languageId" (change)="onTranslationLanguageChange(i)"
+                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      [ngClass]="{'border-red-500': translation.get('languageId')?.invalid && translation.get('languageId')?.touched}">
+                      <option value="">Sélectionnez une langue</option>
+                      <option *ngFor="let lang of getAvailableLanguagesForTranslation(i)" [value]="lang.id">
+                        {{ lang.name }}
+                        <span *ngIf="lang.wordCount" class="text-xs text-gray-400">
+                          ({{ lang.wordCount }} mots)
+                        </span>
+                      </option>
+                    </select>
+                    <div *ngIf="translation.get('languageId')?.invalid && translation.get('languageId')?.touched"
+                      class="text-red-500 text-xs mt-1">
+                      La langue est requise
+                    </div>
+                  </div>
+
+                  <!-- Mot traduit avec recherche -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">
+                      Mot traduit*
+                      <span *ngIf="translation.get('languageId')?.value" class="text-xs text-blue-400">
+                        (recherchez un mot existant en {{ getLanguageNameById(translation.get('languageId')?.value) }})
+                      </span>
+                    </label>
+                    
+                    <!-- Champ de recherche -->
+                    <div class="relative">
+                      <input type="text" 
+                        [ngModel]="translationWordSearch[i] || ''"
+                        (ngModelChange)="translationWordSearch[i] = $event; searchWordsInTargetLanguage(i, getLanguageCodeById(translation.get('languageId')?.value), $event)"
+                        [ngModelOptions]="{standalone: true}"
+                        class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        [ngClass]="{'border-red-500': translation.get('translatedWord')?.invalid && translation.get('translatedWord')?.touched}"
+                        placeholder="Tapez pour rechercher un mot existant..."
+                        [disabled]="!translation.get('languageId')?.value" />
+                      
+                      <!-- Indicateur de recherche -->
+                      <div *ngIf="isSearchingTranslationWords[i]" 
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                      </div>
+                    </div>
+
+                    <!-- Résultats de recherche -->
+                    <div *ngIf="translationWordResults[i] && translationWordResults[i].length > 0" 
+                      class="mt-2 max-h-40 overflow-y-auto bg-gray-800 border border-gray-600 rounded-md">
+                      <div *ngFor="let word of translationWordResults[i]" 
+                        (click)="selectTranslationWord(i, word)"
+                        class="px-3 py-2 hover:bg-gray-700 cursor-pointer border-b border-gray-700 last:border-b-0">
+                        <div class="flex justify-between items-center">
+                          <div>
+                            <span class="font-medium text-white">{{ word.word }}</span>
+                            <span *ngIf="word.categoryName" class="text-xs text-gray-400 ml-2">({{ word.categoryName }})</span>
+                          </div>
+                          <span class="text-xs text-blue-400">Cliquer pour sélectionner</span>
+                        </div>
+                        <div *ngIf="word.meanings && word.meanings[0]?.definitions[0]?.definition" 
+                          class="text-xs text-gray-300 mt-1 truncate">
+                          {{ word.meanings[0].definitions[0].definition }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Message si aucun résultat -->
+                    <div *ngIf="translation.get('languageId')?.value && translationWordSearch[i] && translationWordSearch[i].length > 1 && !isSearchingTranslationWords[i] && (!translationWordResults[i] || translationWordResults[i].length === 0) && !selectedTranslationWords[i]"
+                      class="mt-2 text-xs text-yellow-400 bg-yellow-900/30 p-2 rounded">
+                      ⚠️ Aucun mot trouvé. Vous pouvez continuer à taper pour créer une nouvelle traduction.
+                    </div>
+
+                    <!-- Champ caché pour la valeur du formulaire -->
+                    <input type="hidden" formControlName="translatedWord" />
+                    
+                    <!-- Message de validation -->
+                    <div *ngIf="translation.get('translatedWord')?.invalid && translation.get('translatedWord')?.touched"
+                      class="text-red-500 text-xs mt-1">
+                      La traduction est requise
+                    </div>
+
+                    <!-- Indication du mot sélectionné -->
+                    <div *ngIf="selectedTranslationWords[i]" 
+                      class="mt-2 text-xs text-green-400 bg-green-900/30 p-2 rounded flex items-center justify-between">
+                      <span>✅ Mot sélectionné: <strong>{{ selectedTranslationWords[i].word }}</strong></span>
+                      <button type="button" (click)="onTranslationLanguageChange(i)" 
+                        class="text-red-400 hover:text-red-300 underline">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Contexte -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Contexte</label>
+                    <input type="text" formControlName="context"
+                      class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Contexte d'usage (facultatif)" />
+                    <div class="text-xs text-gray-500 mt-1">
+                      Ex: formel, familier, technique, médical...
+                    </div>
+                  </div>
+
+                  <!-- Niveau de confiance -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Confiance</label>
+                    <div class="flex items-center space-x-3">
+                      <input type="range" formControlName="confidence" min="0.1" max="1" step="0.1" class="flex-1" />
+                      <span class="text-sm text-gray-300 min-w-[3rem]">
+                        {{ (translation.get('confidence')?.value * 100 | number:'1.0-0') }}%
+                      </span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                      Votre niveau de confiance dans cette traduction
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bouton ajouter traduction -->
+              <button type="button" (click)="addTranslation()"
+                class="w-full py-2 border-2 border-dashed border-gray-600 text-gray-400 rounded-lg hover:border-blue-500 hover:text-blue-400 transition-colors">
+                ➕ Ajouter une autre traduction
+              </button>
             </div>
           </div>
         </div>

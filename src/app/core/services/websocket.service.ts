@@ -19,6 +19,19 @@ export interface TypingStatus {
   isTyping: boolean;
 }
 
+export interface TranslationNotification {
+  type: 'translation_added' | 'translation_validated' | 'translation_voted';
+  wordId: string;
+  word: string;
+  language: string;
+  translatedWord: string;
+  userId: string;
+  username: string;
+  confidence?: number;
+  votes?: number;
+  validationType?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -30,6 +43,7 @@ export class WebSocketService {
   private newMessageSubject = new Subject<Message>();
   private userStatusSubject = new Subject<UserStatus>();
   private typingStatusSubject = new Subject<TypingStatus>();
+  private translationNotificationSubject = new Subject<TranslationNotification>();
   private errorSubject = new Subject<string>();
 
   // Observables publics
@@ -37,6 +51,7 @@ export class WebSocketService {
   public newMessage$ = this.newMessageSubject.asObservable();
   public userStatus$ = this.userStatusSubject.asObservable();
   public typingStatus$ = this.typingStatusSubject.asObservable();
+  public translationNotification$ = this.translationNotificationSubject.asObservable();
   public error$ = this.errorSubject.asObservable();
 
   constructor(private authService: AuthService) {
@@ -165,6 +180,19 @@ export class WebSocketService {
       }
     );
 
+    // Événements de traduction
+    this.socket.on('translation_added', (data: TranslationNotification) => {
+      this.translationNotificationSubject.next(data);
+    });
+
+    this.socket.on('translation_validated', (data: TranslationNotification) => {
+      this.translationNotificationSubject.next(data);
+    });
+
+    this.socket.on('translation_voted', (data: TranslationNotification) => {
+      this.translationNotificationSubject.next(data);
+    });
+
     // Événements d'erreur
     this.socket.on('error', (data: { message: string }) => {
       this.errorSubject.next(data.message);
@@ -240,5 +268,72 @@ export class WebSocketService {
    */
   getConnectionStatus(): Observable<boolean> {
     return this.connectionStatus$;
+  }
+
+  // ===== MÉTHODES POUR LES TRADUCTIONS =====
+
+  /**
+   * Notifier qu'une nouvelle traduction a été ajoutée
+   */
+  notifyTranslationAdded(data: {
+    wordId: string;
+    word: string;
+    language: string;
+    translatedWord: string;
+    confidence: number;
+    validationType: string;
+  }): void {
+    if (this.socket?.connected) {
+      this.socket.emit('translation_added', data);
+    }
+  }
+
+  /**
+   * Notifier qu'une traduction a été validée
+   */
+  notifyTranslationValidated(data: {
+    wordId: string;
+    word: string;
+    language: string;
+    translatedWord: string;
+    action: string;
+  }): void {
+    if (this.socket?.connected) {
+      this.socket.emit('translation_validated', data);
+    }
+  }
+
+  /**
+   * Notifier qu'un vote a été effectué sur une traduction
+   */
+  notifyTranslationVoted(data: {
+    wordId: string;
+    word: string;
+    language: string;
+    translatedWord: string;
+    votes: number;
+    voteValue: number;
+  }): void {
+    if (this.socket?.connected) {
+      this.socket.emit('translation_voted', data);
+    }
+  }
+
+  /**
+   * Rejoindre une room de mot pour recevoir les notifications de traduction
+   */
+  joinWordRoom(wordId: string): void {
+    if (this.socket?.connected) {
+      this.socket.emit('join_word_room', { wordId });
+    }
+  }
+
+  /**
+   * Quitter une room de mot
+   */
+  leaveWordRoom(wordId: string): void {
+    if (this.socket?.connected) {
+      this.socket.emit('leave_word_room', { wordId });
+    }
   }
 }

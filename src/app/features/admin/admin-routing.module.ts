@@ -8,6 +8,7 @@ import { UserRole } from '../../core/models/admin';
 // Import des composants
 import { AdminDashboardComponent } from './components/dashboard/admin-dashboard.component';
 import { UserManagementComponent } from './components/users/user-management.component';
+import { AddLanguageComponent } from './components/languages/add-language.component';
 
 const routes: Routes = [
   {
@@ -36,6 +37,25 @@ const routes: Routes = [
           roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
           title: 'Gestion des utilisateurs',
         },
+      },
+      {
+        path: 'languages',
+        children: [
+          {
+            path: '',
+            redirectTo: 'add',
+            pathMatch: 'full',
+          },
+          {
+            path: 'add',
+            component: AddLanguageComponent,
+            canActivate: [RoleGuard],
+            data: {
+              roles: [UserRole.CONTRIBUTOR, UserRole.ADMIN, UserRole.SUPERADMIN],
+              title: 'Ajouter une langue',
+            },
+          },
+        ],
       },
       {
         path: 'moderation',

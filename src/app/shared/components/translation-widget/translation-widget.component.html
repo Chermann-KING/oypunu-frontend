@@ -1,0 +1,221 @@
+<!-- Widget de traduction -->
+<div class="translation-widget" [class.compact]="compact">
+  <!-- En-tête avec sélecteur de langue -->
+  <div class="translation-header">
+    <h3 class="translation-title">
+      <span class="icon">🌐</span>
+      Traductions
+    </h3>
+
+    <!-- Sélecteur de langue avec dropdown personnalisé -->
+    <div class="language-selector" *ngIf="availableLanguages.length > 0">
+      <app-custom-dropdown [options]="dropdownLanguageOptions" [label]="'Langue cible'"
+        [placeholder]="'Sélectionnez une langue'" (selectionChange)="onLanguageSelectionChange($event)"
+        class="language-dropdown">
+
+        <!-- Template personnalisé pour les options de langue -->
+        <ng-template #optionTemplate let-option>
+          <div class="language-option">
+            <span class="flag">{{ getLanguageFlag(option.code) }}</span>
+            <span class="name">{{ option.name }}</span>
+            <span class="count" *ngIf="option.translationCount > 0">
+              ({{ option.translationCount }})
+            </span>
+            <span class="badge" *ngIf="option.hasTranslations">✓</span>
+          </div>
+        </ng-template>
+      </app-custom-dropdown>
+    </div>
+
+    <!-- Bouton d'ajout (si autorisé) -->
+    <button *ngIf="showAddButton && canAddTranslation && selectedLanguage"
+      class="btn btn-sm btn-primary add-translation-btn" (click)="openAddTranslationModal()" [disabled]="isLoading">
+      <span class="icon">➕</span>
+      Ajouter
+    </button>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="translation-content">
+    <!-- État de chargement -->
+    <div *ngIf="isLoading" class="loading-state">
+      <div class="spinner"></div>
+      <span>Chargement des traductions...</span>
+    </div>
+
+    <!-- Message d'erreur -->
+    <div *ngIf="error && !isLoading" class="error-state">
+      <span class="icon">⚠️</span>
+      <span>{{ error }}</span>
+    </div>
+
+    <!-- Aucune langue sélectionnée -->
+    <div *ngIf="!selectedLanguage && !isLoading && !error" class="empty-state">
+      <span class="icon">🌍</span>
+      <p>Sélectionnez une langue pour voir les traductions disponibles</p>
+    </div>
+
+    <!-- Aucune traduction disponible -->
+    <div *ngIf="selectedLanguage && currentTranslations.length === 0 && !isLoading && !error"
+      class="empty-translations">
+      <span class="icon">📝</span>
+      <p>Aucune traduction disponible en {{ getLanguageName(selectedLanguage) }}</p>
+      <button *ngIf="canAddTranslation" class="btn btn-outline btn-sm" (click)="openAddTranslationModal()">
+        Être le premier à traduire
+      </button>
+    </div>
+
+    <!-- Liste des traductions -->
+    <div *ngIf="currentTranslations.length > 0 && !isLoading" class="translations-list">
+      <div *ngFor="let translation of currentTranslations; trackBy: trackByTranslationId" class="translation-item"
+        [class.high-confidence]="translation.confidence >= 0.8" [class.low-confidence]="translation.confidence < 0.6">
+
+        <!-- Mot traduit principal -->
+        <div class="translation-main">
+          <div class="translated-word">
+            <button type="button" class="word-text word-link" (click)="navigateToTranslationDetails(translation)"
+              [title]="'Voir les détails du mot: ' + translation.translatedWord">
+              {{ translation.translatedWord }}
+            </button>
+            <span class="confidence-badge" [class]="getConfidenceClass(translation.confidence)"
+              [title]="'Confiance: ' + (translation.confidence * 100 | number:'1.0-0') + '%'">
+              {{ (translation.confidence * 100 | number:'1.0-0') }}%
+            </span>
+          </div>
+
+          <!-- Contexte d'usage -->
+          <div *ngIf="translation.context && translation.context.length > 0" class="translation-context">
+            <span class="context-label">Contexte:</span>
+            <span *ngFor="let ctx of translation.context; let last = last" class="context-tag">
+              {{ ctx }}<span *ngIf="!last">, </span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Métadonnées et actions -->
+        <div class="translation-meta">
+          <!-- Informations de création -->
+          <div class="creation-info">
+            <span class="validation-type" [class]="getValidationTypeClass(translation.validationType)">
+              {{ translation.validationType === 'auto' ? '🤖' :
+              translation.validationType === 'learned' ? '🧠' : '👤' }}
+            </span>
+
+            <span *ngIf="translation.createdBy" class="creator">
+              par {{ translation.createdBy.username }}
+            </span>
+
+            <span class="creation-date">
+              {{ formatDate(translation.createdAt) }}
+            </span>
+          </div>
+
+          <!-- Actions de vote -->
+          <div class="vote-actions" *ngIf="canVote">
+            <button class="vote-btn vote-up" [class.disabled]="!canVoteForTranslation(translation)"
+              [disabled]="!canVoteForTranslation(translation)" (click)="voteForTranslation(translation, 1)"
+              [title]="'Voter positivement pour cette traduction'">
+              👍
+            </button>
+
+            <span class="vote-count" [class.positive]="translation.votes > 0" [class.negative]="translation.votes < 0">
+              {{ translation.votes }}
+            </span>
+
+            <button class="vote-btn vote-down" [class.disabled]="!canVoteForTranslation(translation)"
+              [disabled]="!canVoteForTranslation(translation)" (click)="voteForTranslation(translation, -1)"
+              [title]="'Voter négativement pour cette traduction'">
+              👎
+            </button>
+          </div>
+        </div>
+
+        <!-- Validation par admin (si nécessaire) -->
+        <div *ngIf="translation.validatedBy" class="validation-info">
+          <span class="validated-icon">✅</span>
+          <span class="validated-text">
+            Validé par {{ translation.validatedBy.username }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal d'ajout de traduction -->
+<div *ngIf="showAddModal" class="modal-overlay" (click)="closeAddTranslationModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h4>Ajouter une traduction</h4>
+      <button class="modal-close" (click)="closeAddTranslationModal()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <form (ngSubmit)="submitNewTranslation()" #translationForm="ngForm">
+        <!-- Mot à traduire (lecture seule) -->
+        <div class="form-group">
+          <label>Mot source</label>
+          <input type="text" [value]="word.word" readonly class="form-control readonly">
+        </div>
+
+        <!-- Langue cible (lecture seule) -->
+        <div class="form-group">
+          <label>Langue cible</label>
+          <div class="language-display">
+            <span class="flag">{{ getLanguageFlag(selectedLanguage!) }}</span>
+            <span class="name">{{ getLanguageName(selectedLanguage!) }}</span>
+          </div>
+        </div>
+
+        <!-- Traduction -->
+        <div class="form-group">
+          <label for="translatedWord">Traduction *</label>
+          <input id="translatedWord" type="text" [(ngModel)]="newTranslation.word" name="translatedWord"
+            class="form-control" placeholder="Entrez la traduction" required #translatedWordInput="ngModel">
+
+          <div *ngIf="translatedWordInput.invalid && translatedWordInput.touched" class="error-message">
+            La traduction est obligatoire
+          </div>
+        </div>
+
+        <!-- Contexte d'usage (optionnel) -->
+        <div class="form-group">
+          <label for="context">Contexte d'usage</label>
+          <input id="context" type="text" [(ngModel)]="newTranslation.context" name="context" class="form-control"
+            placeholder="Ex: médical, familier, technique...">
+          <small class="form-help">
+            Précisez le domaine ou contexte d'usage (optionnel)
+          </small>
+        </div>
+
+        <!-- Niveau de confiance -->
+        <div class="form-group">
+          <label for="confidence">Niveau de confiance</label>
+          <div class="confidence-slider">
+            <input id="confidence" type="range" [(ngModel)]="newTranslation.confidence" name="confidence" min="0.1"
+              max="1" step="0.1" class="slider">
+            <div class="confidence-display">
+              <span [class]="getConfidenceClass(newTranslation.confidence)">
+                {{ (newTranslation.confidence * 100 | number:'1.0-0') }}%
+              </span>
+            </div>
+          </div>
+          <small class="form-help">
+            Indiquez votre niveau de certitude pour cette traduction
+          </small>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeAddTranslationModal()">
+        Annuler
+      </button>
+      <button type="submit" class="btn btn-primary" [disabled]="!isValidNewTranslation() || isLoading"
+        (click)="submitNewTranslation()">
+        <span *ngIf="isLoading" class="spinner-sm"></span>
+        Ajouter la traduction
+      </button>
+    </div>
+  </div>
+</div>

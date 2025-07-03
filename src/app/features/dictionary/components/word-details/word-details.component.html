@@ -92,6 +92,12 @@
             class="border-b-2 py-4 px-1 font-medium text-sm  cursor-pointer">
             Mots associés
           </button>
+          <button (click)="switchTab('translations')" [class.border-purple-500]="activeTab === 'translations'"
+            [class.text-purple-400]="activeTab === 'translations'" [class.border-transparent]="activeTab !== 'translations'"
+            [class.text-gray-400]="activeTab !== 'translations'"
+            class="border-b-2 py-4 px-1 font-medium text-sm cursor-pointer">
+            🌐 Traductions
+          </button>
         </nav>
       </div>
 
@@ -210,6 +216,11 @@
           <div *ngIf="!word.meanings || word.meanings.length === 0" class="text-center py-8">
             <p class="text-lg text-gray-400">Aucun mot associé disponible.</p>
           </div>
+        </div>
+
+        <!-- Traductions -->
+        <div *ngIf="activeTab === 'translations'" class="mt-6">
+          <app-word-translations [word]="word"></app-word-translations>
         </div>
       </div>
 

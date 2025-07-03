@@ -367,10 +367,18 @@
           </div>
         </div>
 
-        <!-- Translations -->
+        <!-- Traductions Intelligentes -->
         <div>
           <div class="flex items-center justify-between mb-4">
-            <h4 class="text-lg font-medium text-white">Traductions</h4>
+            <div>
+              <h4 class="text-lg font-medium text-white flex items-center">
+                🌐 Traductions Intelligentes
+                <span class="ml-2 text-xs bg-blue-600 text-white px-2 py-1 rounded">IA</span>
+              </h4>
+              <p class="text-sm text-gray-400 mt-1">
+                Recherchez des mots existants ou créez de nouveaux liens entre langues
+              </p>
+            </div>
             <button type="button" (click)="addTranslation()"
               class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
               <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -381,12 +389,19 @@
             </button>
           </div>
 
-          <div formArrayName="translations" class="space-y-4">
+          <div formArrayName="translations" class="space-y-6">
             <div *ngFor="let translation of translationsArray.controls; let i = index" [formGroupName]="i"
-              class="border border-gray-800 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-4">
-                <h5 class="text-md font-medium text-white">Traduction {{ i + 1 }}</h5>
-                <button type="button" (click)="removeTranslation(i)" class="text-red-600 hover:text-red-800">
+              class="border border-gray-700 rounded-lg p-5 bg-gray-900/50">
+
+              <!-- En-tête de la traduction -->
+              <div class="flex items-center justify-between mb-6">
+                <h5 class="text-md font-medium text-white flex items-center">
+                  🔗 Traduction {{ i + 1 }}
+                  <span *ngIf="hasSelectedWord(i)" class="ml-2 text-xs bg-green-600 text-white px-2 py-1 rounded">
+                    Mot lié
+                  </span>
+                </h5>
+                <button type="button" (click)="removeTranslation(i)" class="text-red-400 hover:text-red-300">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
@@ -395,35 +410,143 @@
                 </button>
               </div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label [for]="'translationLanguage' + i" class="block text-sm font-medium text-gray-400">
-                    Langue
-                  </label>
-                  <input type="text" [id]="'translationLanguage' + i" formControlName="language"
-                    class="mt-1 block w-full border-gray-700 bg-gray-950 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                    placeholder="Ex: en, es, de">
-                </div>
-
-                <div>
-                  <label [for]="'translatedWord' + i" class="block text-sm font-medium text-gray-400">
-                    Mot traduit
-                  </label>
-                  <input type="text" [id]="'translatedWord' + i" formControlName="translatedWord"
-                    class="mt-1 block w-full border-gray-700 bg-gray-950 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                    placeholder="Traduction...">
+              <!-- Sélection de langue intelligente -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  🌍 Langue de traduction*
+                </label>
+                <select formControlName="language" (change)="onTranslationLanguageChange(i)"
+                  class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  [ngClass]="{'border-red-500': translation.get('language')?.invalid && translation.get('language')?.touched}">
+                  <option value="">Sélectionnez une langue</option>
+                  <option *ngFor="let lang of getAvailableTargetLanguages()" [value]="lang.code">
+                    {{ lang.flag }} {{ lang.name }}
+                  </option>
+                </select>
+                <div *ngIf="translation.get('language')?.invalid && translation.get('language')?.touched"
+                  class="text-red-400 text-xs mt-1">
+                  La langue est requise
                 </div>
               </div>
 
-              <div class="mt-4">
-                <label class="block text-sm font-medium text-gray-400 mb-2">Contexte</label>
+              <!-- Recherche intelligente de mots -->
+              <div *ngIf="translation.get('language')?.value" class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  🔍 Rechercher un mot existant
+                </label>
+                <div class="relative">
+                  <input type="text" formControlName="searchTerm"
+                    class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                    placeholder="Tapez pour rechercher un mot existant..." autocomplete="off">
+                  <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <svg *ngIf="isSearchingWords[i]" class="animate-spin h-4 w-4 text-blue-400" fill="none"
+                      viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                      </path>
+                    </svg>
+                    <svg *ngIf="!isSearchingWords[i]" class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                  </div>
+                </div>
+
+                <!-- Résultats de recherche -->
+                <div *ngIf="translationSearchResults[i] && translationSearchResults[i].length > 0"
+                  class="mt-2 bg-gray-800 border border-gray-600 rounded-md max-h-60 overflow-y-auto">
+                  <div class="p-2">
+                    <div class="text-xs text-gray-400 mb-2">{{ translationSearchResults[i].length }} résultat(s)
+                      trouvé(s):</div>
+                    <div *ngFor="let word of translationSearchResults[i]" (click)="selectExistingWord(i, word)"
+                      class="p-3 hover:bg-gray-700 cursor-pointer rounded-md border-l-4 border-blue-500 mb-2 last:mb-0">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <span class="font-medium text-white">{{ word.word }}</span>
+                          <span class="text-gray-300 ml-2 text-sm">{{ getLanguageName(word.language) }}</span>
+                        </div>
+                        <button type="button" class="text-blue-400 text-xs hover:text-blue-300">
+                          Sélectionner
+                        </button>
+                      </div>
+                      <div
+                        *ngIf="word.meanings && word.meanings[0] && word.meanings[0].definitions && word.meanings[0].definitions[0] && word.meanings[0].definitions[0].definition"
+                        class="text-sm text-gray-400 mt-1 italic">
+                        {{ word.meanings[0].definitions[0].definition.substring(0, 100) }}...
+                      </div>
+                      <div *ngIf="getCategoryName(word.categoryId)" class="text-xs text-blue-400 mt-1">
+                        Catégorie: {{ getCategoryName(word.categoryId) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Option de création si aucun résultat -->
+                <div *ngIf="showCreateWordOptions[i]"
+                  class="mt-2 bg-orange-900/30 border border-orange-600 rounded-md p-4">
+                  <div class="flex items-start">
+                    <span class="text-orange-400 mr-2">💡</span>
+                    <div class="flex-1">
+                      <p class="text-orange-200 text-sm">
+                        Aucun mot trouvé pour "{{ translation.get('searchTerm')?.value }}" en {{
+                        getLanguageName(translation.get('language')?.value) }}.
+                      </p>
+                      <button type="button" (click)="proposeCreateNewWord(i)"
+                        class="mt-2 px-3 py-1 bg-orange-600 text-white rounded text-sm hover:bg-orange-700">
+                        ➕ Créer ce mot
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mot sélectionné (aperçu) -->
+              <div *ngIf="hasSelectedWord(i)" class="mb-4 bg-green-900/30 border border-green-600 rounded-md p-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="text-green-400 mr-2">✅</span>
+                    <span class="text-green-200 font-medium">Mot sélectionné:</span>
+                    <span class="text-white ml-2">{{ getSelectedWord(i)?.word }}</span>
+                    <span class="text-green-300 ml-2">({{ getLanguageName(getSelectedWord(i)?.language || '') }})</span>
+                  </div>
+                  <button type="button" (click)="clearSelectedWord(i)"
+                    class="text-green-400 hover:text-green-300 text-sm">
+                    Changer
+                  </button>
+                </div>
+                <div *ngIf="getSelectedWord(i)?.meanings?.[0]?.definitions?.[0]?.definition"
+                  class="text-sm text-green-300 mt-2 italic">
+                  {{ getSelectedWord(i)?.meanings?.[0]?.definitions?.[0]?.definition }}
+                </div>
+              </div>
+
+              <!-- Champ manuel (fallback) -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">
+                  ✍️ Ou saisie manuelle
+                </label>
+                <input type="text" formControlName="translatedWord"
+                  class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  [ngClass]="{'border-red-500': translation.get('translatedWord')?.invalid && translation.get('translatedWord')?.touched}"
+                  placeholder="Ou tapez manuellement la traduction...">
+                <div *ngIf="translation.get('translatedWord')?.invalid && translation.get('translatedWord')?.touched"
+                  class="text-red-400 text-xs mt-1">
+                  La traduction est requise
+                </div>
+              </div>
+
+              <!-- Contexte -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">📝 Contexte d'usage</label>
                 <div formArrayName="context" class="space-y-2">
                   <div *ngFor="let context of getContextArray(i).controls; let j = index" class="flex">
                     <input [formControlName]="j"
-                      class="flex-1 border-gray-700 bg-gray-950 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-                      placeholder="Contexte d'utilisation...">
+                      class="flex-1 border-gray-600 bg-gray-800 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
+                      placeholder="Ex: formel, familier, technique...">
                     <button type="button" (click)="removeArrayItem(getContextArray(i), j)"
-                      class="ml-2 text-red-600 hover:text-red-800">
+                      class="ml-2 text-red-400 hover:text-red-300">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
                         </path>
@@ -431,9 +554,24 @@
                     </button>
                   </div>
                   <button type="button" (click)="addArrayItem(getContextArray(i))"
-                    class="text-sm text-purple-600 hover:text-purple-800">
+                    class="text-sm text-purple-400 hover:text-purple-300">
                     + Ajouter un contexte
                   </button>
+                </div>
+              </div>
+
+              <!-- Niveau de confiance -->
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">🎯 Niveau de confiance</label>
+                <div class="flex items-center space-x-3">
+                  <input type="range" formControlName="confidence" min="0" max="1" step="0.1"
+                    class="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer" />
+                  <span class="text-sm text-gray-300 min-w-[3rem]">
+                    {{ (translation.get('confidence')?.value * 100 | number:'1.0-0') }}%
+                  </span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  Votre niveau de confiance dans cette traduction (0-100%)
                 </div>
               </div>
             </div>

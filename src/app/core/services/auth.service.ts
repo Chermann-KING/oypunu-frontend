@@ -324,4 +324,32 @@ export class AuthService {
     localStorage.setItem('user', JSON.stringify(user));
     this._currentUserSubject.next(user);
   }
+
+  /**
+   * Vérifie si l'utilisateur a un rôle minimum requis
+   */
+  hasMinimumRole(requiredRole: string): boolean {
+    const user = this.getCurrentUser();
+    if (!user) return false;
+
+    const roleHierarchy = {
+      'user': 1,
+      'contributor': 2,
+      'admin': 3,
+      'superadmin': 4
+    };
+
+    const userLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
+    const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
+
+    return userLevel >= requiredLevel;
+  }
+
+  /**
+   * Vérifie si l'utilisateur a un rôle spécifique
+   */
+  hasRole(role: string): boolean {
+    const user = this.getCurrentUser();
+    return user ? user.role === role : false;
+  }
 }

@@ -31,18 +31,21 @@ export class AddWordComponent implements OnInit, OnDestroy {
   errorMessage = '';
   successMessage = '';
 
-  // Options pour les langages
-  languages = [
-    { code: 'fr', name: 'Français' },
-    { code: 'en', name: 'Anglais' },
-    { code: 'es', name: 'Espagnol' },
-    { code: 'de', name: 'Allemand' },
-    { code: 'it', name: 'Italien' },
-    { code: 'pt', name: 'Portugais' },
-    { code: 'ru', name: 'Russe' },
-    { code: 'ja', name: 'Japonais' },
-    { code: 'zh', name: 'Chinois' },
-  ];
+  // ✨ NOUVEAU : Langues chargées dynamiquement depuis la base de données
+  languages: { id: string; code: string; name: string; nativeName?: string; wordCount?: number }[] = [];
+
+  // Propriétés pour le système de traduction intelligente
+  similarWords: any[] = [];
+  isCheckingSimilarity = false;
+  showSimilarityWarning = false;
+  selectedSimilarWord: any = null;
+  showTranslationSection = false;
+
+  // Propriétés pour la recherche de mots existants
+  translationWordSearch: { [key: number]: string } = {};
+  translationWordResults: { [key: number]: any[] } = {};
+  isSearchingTranslationWords: { [key: number]: boolean } = {};
+  selectedTranslationWords: { [key: number]: any } = {};
 
   // Options pour les parties du discours
   partsOfSpeech = [
@@ -73,31 +76,42 @@ export class AddWordComponent implements OnInit, OnDestroy {
     // Initialisation du formulaire
     this.wordForm = this._fb.group({
       word: ['', [Validators.required, Validators.minLength(1)]],
-      language: ['', Validators.required],
+      languageId: ['', Validators.required], // ✨ NOUVEAU : utilisation de languageId
+      language: [''], // ✨ TRANSITION : garde l'ancien champ pour compatibilité
       pronunciation: [''],
       etymology: [''],
       categoryId: [''],
       meanings: this._fb.array([this.createMeaning()]),
+      translations: this._fb.array([]),
     });
   }
 
   ngOnInit(): void {
+    // ✨ NOUVEAU : Charger les langues disponibles depuis la base de données
+    this.loadAvailableLanguages();
+
     // Chargement des catégories au démarrage
     this.wordForm.get('categoryId')?.valueChanges.subscribe((categoryId) => {
       this.informationRecue += categoryId;
     });
     // Ajout d'un écouteur pour le changement de langue
     this.wordForm
-      .get('language')
+      .get('languageId')
       ?.valueChanges.pipe(takeUntil(this._destroy$))
-      .subscribe((selectedLanguage) => {
-        if (selectedLanguage) {
-          this.informationRecue += selectedLanguage;
-          // Charger les catégories pour la langue sélectionnée
-          this._loadCategoriesByLanguage(selectedLanguage);
+      .subscribe((selectedLanguageId) => {
+        if (selectedLanguageId) {
+          this.informationRecue += selectedLanguageId;
+          // Trouver la langue correspondante et son code pour charger les catégories
+          const selectedLanguage = this.languages.find(lang => lang.id === selectedLanguageId);
+          if (selectedLanguage) {
+            this._loadCategoriesByLanguage(selectedLanguage.code);
+            // Synchroniser l'ancien champ language pour compatibilité
+            this.wordForm.get('language')?.setValue(selectedLanguage.code, { emitEvent: false });
+          }
         } else {
           // Si aucune langue n'est sélectionnée, vider la liste des catégories
           this.categories = [];
+          this.wordForm.get('language')?.setValue('', { emitEvent: false });
         }
       });
   }
@@ -110,6 +124,10 @@ export class AddWordComponent implements OnInit, OnDestroy {
   // Getters pour accéder aux contrôles du formulaire
   get meanings(): FormArray {
     return this.wordForm.get('meanings') as FormArray;
+  }
+
+  get translations(): FormArray {
+    return this.wordForm.get('translations') as FormArray;
   }
 
   // Création d'un nouveau contrôle de sens
@@ -198,6 +216,36 @@ export class AddWordComponent implements OnInit, OnDestroy {
       return meaning;
     });
 
+    // Nettoyage des translations - suppression des propriétés non autorisées
+    if (formData.translations && formData.translations.length > 0) {
+      formData.translations = formData.translations
+        .filter((translation: any) => (translation.languageId || translation.language) && translation.translatedWord)
+        .map((translation: any) => {
+          // Supprimer les propriétés non autorisées par le backend
+          const { targetWordId, searchTerm, selectedWordId, ...cleanTranslation } = translation;
+          
+          // Convertir context string en tableau si nécessaire
+          if (cleanTranslation.context && typeof cleanTranslation.context === 'string') {
+            const contextStr = cleanTranslation.context.trim();
+            if (contextStr) {
+              // Séparer par virgules et nettoyer
+              cleanTranslation.context = contextStr
+                .split(',')
+                .map((item: string) => item.trim())
+                .filter((item: string) => item !== '');
+            } else {
+              // Contexte vide, supprimer la propriété
+              delete cleanTranslation.context;
+            }
+          } else if (!cleanTranslation.context || (Array.isArray(cleanTranslation.context) && cleanTranslation.context.length === 0)) {
+            // Supprimer context s'il est vide
+            delete cleanTranslation.context;
+          }
+          
+          return cleanTranslation;
+        });
+    }
+
     return formData;
   }
 
@@ -227,7 +275,7 @@ export class AddWordComponent implements OnInit, OnDestroy {
         return;
       }
 
-      if (!submitData.language || submitData.language.trim() === '') {
+      if (!submitData.languageId || submitData.languageId.trim() === '') {
         this.errorMessage = 'La langue est requise';
         this.isSubmitting = false;
         return;
@@ -281,7 +329,11 @@ export class AddWordComponent implements OnInit, OnDestroy {
 
       // Construction du FormData avec validation
       formData.append('word', submitData.word.trim());
-      formData.append('language', submitData.language.trim());
+      formData.append('languageId', submitData.languageId.trim());
+      // Conserver language pour compatibilité pendant la transition
+      if (submitData.language) {
+        formData.append('language', submitData.language.trim());
+      }
       formData.append('pronunciation', submitData.pronunciation || '');
       formData.append('etymology', submitData.etymology || '');
 
@@ -440,6 +492,7 @@ export class AddWordComponent implements OnInit, OnDestroy {
     // Réinitialiser les contrôles simples
     this.wordForm.patchValue({
       word: '',
+      languageId: '',
       language: '',
       pronunciation: '',
       etymology: '',
@@ -475,5 +528,165 @@ export class AddWordComponent implements OnInit, OnDestroy {
     if (this.audioPlayer && this.audioPreviewUrl) {
       this.audioPlayer.nativeElement.play();
     }
+  }
+
+  // Méthodes pour la gestion des traductions
+  toggleTranslationSection(): void {
+    this.showTranslationSection = !this.showTranslationSection;
+  }
+
+  createTranslation(): FormGroup {
+    return this._fb.group({
+      languageId: ['', Validators.required], // ✨ NOUVEAU : utilisation de languageId
+      language: [''], // ✨ TRANSITION : garde l'ancien champ pour compatibilité
+      translatedWord: ['', Validators.required],
+      context: [''],
+      confidence: [0.8, [Validators.min(0), Validators.max(1)]]
+    });
+  }
+
+  addTranslation(): void {
+    this.translations.push(this.createTranslation());
+  }
+
+  removeTranslation(index: number): void {
+    this.translations.removeAt(index);
+  }
+
+  getAvailableLanguagesForTranslation(index: number): any[] {
+    const sourceLanguageId = this.wordForm.get('languageId')?.value;
+    return this.languages.filter(lang => lang.id !== sourceLanguageId);
+  }
+
+  getLanguageName(code: string): string {
+    const language = this.languages.find(lang => lang.code === code);
+    return language ? language.name : code;
+  }
+
+  getLanguageNameById(id: string): string {
+    const language = this.languages.find(lang => lang.id === id);
+    return language ? language.name : id;
+  }
+
+  getLanguageCodeById(id: string): string {
+    const language = this.languages.find(lang => lang.id === id);
+    return language ? language.code : '';
+  }
+
+  // Méthode de tracking pour optimiser le rendu
+  trackByLanguageId(index: number, language: any): string {
+    return language.id;
+  }
+
+  // Méthodes pour la recherche de mots existants
+  searchWordsInTargetLanguage(translationIndex: number, language: string, searchTerm: string): void {
+    if (!searchTerm || searchTerm.length < 2) {
+      this.translationWordResults[translationIndex] = [];
+      return;
+    }
+
+    if (!language) {
+      return;
+    }
+
+    this.isSearchingTranslationWords[translationIndex] = true;
+    
+    // Appel API réel pour chercher des mots existants
+    this._dictionaryService.searchWords({
+      query: searchTerm,
+      languages: [language],
+      limit: 10,
+      page: 1
+    }).pipe(takeUntil(this._destroy$))
+    .subscribe({
+      next: (results) => {
+        this.translationWordResults[translationIndex] = results.words || [];
+        this.isSearchingTranslationWords[translationIndex] = false;
+        console.log(`🔍 Trouvé ${results.words?.length || 0} mots en ${language} pour "${searchTerm}":`, results.words);
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la recherche de mots:', error);
+        this.translationWordResults[translationIndex] = [];
+        this.isSearchingTranslationWords[translationIndex] = false;
+      }
+    });
+  }
+
+  selectTranslationWord(translationIndex: number, word: any): void {
+    this.selectedTranslationWords[translationIndex] = word;
+    
+    const translationControl = this.translations.at(translationIndex);
+    translationControl.patchValue({
+      translatedWord: word.word
+    });
+
+    this.translationWordResults[translationIndex] = [];
+    this.translationWordSearch[translationIndex] = word.word;
+  }
+
+  onTranslationLanguageChange(translationIndex: number): void {
+    this.translationWordSearch[translationIndex] = '';
+    this.translationWordResults[translationIndex] = [];
+    this.selectedTranslationWords[translationIndex] = null;
+    
+    const translationControl = this.translations.at(translationIndex);
+    const selectedLanguageId = translationControl.get('languageId')?.value;
+    
+    // Synchroniser l'ancien champ language pour compatibilité
+    if (selectedLanguageId) {
+      const selectedLanguage = this.languages.find(lang => lang.id === selectedLanguageId);
+      if (selectedLanguage) {
+        translationControl.patchValue({
+          language: selectedLanguage.code,
+          translatedWord: '',
+          targetWordId: null
+        }, { emitEvent: false });
+      }
+    } else {
+      translationControl.patchValue({
+        language: '',
+        translatedWord: '',
+        targetWordId: null
+      }, { emitEvent: false });
+    }
+  }
+
+  // Méthodes pour les suggestions de similarité
+  selectSimilarWord(suggestion: any): void {
+    this.selectedSimilarWord = suggestion;
+  }
+
+  ignoreSuggestions(): void {
+    this.showSimilarityWarning = false;
+    this.similarWords = [];
+  }
+
+  /**
+   * ✨ NOUVELLE MÉTHODE : Charge les langues disponibles depuis la base de données
+   */
+  private loadAvailableLanguages(): void {
+    console.log('🔄 Tentative de chargement des langues depuis l\'API...');
+    
+    this._dictionaryService.getAvailableLanguages()
+      .pipe(takeUntil(this._destroy$))
+      .subscribe({
+        next: (languages) => {
+          console.log('✅ Langues reçues depuis l\'API:', languages);
+          this.languages = languages;
+          console.log('🌍 Langues disponibles chargées dans le composant:', this.languages);
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des langues:', error);
+          console.log('🔄 Utilisation du fallback...');
+          // Fallback vers une liste par défaut si l'API ne répond pas
+          this.languages = [
+            { id: 'fallback-fr', code: 'fr', name: 'Français', wordCount: 42 },
+            { id: 'fallback-en', code: 'en', name: 'Anglais', wordCount: 28 },
+            { id: 'fallback-es', code: 'es', name: 'Espagnol', wordCount: 15 },
+            { id: 'fallback-de', code: 'de', name: 'Allemand', wordCount: 8 },
+          ];
+          console.log('🌍 Langues fallback chargées:', this.languages);
+        }
+      });
   }
 }

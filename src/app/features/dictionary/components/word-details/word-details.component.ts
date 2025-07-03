@@ -18,7 +18,8 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
   isLoading = true;
   error = '';
   isAuthenticated = false;
-  activeTab: 'definitions' | 'examples' | 'related' = 'definitions';
+  activeTab: 'definitions' | 'examples' | 'related' | 'translations' =
+    'definitions';
   canEdit = false;
   currentUser: any = null;
 
@@ -57,6 +58,9 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // S'assurer que l'onglet par défaut est toujours 'definitions'
+    this.activeTab = 'definitions';
+
     // Vérifier si l'utilisateur est authentifié
     this._authService.currentUser$
       .pipe(takeUntil(this._destroy$))
@@ -68,6 +72,8 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
     this._route.paramMap.pipe(takeUntil(this._destroy$)).subscribe((params) => {
       const wordId = params.get('id');
       if (wordId) {
+        // Réinitialiser l'onglet à 'definitions' pour chaque nouveau mot
+        this.activeTab = 'definitions';
         this.loadWord(wordId);
       } else {
         this.error = 'Identifiant de mot manquant';
@@ -147,7 +153,9 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
     }
   }
 
-  switchTab(tab: 'definitions' | 'examples' | 'related'): void {
+  switchTab(
+    tab: 'definitions' | 'examples' | 'related' | 'translations'
+  ): void {
     this.activeTab = tab;
   }
 
@@ -223,29 +231,19 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
 
   private _checkEditPermissions(): void {
     this.canEdit = false;
-    if (this.currentUser && this.word) {
-      if (
-        this.currentUser.role === 'admin' ||
-        this.currentUser.role === 'superadmin'
-      ) {
-        this.canEdit = true;
-        return;
-      }
-
-      const createdById =
-        this.word.createdBy && typeof this.word.createdBy === 'object'
-          ? (this.word.createdBy as any)._id || (this.word.createdBy as any).id
-          : this.word.createdBy;
-
-      if (
-        createdById &&
-        (this.currentUser as any)._id &&
-        createdById === (this.currentUser as any)._id &&
-        this.word.status !== 'rejected'
-      ) {
-        this.canEdit = true;
-        return;
-      }
+    if (this.word && this.isAuthenticated) {
+      this._dictionaryService
+        .canUserEditWord(this.word.id)
+        .pipe(takeUntil(this._destroy$))
+        .subscribe({
+          next: (response) => {
+            this.canEdit = response.canEdit;
+          },
+          error: (error) => {
+            console.error('Error checking edit permissions:', error);
+            this.canEdit = false;
+          }
+        });
     }
   }
 

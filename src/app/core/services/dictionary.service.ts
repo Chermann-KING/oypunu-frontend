@@ -97,22 +97,23 @@ export class DictionaryService {
       .set('page', params.page?.toString() || '1')
       .set('limit', params.limit?.toString() || '10');
 
+    // Solution simple : envoyer les tableaux comme des strings séparées par des virgules
     if (params.languages && params.languages.length) {
-      params.languages.forEach((lang) => {
-        httpParams = httpParams.append('languages', lang);
-      });
+      // Joindre les langues avec des virgules
+      httpParams = httpParams.set('languages', params.languages.join(','));
     }
 
     if (params.categories && params.categories.length) {
-      params.categories.forEach((cat) => {
-        httpParams = httpParams.append('categories', cat);
-      });
+      // Joindre les catégories avec des virgules
+      httpParams = httpParams.set('categories', params.categories.join(','));
     }
 
     if (params.partsOfSpeech && params.partsOfSpeech.length) {
-      params.partsOfSpeech.forEach((pos) => {
-        httpParams = httpParams.append('partsOfSpeech', pos);
-      });
+      // Joindre les parties du discours avec des virgules
+      httpParams = httpParams.set(
+        'partsOfSpeech',
+        params.partsOfSpeech.join(',')
+      );
     }
 
     if (params.query && params.query.trim() !== '') {
@@ -676,5 +677,21 @@ export class DictionaryService {
       ...word,
       isFavorite: favorites.some((f) => f.id === word.id),
     };
+  }
+
+  /**
+   * ✨ NOUVELLE MÉTHODE : Récupère les langues disponibles avec comptage des mots
+   */
+  getAvailableLanguages(): Observable<any[]> {
+    return this._http.get<any[]>(`${this._WORDS_API_URL}/available-languages`).pipe(
+      tap(languages => {
+        console.log('🌍 Langues disponibles récupérées:', languages);
+      }),
+      catchError(error => {
+        console.error('❌ Erreur lors de la récupération des langues:', error);
+        // Retourner une liste vide en cas d'erreur
+        return of([]);
+      })
+    );
   }
 }

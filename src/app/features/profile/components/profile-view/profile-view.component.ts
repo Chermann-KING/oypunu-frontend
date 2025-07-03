@@ -46,13 +46,16 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     this.isOwnProfile = true;
     this.isLoading = true;
 
-    const profileSub = forkJoin({
-      profile: this.profileService.getProfile(),
-      stats: this.profileService.getUserStats(),
-    }).subscribe({
-      next: ({ profile, stats }) => {
+    const profileSub = this.profileService.getProfile().subscribe({
+      next: (profile) => {
         this.user = profile;
-        this.userStats = stats;
+        // Statistiques temporaires en attendant la correction du backend
+        this.userStats = {
+          totalWordsAdded: (profile as any).totalWordsAdded || 0,
+          totalCommunityPosts: (profile as any).totalCommunityPosts || 0,
+          favoriteWordsCount: (profile as any).favoriteWords?.length || 0,
+          joinDate: (profile as any).createdAt || new Date()
+        };
         this.isLoading = false;
       },
       error: (error) => {
@@ -119,5 +122,10 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
   getInitials(): string {
     if (!this.user?.username) return '';
     return this.user.username.charAt(0).toUpperCase();
+  }
+
+  get canProposeLanguages(): boolean {
+    const currentUser = this.authService.getCurrentUser();
+    return !!(currentUser && currentUser.role && ['contributor', 'admin', 'superadmin'].includes(currentUser.role));
   }
 }

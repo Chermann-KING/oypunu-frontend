@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subscription, Observable } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
 import { AdminService } from '../../../../core/services/admin.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { PermissionService } from '../../services/permission.service';
@@ -20,6 +21,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   systemMetrics: any = null;
   isLoading = true;
   errorMessage = '';
+  successMessage = '';
 
   // Permissions pour l'affichage conditionnel (initialisées dans ngOnInit)
   canAccessUserManagement$!: Observable<boolean>;
@@ -37,11 +39,23 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   constructor(
     private adminService: AdminService,
     private authService: AuthService,
-    private permissionService: PermissionService
+    private permissionService: PermissionService,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
     console.log('🚀 AdminDashboard: Initialisation du tableau de bord');
+
+    // Vérifier les paramètres de succès
+    this.route.queryParams.subscribe(params => {
+      if (params['success'] === 'language-proposed') {
+        this.successMessage = '🎉 Langue proposée avec succès ! Elle sera examinée par un administrateur.';
+        // Effacer le message après 5 secondes
+        setTimeout(() => {
+          this.successMessage = '';
+        }, 5000);
+      }
+    });
 
     // Initialiser les observables de permissions
     this.canAccessUserManagement$ =

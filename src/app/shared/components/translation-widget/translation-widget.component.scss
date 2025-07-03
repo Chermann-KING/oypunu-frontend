@@ -1,0 +1,378 @@
+.translation-widget {
+  @apply bg-gray-900 rounded-lg shadow-sm border border-gray-800 p-6;
+
+  &.compact {
+    @apply p-4;
+
+    .translation-title {
+      @apply text-lg;
+    }
+  }
+}
+
+// En-tête du widget
+.translation-header {
+  @apply flex items-center justify-between mb-4 pb-3 border-b border-gray-800;
+
+  .translation-title {
+    @apply text-xl font-semibold text-white flex items-center gap-2;
+
+    .icon {
+      @apply text-blue-400;
+    }
+  }
+
+  .language-selector {
+    @apply flex-1 max-w-xs mx-4;
+  }
+
+  .add-translation-btn {
+    @apply flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md
+           hover:bg-blue-700 transition-colors duration-200;
+
+    &:disabled {
+      @apply opacity-50 cursor-not-allowed;
+    }
+
+    .icon {
+      @apply text-sm;
+    }
+  }
+}
+
+// Dropdown de langue personnalisé
+.language-option {
+  @apply flex items-center gap-3 p-2;
+
+  .flag {
+    @apply text-lg;
+  }
+
+  .name {
+    @apply flex-1 text-gray-300;
+  }
+
+  .count {
+    @apply text-sm text-gray-500;
+  }
+
+  .badge {
+    @apply text-green-400 font-bold;
+  }
+}
+
+// Contenu principal
+.translation-content {
+  @apply min-h-[120px];
+}
+
+// États vides et de chargement
+.loading-state,
+.error-state,
+.empty-state,
+.empty-translations {
+  @apply flex items-center justify-center gap-3 py-8 text-gray-400;
+
+  .icon {
+    @apply text-2xl;
+  }
+
+  .spinner {
+    @apply w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin;
+  }
+}
+
+.error-state {
+  @apply text-red-400 bg-red-900/20 p-4 rounded-md border border-red-800;
+}
+
+.empty-translations {
+  @apply flex-col gap-4;
+
+  p {
+    @apply text-center;
+  }
+}
+
+// Liste des traductions
+.translations-list {
+  @apply space-y-4;
+}
+
+.translation-item {
+  @apply bg-gray-800 rounded-lg p-4 border-l-4 border-gray-700 transition-all duration-200;
+
+  &.high-confidence {
+    @apply border-green-500 bg-green-900/20;
+  }
+
+  &.low-confidence {
+    @apply border-orange-500 bg-orange-900/20;
+  }
+
+  &:hover {
+    @apply shadow-sm bg-gray-700;
+  }
+}
+
+// Contenu principal de la traduction
+.translation-main {
+  @apply mb-3;
+
+  .translated-word {
+    @apply flex items-center justify-between mb-2;
+
+    .word-text {
+      @apply text-lg font-semibold text-white;
+
+      &.word-link {
+        @apply bg-transparent border-none p-0 cursor-pointer transition-colors duration-200;
+        @apply hover:text-blue-400 hover:underline focus:outline-none focus:text-blue-400 focus:underline;
+
+        &:hover {
+          @apply transform-none; // Éviter les transformations inattendues
+        }
+      }
+    }
+
+    .confidence-badge {
+      @apply px-2 py-1 rounded-full text-xs font-medium;
+
+      &.confidence-high {
+        @apply bg-green-800 text-green-300;
+      }
+
+      &.confidence-medium {
+        @apply bg-yellow-800 text-yellow-300;
+      }
+
+      &.confidence-low {
+        @apply bg-orange-800 text-orange-300;
+      }
+    }
+  }
+
+  .translation-context {
+    @apply text-sm text-gray-400;
+
+    .context-label {
+      @apply font-medium mr-2;
+    }
+
+    .context-tag {
+      @apply inline-block bg-gray-700 px-2 py-1 rounded-full text-xs mr-1 text-gray-300;
+    }
+  }
+}
+
+// Métadonnées et actions
+.translation-meta {
+  @apply flex items-center justify-between pt-3 border-t border-gray-700;
+
+  .creation-info {
+    @apply flex items-center gap-2 text-sm text-gray-400;
+
+    .validation-type {
+      @apply text-base;
+
+      &.validation-auto {
+        @apply text-blue-400;
+      }
+
+      &.validation-learned {
+        @apply text-purple-400;
+      }
+
+      &.validation-manual {
+        @apply text-gray-400;
+      }
+    }
+
+    .creator {
+      @apply font-medium text-gray-300;
+    }
+  }
+
+  .vote-actions {
+    @apply flex items-center gap-2;
+
+    .vote-btn {
+      @apply p-1 rounded-full hover:bg-gray-700 transition-colors duration-200 cursor-pointer;
+
+      &.disabled {
+        @apply opacity-50 cursor-not-allowed hover:bg-transparent;
+      }
+
+      &.vote-up:hover:not(.disabled) {
+        @apply bg-green-800;
+      }
+
+      &.vote-down:hover:not(.disabled) {
+        @apply bg-red-800;
+      }
+    }
+
+    .vote-count {
+      @apply px-2 py-1 rounded-full text-sm font-medium min-w-[2rem] text-center;
+
+      &.positive {
+        @apply bg-green-800 text-green-300;
+      }
+
+      &.negative {
+        @apply bg-red-800 text-red-300;
+      }
+    }
+  }
+}
+
+// Information de validation
+.validation-info {
+  @apply flex items-center gap-2 mt-2 text-sm text-green-400 bg-green-900/20 p-2 rounded border border-green-800;
+
+  .validated-icon {
+    @apply text-base;
+  }
+}
+
+// Modal d'ajout de traduction
+.modal-overlay {
+  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4;
+}
+
+.modal-content {
+  @apply bg-gray-900 rounded-lg max-w-md w-full max-h-[90vh] overflow-auto border border-gray-800;
+}
+
+.modal-header {
+  @apply flex items-center justify-between p-6 pb-4 border-b border-gray-800;
+
+  h4 {
+    @apply text-lg font-semibold text-white;
+  }
+
+  .modal-close {
+    @apply text-2xl text-gray-400 hover:text-gray-300 cursor-pointer;
+  }
+}
+
+.modal-body {
+  @apply p-6;
+}
+
+.modal-footer {
+  @apply flex justify-end gap-3 p-6 pt-4 border-t border-gray-800;
+}
+
+// Formulaire dans la modal
+.form-group {
+  @apply mb-4;
+
+  label {
+    @apply block text-sm font-medium text-gray-300 mb-2;
+  }
+
+  .form-control {
+    @apply w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-md focus:ring-2
+           focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200;
+
+    &.readonly {
+      @apply bg-gray-700 cursor-not-allowed;
+    }
+  }
+
+  .form-help {
+    @apply text-xs text-gray-500 mt-1;
+  }
+
+  .error-message {
+    @apply text-red-400 text-sm mt-1;
+  }
+}
+
+// Affichage de langue dans la modal
+.language-display {
+  @apply flex items-center gap-2 p-2 bg-gray-800 rounded-md;
+
+  .flag {
+    @apply text-lg;
+  }
+
+  .name {
+    @apply font-medium text-gray-300;
+  }
+}
+
+// Slider de confiance
+.confidence-slider {
+  @apply flex items-center gap-4;
+
+  .slider {
+    @apply flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer;
+
+    &::-webkit-slider-thumb {
+      @apply appearance-none w-4 h-4 bg-blue-500 rounded-full cursor-pointer;
+    }
+
+    &::-moz-range-thumb {
+      @apply w-4 h-4 bg-blue-500 rounded-full cursor-pointer border-none;
+    }
+  }
+
+  .confidence-display {
+    @apply min-w-[4rem] text-center;
+
+    span {
+      @apply px-2 py-1 rounded-full text-sm font-medium;
+    }
+  }
+}
+
+// Boutons
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-colors duration-200 cursor-pointer;
+
+  &.btn-primary {
+    @apply bg-blue-600 text-white hover:bg-blue-700;
+  }
+
+  &.btn-secondary {
+    @apply bg-gray-700 text-gray-300 hover:bg-gray-600;
+  }
+
+  &.btn-outline {
+    @apply border border-gray-700 text-gray-300 hover:bg-gray-800;
+  }
+
+  &.btn-sm {
+    @apply px-3 py-1 text-sm;
+  }
+
+  &:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+}
+
+// Spinner petit
+.spinner-sm {
+  @apply w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .translation-header {
+    @apply flex-col gap-3 items-stretch;
+
+    .language-selector {
+      @apply max-w-none mx-0;
+    }
+  }
+
+  .translation-meta {
+    @apply flex-col gap-3 items-start;
+  }
+
+  .modal-content {
+    @apply mx-2;
+  }
+}

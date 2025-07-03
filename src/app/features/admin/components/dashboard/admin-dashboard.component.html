@@ -31,6 +31,15 @@
         </button>
     </div>
 
+    <!-- Messages de succès -->
+    <div *ngIf="successMessage" class="success-message">
+        <i class="fas fa-check-circle"></i>
+        {{ successMessage }}
+        <button class="close-success" (click)="successMessage = ''">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
     <!-- Loading state -->
     <div *ngIf="isLoading && !errorMessage" class="loading-container">
         <div class="loading-spinner">
@@ -95,6 +104,10 @@
                 <a routerLink="/admin/moderation" class="action-btn primary">
                     <i class="fas fa-list"></i>
                     <span>Modérer les mots</span>
+                </a>
+                <a routerLink="/admin/languages/add" class="action-btn secondary">
+                    <i class="fas fa-globe"></i>
+                    <span>Proposer une langue</span>
                 </a>
             </div>
         </div>
@@ -183,6 +196,14 @@
                 <a routerLink="/admin/moderation" class="action-btn secondary">
                     <i class="fas fa-clipboard-list"></i>
                     <span>Modérer les mots</span>
+                </a>
+                <a routerLink="/admin/moderation/languages" class="action-btn secondary">
+                    <i class="fas fa-globe-americas"></i>
+                    <span>Modérer les langues</span>
+                </a>
+                <a routerLink="/admin/languages/add" class="action-btn secondary">
+                    <i class="fas fa-language"></i>
+                    <span>Ajouter une langue</span>
                 </a>
                 <button class="action-btn secondary" disabled>
                     <i class="fas fa-globe"></i>
@@ -280,6 +301,14 @@
                 <a routerLink="/admin/moderation" class="action-btn secondary">
                     <i class="fas fa-clipboard-list"></i>
                     <span>Modérer les mots</span>
+                </a>
+                <a routerLink="/admin/moderation/languages" class="action-btn secondary">
+                    <i class="fas fa-globe-americas"></i>
+                    <span>Modérer les langues</span>
+                </a>
+                <a routerLink="/admin/languages/add" class="action-btn secondary">
+                    <i class="fas fa-language"></i>
+                    <span>Ajouter une langue</span>
                 </a>
                 <button class="action-btn secondary" disabled>
                     <i class="fas fa-globe"></i>

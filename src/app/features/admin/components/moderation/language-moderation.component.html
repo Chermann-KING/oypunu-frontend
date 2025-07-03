@@ -1,0 +1,325 @@
+<div class="language-moderation-container">
+  <!-- Header -->
+  <div class="page-header">
+    <nav class="breadcrumb">
+      <a routerLink="/admin">Admin</a>
+      <span>›</span>
+      <span class="current">Modération des langues</span>
+    </nav>
+
+    <h1 class="page-title">
+      <i class="fas fa-globe" aria-hidden="true"></i>
+      Modération des langues
+    </h1>
+
+    <p class="page-subtitle">
+      Examinez et approuvez les langues proposées par les contributeurs
+    </p>
+  </div>
+
+  <!-- États de chargement et d'erreur -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement des langues en attente...</p>
+    </div>
+  </div>
+
+  <div *ngIf="error" class="error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ error }}
+    <button class="retry-btn" (click)="loadPendingLanguages()">
+      <i class="fas fa-redo"></i>
+      Réessayer
+    </button>
+  </div>
+
+  <!-- Contenu principal -->
+  <div *ngIf="!isLoading && !error" class="moderation-content">
+
+    <!-- Aucune langue en attente -->
+    <div *ngIf="pendingLanguages.length === 0" class="empty-state">
+      <div class="empty-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <h3>Aucune langue en attente</h3>
+      <p>Toutes les langues proposées ont été traitées. Excellent travail !</p>
+      <a routerLink="/admin" class="btn btn-primary">
+        <i class="fas fa-arrow-left"></i>
+        Retour au dashboard
+      </a>
+    </div>
+
+    <!-- Liste des langues en attente -->
+    <div *ngIf="pendingLanguages.length > 0" class="moderation-layout">
+
+      <!-- Liste à gauche -->
+      <div class="languages-list">
+        <div class="list-header">
+          <h3>
+            <i class="fas fa-clock"></i>
+            Langues en attente ({{ pendingLanguages.length }})
+          </h3>
+          <button class="refresh-btn" (click)="loadPendingLanguages()" title="Actualiser">
+            <i class="fas fa-sync"></i>
+          </button>
+        </div>
+
+        <div class="language-cards">
+          <div *ngFor="let language of pendingLanguages" class="language-card"
+            [class.selected]="selectedLanguage?._id === language._id" (click)="selectLanguage(language)">
+
+            <div class="card-header">
+              <h4>{{ language.name }}</h4>
+              <span class="status-badge text-gray-400" [ngClass]="getStatusBadgeClass(language.systemStatus)">
+                {{ language.systemStatus }}
+              </span>
+            </div>
+
+            <div class="card-content">
+              <p class="native-name">{{ language.nativeName }}</p>
+              <div class="card-meta">
+                <span class="region">
+                  <i class="fas fa-map-marker-alt"></i>
+                  {{ language.region }}
+                </span>
+                <span class="date">
+                  <i class="fas fa-calendar"></i>
+                  {{ formatDate(language.createdAt) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              <span class="countries-count">
+                <i class="fas fa-flag"></i>
+                {{ language.countries.length }} pays
+              </span>
+              <span class="speakers" *ngIf="language.speakerCount">
+                <i class="fas fa-users"></i>
+                {{ formatSpeakerCount(language.speakerCount) }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Détails à droite -->
+      <div class="language-details">
+        <div *ngIf="!selectedLanguage" class="no-selection">
+          <div class="selection-prompt">
+            <i class="fas fa-hand-pointer"></i>
+            <h3>Sélectionnez une langue</h3>
+            <p>Cliquez sur une langue dans la liste pour voir ses détails et la modérer</p>
+          </div>
+        </div>
+
+        <div *ngIf="selectedLanguage" class="details-content">
+
+          <!-- Informations principales -->
+          <div class="details-header">
+            <h2>{{ selectedLanguage.name }}</h2>
+            <span class="native-name">{{ selectedLanguage.nativeName }}</span>
+          </div>
+
+          <!-- Informations détaillées -->
+          <div class="details-sections">
+
+            <!-- Informations de base -->
+            <div class="detail-section">
+              <h4>📍 Informations géographiques</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>Région</label>
+                  <span>{{ selectedLanguage.region }}</span>
+                </div>
+                <div class="detail-item">
+                  <label>Pays concernés</label>
+                  <div class="countries-list">
+                    <span *ngFor="let country of selectedLanguage.countries" class="country-tag">
+                      {{ country }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Détails linguistiques -->
+            <div class="detail-section">
+              <h4>🔤 Détails linguistiques</h4>
+              <div class="detail-grid">
+                <div class="detail-item" *ngIf="selectedLanguage.iso639_1">
+                  <label>Code ISO 639-1</label>
+                  <span class="code">{{ selectedLanguage.iso639_1 }}</span>
+                </div>
+                <div class="detail-item" *ngIf="selectedLanguage.iso639_3">
+                  <label>Code ISO 639-3</label>
+                  <span class="code">{{ selectedLanguage.iso639_3 }}</span>
+                </div>
+                <div class="detail-item" *ngIf="selectedLanguage.speakerCount">
+                  <label>Nombre de locuteurs</label>
+                  <span>{{ formatSpeakerCount(selectedLanguage.speakerCount) }}</span>
+                </div>
+                <div class="detail-item" *ngIf="selectedLanguage.endangermentStatus">
+                  <label>Statut d'endangement</label>
+                  <span class="endangerment-status">
+                    {{ getEndangermentIcon(selectedLanguage.endangermentStatus) }}
+                    {{ getEndangermentLabel(selectedLanguage.endangermentStatus) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Noms alternatifs -->
+            <div class="detail-section"
+              *ngIf="selectedLanguage.alternativeNames && selectedLanguage.alternativeNames.length > 0">
+              <h4>🏷️ Autres noms</h4>
+              <div class="alternative-names">
+                <span *ngFor="let name of selectedLanguage.alternativeNames" class="alt-name-tag">
+                  {{ name }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="detail-section" *ngIf="selectedLanguage.description">
+              <h4>📝 Description</h4>
+              <p class="description">{{ selectedLanguage.description }}</p>
+            </div>
+
+            <!-- Sources -->
+            <div class="detail-section" *ngIf="selectedLanguage.wikipediaUrl || selectedLanguage.ethnologueUrl">
+              <h4>🔗 Sources</h4>
+              <div class="sources">
+                <a *ngIf="selectedLanguage.wikipediaUrl" [href]="selectedLanguage.wikipediaUrl" target="_blank"
+                  class="source-link">
+                  <i class="fab fa-wikipedia-w"></i>
+                  Wikipedia
+                </a>
+                <a *ngIf="selectedLanguage.ethnologueUrl" [href]="selectedLanguage.ethnologueUrl" target="_blank"
+                  class="source-link">
+                  <i class="fas fa-book"></i>
+                  Ethnologue
+                </a>
+              </div>
+            </div>
+
+            <!-- Métadonnées -->
+            <div class="detail-section">
+              <h4>ℹ️ Métadonnées</h4>
+              <div class="detail-grid">
+                <div class="detail-item">
+                  <label>Proposée le</label>
+                  <span>{{ formatDate(selectedLanguage.createdAt) }}</span>
+                </div>
+                <div class="detail-item" *ngIf="selectedLanguage.proposedBy">
+                  <label>Proposée par</label>
+                  <span>{{ getProposedByName(selectedLanguage.proposedBy) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions de modération -->
+          <div class="moderation-actions" *ngIf="canApproveLanguages">
+
+            <!-- Boutons d'action principaux -->
+            <div class="action-buttons" *ngIf="!showApprovalForm && !showRejectionForm">
+              <button class="btn btn-success" (click)="showApproval()">
+                <i class="fas fa-check"></i>
+                Approuver cette langue
+              </button>
+              <button class="btn btn-danger" (click)="showRejection()">
+                <i class="fas fa-times"></i>
+                Rejeter cette langue
+              </button>
+            </div>
+
+            <!-- Formulaire d'approbation -->
+            <div class="action-form approval-form" *ngIf="showApprovalForm">
+              <h5>
+                <i class="fas fa-check-circle"></i>
+                Approuver "{{ selectedLanguage.name }}"
+              </h5>
+
+              <div class="form-field">
+                <label for="approvalNotes">Notes d'approbation (optionnel)</label>
+                <textarea id="approvalNotes" [(ngModel)]="approvalNotes" placeholder="Commentaires sur l'approbation..."
+                  rows="3"></textarea>
+              </div>
+
+              <div class="form-field">
+                <label class="checkbox-label">
+                  <input type="checkbox" [(ngModel)]="isFeatured">
+                  <span class="checkmark"></span>
+                  Mettre en avant cette langue
+                </label>
+                <small>Les langues mises en avant apparaissent en priorité dans les listes</small>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn btn-success" (click)="approveLanguage()" [disabled]="isSubmitting">
+                  <span *ngIf="!isSubmitting">
+                    <i class="fas fa-check"></i>
+                    Confirmer l'approbation
+                  </span>
+                  <span *ngIf="isSubmitting">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Approbation...
+                  </span>
+                </button>
+                <button class="btn btn-secondary" (click)="cancelAction()" [disabled]="isSubmitting">
+                  Annuler
+                </button>
+              </div>
+            </div>
+
+            <!-- Formulaire de rejet -->
+            <div class="action-form rejection-form" *ngIf="showRejectionForm">
+              <h5>
+                <i class="fas fa-times-circle"></i>
+                Rejeter "{{ selectedLanguage.name }}"
+              </h5>
+
+              <div class="form-field">
+                <label for="rejectionReason" class="required">Raison du rejet</label>
+                <textarea id="rejectionReason" [(ngModel)]="rejectionReason"
+                  placeholder="Expliquez pourquoi cette langue ne peut pas être approuvée..." rows="3"
+                  required></textarea>
+              </div>
+
+              <div class="form-field">
+                <label for="rejectionNotes">Suggestions d'amélioration (optionnel)</label>
+                <textarea id="rejectionNotes" [(ngModel)]="rejectionNotes"
+                  placeholder="Suggestions pour une future proposition..." rows="2"></textarea>
+              </div>
+
+              <div class="form-actions">
+                <button class="btn btn-danger" (click)="rejectLanguage()"
+                  [disabled]="!rejectionReason.trim() || isSubmitting">
+                  <span *ngIf="!isSubmitting">
+                    <i class="fas fa-times"></i>
+                    Confirmer le rejet
+                  </span>
+                  <span *ngIf="isSubmitting">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    Rejet...
+                  </span>
+                </button>
+                <button class="btn btn-secondary" (click)="cancelAction()" [disabled]="isSubmitting">
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Message si pas les permissions -->
+          <div class="no-permission" *ngIf="!canApproveLanguages">
+            <i class="fas fa-lock"></i>
+            <p>Seuls les administrateurs peuvent approuver ou rejeter les langues.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

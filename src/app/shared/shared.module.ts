@@ -12,6 +12,10 @@ import { CapitalizePipe } from '../pipes/capitalize.pipe';
 import { WordCardComponent } from './components/word-card/word-card.component';
 import { ShareWordModalComponent } from './components/share-word-modal/share-word-modal.component';
 import { AudioRecorderComponent } from './components/audio-recorder/audio-recorder.component';
+import { TranslationWidgetComponent } from './components/translation-widget/translation-widget.component';
+import { WordTranslationsComponent } from './components/word-translations/word-translations.component';
+import { RevisionHistoryComponent } from './components/revision-history/revision-history.component';
+import { WordStatusBadgeComponent } from './components/word-status-badge/word-status-badge.component';
 
 @NgModule({
   declarations: [
@@ -25,6 +29,10 @@ import { AudioRecorderComponent } from './components/audio-recorder/audio-record
     CapitalizePipe,
     ShareWordModalComponent,
     AudioRecorderComponent,
+    TranslationWidgetComponent,
+    WordTranslationsComponent,
+    RevisionHistoryComponent,
+    WordStatusBadgeComponent,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
   exports: [
@@ -38,6 +46,10 @@ import { AudioRecorderComponent } from './components/audio-recorder/audio-record
     WordCardComponent,
     CapitalizePipe,
     ShareWordModalComponent,
+    TranslationWidgetComponent,
+    WordTranslationsComponent,
+    RevisionHistoryComponent,
+    WordStatusBadgeComponent,
   ],
 })
 export class SharedModule {}
