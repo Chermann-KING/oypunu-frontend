@@ -242,7 +242,7 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
           error: (error) => {
             console.error('Error checking edit permissions:', error);
             this.canEdit = false;
-          }
+          },
         });
     }
   }
@@ -285,5 +285,67 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
       default:
         return status;
     }
+  }
+
+  /**
+   * Navigate vers la page de détail d'un synonyme/antonyme
+   */
+  navigateToWord(wordText: string): void {
+    if (!wordText || !this.word) return;
+
+    console.log(`🔍 Navigation vers: "${wordText}"`);
+
+    // Rechercher le mot dans la même langue que le mot actuel
+    const currentLanguage = this.word.language;
+
+    this._dictionaryService
+      .searchWords({
+        query: wordText,
+        languages: [currentLanguage],
+        limit: 5,
+        page: 1,
+      })
+      .pipe(takeUntil(this._destroy$))
+      .subscribe({
+        next: (results) => {
+          if (results.words && results.words.length > 0) {
+            // Chercher une correspondance exacte
+            const exactMatch = results.words.find(
+              (word) => word.word.toLowerCase() === wordText.toLowerCase()
+            );
+
+            if (exactMatch) {
+              console.log(`✅ Correspondance exacte trouvée: ${exactMatch.id}`);
+              this._router.navigate(['/dictionary/word', exactMatch.id]);
+            } else {
+              // Prendre le premier résultat si pas de correspondance exacte
+              const foundWord = results.words[0];
+              console.log(`✅ Mot similaire trouvé: ${foundWord.id}`);
+              this._router.navigate(['/dictionary/word', foundWord.id]);
+            }
+          } else {
+            // Mot non trouvé, faire une recherche générale
+            console.log(
+              `⚠️ Mot "${wordText}" non trouvé, redirection vers la recherche`
+            );
+            this._router.navigate(['/dictionary'], {
+              queryParams: {
+                q: wordText,
+                language: currentLanguage,
+              },
+            });
+          }
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la recherche du mot:', error);
+          // En cas d'erreur, rediriger vers la recherche
+          this._router.navigate(['/dictionary'], {
+            queryParams: {
+              q: wordText,
+              language: currentLanguage,
+            },
+          });
+        },
+      });
   }
 }

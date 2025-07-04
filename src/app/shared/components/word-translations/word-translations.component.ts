@@ -1,14 +1,21 @@
 import { Component, Input } from '@angular/core';
+import { Router } from '@angular/router';
 import { Word, WordTranslation } from '../../../core/models/word';
+import { DictionaryService } from '../../../core/services/dictionary.service';
 
 @Component({
   selector: 'app-word-translations',
   templateUrl: './word-translations.component.html',
   styleUrls: ['./word-translations.component.scss'],
-  standalone: false
+  standalone: false,
 })
 export class WordTranslationsComponent {
   @Input() word!: Word;
+
+  constructor(
+    private router: Router,
+    private dictionaryService: DictionaryService
+  ) {}
 
   // Langues disponibles avec leurs noms
   private languageNames: { [key: string]: string } = {
@@ -23,7 +30,7 @@ export class WordTranslationsComponent {
     zh: 'Chinois',
     ar: 'Arabe',
     ko: 'Coréen',
-    hi: 'Hindi'
+    hi: 'Hindi',
   };
 
   /**
@@ -49,7 +56,7 @@ export class WordTranslationsComponent {
       zh: '🇨🇳',
       ar: '🇸🇦',
       ko: '🇰🇷',
-      hi: '🇮🇳'
+      hi: '🇮🇳',
     };
     return flags[code] || '🌐';
   }
@@ -81,7 +88,7 @@ export class WordTranslationsComponent {
    */
   getAvailableLanguages(): string[] {
     const grouped = this.getTranslationsByLanguage();
-    return Object.keys(grouped).sort((a, b) => 
+    return Object.keys(grouped).sort((a, b) =>
       this.getLanguageName(a).localeCompare(this.getLanguageName(b))
     );
   }
@@ -99,7 +106,7 @@ export class WordTranslationsComponent {
    */
   getConfidenceClass(confidence?: number): string {
     if (!confidence) return 'text-gray-400';
-    
+
     if (confidence >= 0.8) return 'text-green-400';
     if (confidence >= 0.6) return 'text-yellow-400';
     return 'text-orange-400';
@@ -111,5 +118,65 @@ export class WordTranslationsComponent {
   formatConfidence(confidence?: number): string {
     if (!confidence) return '';
     return `${Math.round(confidence * 100)}%`;
+  }
+
+  /**
+   * Navigate vers la page de détail d'une traduction
+   */
+  navigateToTranslation(translatedWord: string, language: string): void {
+    console.log(`🔍 Navigation vers: "${translatedWord}" en ${language}`);
+
+    // Rechercher le mot traduit dans la langue spécifiée
+    this.dictionaryService
+      .searchWords({
+        query: translatedWord,
+        languages: [language],
+        limit: 5,
+        page: 1,
+      })
+      .subscribe({
+        next: (results) => {
+          if (results.words && results.words.length > 0) {
+            // Chercher une correspondance exacte
+            const exactMatch = results.words.find(
+              (word) => word.word.toLowerCase() === translatedWord.toLowerCase()
+            );
+
+            if (exactMatch) {
+              console.log(`✅ Correspondance exacte trouvée: ${exactMatch.id}`);
+              this.router.navigate(['/dictionary/word', exactMatch.id]);
+            } else {
+              // Prendre le premier résultat si pas de correspondance exacte
+              const foundWord = results.words[0];
+              console.log(`✅ Mot similaire trouvé: ${foundWord.id}`);
+              this.router.navigate(['/dictionary/word', foundWord.id]);
+            }
+          } else {
+            // Mot non trouvé, faire une recherche générale
+            console.log(
+              `⚠️ Mot "${translatedWord}" non trouvé, redirection vers la recherche`
+            );
+            this.router.navigate(['/dictionary'], {
+              queryParams: {
+                q: translatedWord,
+                language: language,
+              },
+            });
+          }
+        },
+        error: (error) => {
+          console.error(
+            '❌ Erreur lors de la recherche du mot traduit:',
+            error
+          );
+          // En cas d'erreur, rediriger vers la recherche
+          this.router.navigate(['/dictionary'], {
+            queryParams: {
+              q: translatedWord,
+              language: language,
+            },
+          });
+        },
+      });
   }
 }

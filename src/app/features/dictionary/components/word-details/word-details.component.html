@@ -93,7 +93,8 @@
             Mots associés
           </button>
           <button (click)="switchTab('translations')" [class.border-purple-500]="activeTab === 'translations'"
-            [class.text-purple-400]="activeTab === 'translations'" [class.border-transparent]="activeTab !== 'translations'"
+            [class.text-purple-400]="activeTab === 'translations'"
+            [class.border-transparent]="activeTab !== 'translations'"
             [class.text-gray-400]="activeTab !== 'translations'"
             class="border-b-2 py-4 px-1 font-medium text-sm cursor-pointer">
             🌐 Traductions
@@ -177,8 +178,9 @@
                     <h4 class="text-lg font-medium text-gray-400 mb-2">{{ getPartOfSpeechName(meaning.partOfSpeech) }}
                     </h4>
                     <div class="flex flex-wrap gap-2">
-                      <span *ngFor="let synonym of meaning.synonyms"
-                        class="px-3 py-1 bg-gray-800 rounded-full text-purple-400 hover:bg-gray-700 transition-colors cursor-pointer">
+                      <span *ngFor="let synonym of meaning.synonyms" (click)="navigateToWord(synonym)"
+                        class="px-3 py-1 bg-gray-800 rounded-full text-purple-400 hover:bg-gray-700 hover:text-purple-300 transition-colors cursor-pointer"
+                        title="Cliquer pour voir la définition de '{{ synonym }}'">
                         {{ synonym }}
                       </span>
                     </div>
@@ -199,8 +201,9 @@
                     <h4 class="text-lg font-medium text-gray-400 mb-2">{{ getPartOfSpeechName(meaning.partOfSpeech) }}
                     </h4>
                     <div class="flex flex-wrap gap-2">
-                      <span *ngFor="let antonym of meaning.antonyms"
-                        class="px-3 py-1 bg-gray-800 rounded-full text-purple-400 hover:bg-gray-700 transition-colors cursor-pointer">
+                      <span *ngFor="let antonym of meaning.antonyms" (click)="navigateToWord(antonym)"
+                        class="px-3 py-1 bg-gray-800 rounded-full text-purple-400 hover:bg-gray-700 hover:text-purple-300 transition-colors cursor-pointer"
+                        title="Cliquer pour voir la définition de '{{ antonym }}'">
                         {{ antonym }}
                       </span>
                     </div>
