@@ -45,8 +45,8 @@
         </div>
       </div>
 
-      <!-- Navigation Desktop pour utilisateurs connectés -->
-      <div *ngIf="isAuthenticated" class="hidden md:flex items-center space-x-6">
+      <!-- Navigation Desktop pour utilisateurs connectés (masquée sur dashboard) -->
+      <div *ngIf="isAuthenticated && !isDashboardPage" class="hidden md:flex items-center space-x-6">
         <app-main-nav></app-main-nav>
       </div>
 
@@ -58,7 +58,7 @@
         </div>
 
         <!-- Mobile Menu Button -->
-        <div *ngIf="(!isHomePage && !isAuthPage) || isAuthenticated" class="md:hidden">
+        <div *ngIf="((!isHomePage && !isAuthPage) || isAuthenticated) && !isDashboardPage" class="md:hidden">
           <button (click)="toggleMobileMenu()"
             class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white transition-colors duration-200"
             [attr.aria-expanded]="isMobileMenuOpen">
@@ -118,8 +118,8 @@
           </div>
         </div>
 
-        <!-- Navigation utilisateur connecté mobile -->
-        <div *ngIf="isAuthenticated">
+        <!-- Navigation utilisateur connecté mobile (masquée sur dashboard) -->
+        <div *ngIf="isAuthenticated && !isDashboardPage">
           <a routerLink="/dictionary" routerLinkActive="mobile-nav-active" [routerLinkActiveOptions]="{exact: false}"
             (click)="closeMobileMenu()"
             class="mobile-nav-link flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-300 hover:text-white hover:bg-gray-700 transition-colors duration-200">

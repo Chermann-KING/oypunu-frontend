@@ -13,6 +13,7 @@ export class HeaderComponent implements OnInit {
   isAuthenticated = false;
   isHomePage = false;
   isAuthPage = false;
+  isDashboardPage = false;
   isMobileMenuOpen = false;
 
   constructor(private _authService: AuthService, private _router: Router) {}
@@ -20,6 +21,7 @@ export class HeaderComponent implements OnInit {
   ngOnInit(): void {
     this._authService.currentUser$.subscribe((user) => {
       this.isAuthenticated = !!user;
+      this.updateDashboardStatus();
     });
 
     // Détecter la page courante
@@ -28,6 +30,7 @@ export class HeaderComponent implements OnInit {
       .subscribe((event: NavigationEnd) => {
         this.isHomePage = event.url === '/' || event.url === '/home';
         this.isAuthPage = event.url.startsWith('/auth');
+        this.updateDashboardStatus();
         // Fermer le menu mobile lors de la navigation
         this.isMobileMenuOpen = false;
       });
@@ -35,6 +38,7 @@ export class HeaderComponent implements OnInit {
     // Vérifier la route initiale
     this.isHomePage = this._router.url === '/' || this._router.url === '/home';
     this.isAuthPage = this._router.url.startsWith('/auth');
+    this.updateDashboardStatus();
   }
 
   toggleMobileMenu(): void {
@@ -43,5 +47,10 @@ export class HeaderComponent implements OnInit {
 
   closeMobileMenu(): void {
     this.isMobileMenuOpen = false;
+  }
+
+  private updateDashboardStatus(): void {
+    // Le dashboard s'affiche quand on est sur /home ET connecté
+    this.isDashboardPage = this.isHomePage && this.isAuthenticated;
   }
 }
