@@ -1,0 +1,278 @@
+<!-- Dashboard pour Utilisateurs Connectés -->
+<div class="min-h-screen bg-gray-950 text-white">
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex items-center justify-center min-h-screen">
+    <div class="text-center">
+      <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mx-auto mb-4"></div>
+      <p class="text-gray-400">Chargement de votre dashboard...</p>
+    </div>
+  </div>
+
+  <!-- Dashboard Content -->
+  <div *ngIf="!isLoading" class="container mx-auto px-4 py-8">
+
+    <!-- Header avec Salutation -->
+    <header class="mb-12" [class.opacity-0]="!showWelcomeAnimation" [class.transform]="!showWelcomeAnimation"
+      [class.translate-y-10]="!showWelcomeAnimation" class="transition-all duration-1000 ease-out">
+      <div class="text-center md:text-left">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">
+          {{ getUserGreeting() }}
+        </h1>
+        <p class="text-xl text-gray-400 mb-6">
+          Prêt à explorer de nouveaux mots aujourd'hui ?
+        </p>
+
+        <!-- Streak Badge -->
+        <div *ngIf="personalStats.streak > 0"
+          class="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-full text-sm font-medium">
+          {{ getStreakMessage() }}
+        </div>
+      </div>
+    </header>
+
+    <!-- Actions Rapides -->
+    <section class="mb-12" [class.opacity-0]="!showStats" [class.transform]="!showStats"
+      [class.translate-y-10]="!showStats" class="transition-all duration-1000 ease-out delay-300">
+      <h2 class="text-2xl font-bold mb-6">Actions Rapides</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div *ngFor="let action of quickActions; trackBy: trackByActionId" (click)="navigateToAction(action)"
+          class="group cursor-pointer p-6 bg-gray-900 hover:bg-gray-800 rounded-2xl border border-gray-800 hover:border-purple-500 transition-all duration-300 transform hover:scale-105">
+
+          <div class="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">
+            {{ action.icon }}
+          </div>
+
+          <h3 class="text-lg font-semibold mb-2 group-hover:text-purple-400 transition-colors">
+            {{ action.title }}
+          </h3>
+
+          <p class="text-gray-400 text-sm group-hover:text-gray-300 transition-colors">
+            {{ action.description }}
+          </p>
+
+          <div
+            class="mt-4 flex items-center text-sm text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span>Cliquer pour accéder</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd"
+                d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                clip-rule="evenodd" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Statistiques Personnelles -->
+    <section class="mb-12" [class.opacity-0]="!showStats" [class.transform]="!showStats"
+      [class.translate-y-10]="!showStats" class="transition-all duration-1000 ease-out delay-500">
+      <h2 class="text-2xl font-bold mb-6">Vos Statistiques</h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        <!-- Mots Ajoutés -->
+        <div class="p-6 bg-gradient-to-br from-purple-900/30 to-purple-800/30 rounded-2xl border border-purple-700/50">
+          <div class="text-3xl font-bold text-purple-400 mb-2">
+            {{ personalStats.wordsAdded }}
+          </div>
+          <div class="text-gray-400 text-sm">Mots ajoutés</div>
+          <div class="text-purple-300 text-xs mt-1">Contribution</div>
+        </div>
+
+        <!-- Favoris -->
+        <div class="p-6 bg-gradient-to-br from-red-900/30 to-red-800/30 rounded-2xl border border-red-700/50">
+          <div class="text-3xl font-bold text-red-400 mb-2">
+            {{ personalStats.favoritesCount }}
+          </div>
+          <div class="text-gray-400 text-sm">Favoris</div>
+          <div class="text-red-300 text-xs mt-1">Sauvegardés</div>
+        </div>
+
+        <!-- Langues Contribuées -->
+        <div class="p-6 bg-gradient-to-br from-blue-900/30 to-blue-800/30 rounded-2xl border border-blue-700/50">
+          <div class="text-3xl font-bold text-blue-400 mb-2">
+            {{ personalStats.languagesContributed }}
+          </div>
+          <div class="text-gray-400 text-sm">Langues</div>
+          <div class="text-blue-300 text-xs mt-1">Contribuées</div>
+        </div>
+
+        <!-- Langues Explorées -->
+        <div class="p-6 bg-gradient-to-br from-cyan-900/30 to-cyan-800/30 rounded-2xl border border-cyan-700/50">
+          <div class="text-3xl font-bold text-cyan-400 mb-2">
+            {{ personalStats.languagesExplored }}
+          </div>
+          <div class="text-gray-400 text-sm">Langues</div>
+          <div class="text-cyan-300 text-xs mt-1">Explorées</div>
+        </div>
+
+        <!-- Score de Contribution -->
+        <div class="p-6 bg-gradient-to-br from-green-900/30 to-green-800/30 rounded-2xl border border-green-700/50">
+          <div class="text-3xl font-bold text-green-400 mb-2">
+            {{ personalStats.contributionScore }}
+          </div>
+          <div class="text-gray-400 text-sm">Score</div>
+          <div class="text-green-300 text-xs mt-1">{{ getContributionLevel() }}</div>
+        </div>
+
+        <!-- Série -->
+        <div class="p-6 bg-gradient-to-br from-orange-900/30 to-orange-800/30 rounded-2xl border border-orange-700/50">
+          <div class="text-3xl font-bold text-orange-400 mb-2">
+            {{ personalStats.streak }}
+          </div>
+          <div class="text-gray-400 text-sm">Série</div>
+          <div class="text-orange-300 text-xs mt-1">Jours consécutifs</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+      <!-- Mes Contributions Récentes -->
+      <section [class.opacity-0]="!showRecentWords" [class.transform]="!showRecentWords"
+        [class.translate-y-10]="!showRecentWords" class="transition-all duration-1000 ease-out delay-700">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold">Mes Contributions Récentes</h2>
+          <button (click)="navigateToAction(quickActions[1])" class="text-green-400 hover:text-green-300 text-sm">
+            Ajouter un mot →
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <div *ngFor="let word of recentContributions; trackBy: trackByWordId"
+            class="p-4 bg-gradient-to-r from-green-900/20 to-emerald-900/20 hover:from-green-800/30 hover:to-emerald-800/30 rounded-xl border border-green-700/50 hover:border-green-500/50 transition-all duration-300 cursor-pointer"
+            (click)="viewWord(word.id)">
+
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center">
+                <span class="text-2xl mr-3">{{ getLanguageFlag(word.language) }}</span>
+                <div>
+                  <h3 class="text-lg font-semibold text-white group-hover:text-green-400 transition-colors">
+                    {{ word.word }}
+                  </h3>
+                  <p class="text-gray-400 text-sm">{{ getLanguageName(word.language) }}</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <span class="px-2 py-1 bg-green-900/50 text-green-300 rounded-full text-xs">
+                  Ma contribution
+                </span>
+                <span class="text-gray-500 text-xs">{{ getTimeAgo(getWordDate(word)) }}</span>
+              </div>
+            </div>
+
+            <p class="text-gray-300 text-sm line-clamp-2">{{ word.definition }}</p>
+          </div>
+
+          <div *ngIf="recentContributions.length === 0" class="text-center py-8 text-gray-500">
+            <div class="text-4xl mb-4">✍️</div>
+            <p class="mb-4">Aucune contribution récente</p>
+            <button (click)="navigateToAction(quickActions[1])"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm transition-colors">
+              Ajouter votre premier mot
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Récemment Consultés -->
+      <section [class.opacity-0]="!showRecentWords" [class.transform]="!showRecentWords"
+        [class.translate-y-10]="!showRecentWords" class="transition-all duration-1000 ease-out delay-700">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-bold">Récemment Consultés</h2>
+          <button (click)="navigateToAction(quickActions[0])" class="text-purple-400 hover:text-purple-300 text-sm">
+            Explorer plus →
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <div *ngFor="let word of recentConsultations; trackBy: trackByWordId"
+            class="p-4 bg-gray-900 hover:bg-gray-800 rounded-xl border border-gray-800 hover:border-purple-500/50 transition-all duration-300 cursor-pointer"
+            (click)="viewWord(word.id)">
+
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center">
+                <span class="text-2xl mr-3">{{ getLanguageFlag(word.language) }}</span>
+                <div>
+                  <h3 class="text-lg font-semibold text-white group-hover:text-purple-400 transition-colors">
+                    {{ word.word }}
+                  </h3>
+                  <p class="text-gray-400 text-sm">{{ getLanguageName(word.language) }}</p>
+                </div>
+              </div>
+
+              <div class="flex items-center space-x-2">
+                <span *ngIf="word.viewCount && word.viewCount > 1"
+                  class="px-2 py-1 bg-purple-900/50 text-purple-300 rounded-full text-xs">
+                  {{ word.viewCount }}x vues
+                </span>
+                <button (click)="toggleFavorite(word); $event.stopPropagation()"
+                  class="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" [class.text-red-500]="word.isFavorite"
+                    [class.text-gray-400]="!word.isFavorite" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                  </svg>
+                </button>
+                <span class="text-gray-500 text-xs">{{ getTimeAgo(getWordDate(word)) }}</span>
+              </div>
+            </div>
+
+            <p class="text-gray-300 text-sm line-clamp-2">{{ word.definition }}</p>
+          </div>
+
+          <div *ngIf="recentConsultations.length === 0" class="text-center py-8 text-gray-500">
+            <div class="text-4xl mb-4">📚</div>
+            <p class="mb-4">Aucun mot consulté récemment</p>
+            <button (click)="navigateToAction(quickActions[0])"
+              class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm transition-colors">
+              Commencer à explorer
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Recommandations Intelligentes -->
+    <div class="mt-8">
+      <section [class.opacity-0]="!showRecommendations" [class.transform]="!showRecommendations"
+        [class.translate-y-10]="!showRecommendations" class="transition-all duration-1000 ease-out delay-900">
+        
+        <!-- Recommandations temporairement désactivées pour résoudre le blocage -->
+        <div class="text-center py-8">
+          <h3 class="text-xl font-bold text-white mb-4">🎯 Recommandations Personnalisées</h3>
+          <p class="text-gray-400 mb-4">Système de recommandations intelligentes en cours d'intégration...</p>
+          <div class="flex justify-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- Call to Action -->
+    <section class="mt-16 text-center">
+      <div class="bg-gradient-to-r from-purple-900/30 to-blue-900/30 rounded-2xl p-8 border border-purple-700/50">
+        <h3 class="text-2xl font-bold mb-4">Continuez votre apprentissage !</h3>
+        <p class="text-gray-400 mb-6 max-w-2xl mx-auto">
+          Chaque mot que vous découvrez enrichit votre compréhension du monde.
+          Que souhaitez-vous explorer aujourd'hui ?
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <button (click)="navigateToAction(quickActions[0])"
+            class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-semibold transition-colors">
+            🔍 Découvrir de nouveaux mots
+          </button>
+          <button (click)="navigateToAction(quickActions[1])"
+            class="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl font-semibold transition-colors">
+            ➕ Contribuer à la communauté
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

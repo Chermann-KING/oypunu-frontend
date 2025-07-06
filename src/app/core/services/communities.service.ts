@@ -11,6 +11,7 @@ import {
 } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { AuthService } from './auth.service';
+import { GuestLimitsService } from './guest-limits.service';
 
 export interface CommunityMember {
   _id: string;
@@ -43,7 +44,11 @@ export class CommunitiesService {
   private _userCommunities = new BehaviorSubject<Community[]>([]);
   userCommunities$ = this._userCommunities.asObservable();
 
-  constructor(private _http: HttpClient, private _authService: AuthService) {
+  constructor(
+    private _http: HttpClient, 
+    private _authService: AuthService,
+    private _guestLimitsService: GuestLimitsService
+  ) {
     this._loadUserCommunities();
 
     // Recharger les communautés quand l'utilisateur change
@@ -73,6 +78,20 @@ export class CommunitiesService {
     page: number;
     limit: number;
   }> {
+    // Pour les visiteurs non authentifiés, vérifier les limitations avant de charger
+    if (!this._authService.isAuthenticated()) {
+      const limitResult = this._guestLimitsService.canViewCommunity();
+      if (!limitResult.allowed) {
+        console.log('🚫 Visiteur: Limite de consultation des communautés atteinte');
+        return of({
+          communities: [],
+          total: 0,
+          page: 1,
+          limit: 10
+        });
+      }
+    }
+
     let params = new HttpParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined) {
@@ -85,12 +104,35 @@ export class CommunitiesService {
       total: number;
       page: number;
       limit: number;
-    }>(`${this._API_URL}`, { params });
+    }>(`${this._API_URL}`, { params }).pipe(
+      tap((response) => {
+        // Enregistrer la consultation pour les visiteurs non authentifiés
+        if (!this._authService.isAuthenticated() && response.communities.length > 0) {
+          this._guestLimitsService.recordCommunityView();
+        }
+      })
+    );
   }
 
   // Récupérer une communauté par son ID
   getOne(communityId: string): Observable<Community> {
-    return this._http.get<Community>(`${this._API_URL}/${communityId}`);
+    // Pour les visiteurs non authentifiés, vérifier les limitations avant de charger
+    if (!this._authService.isAuthenticated()) {
+      const limitResult = this._guestLimitsService.canViewCommunity();
+      if (!limitResult.allowed) {
+        console.log('🚫 Visiteur: Limite de consultation des communautés atteinte');
+        return throwError(() => new Error('Limite de consultation atteinte'));
+      }
+    }
+
+    return this._http.get<Community>(`${this._API_URL}/${communityId}`).pipe(
+      tap((community) => {
+        // Enregistrer la consultation pour les visiteurs non authentifiés
+        if (!this._authService.isAuthenticated() && community) {
+          this._guestLimitsService.recordCommunityView();
+        }
+      })
+    );
   }
 
   // Mettre à jour une communauté

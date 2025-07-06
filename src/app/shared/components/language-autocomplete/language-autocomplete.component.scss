@@ -1,0 +1,81 @@
+// Style pour l'auto-complétion des langues
+.language-autocomplete {
+  position: relative;
+}
+
+// Amélioration de l'affichage du dropdown
+.dropdown-enter {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.dropdown-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.dropdown-leave {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dropdown-leave-active {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+// Style pour les options survolées
+.option-item {
+  transition: all 0.15s ease;
+  
+  &:hover {
+    background-color: rgba(139, 92, 246, 0.1);
+    border-left: 3px solid rgba(139, 92, 246, 0.8);
+  }
+}
+
+// Style pour l'option sélectionnée
+.option-selected {
+  background-color: rgba(139, 92, 246, 0.2);
+  border-left: 3px solid rgba(139, 92, 246, 1);
+}
+
+// Animation pour le spinner
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+// Responsive design
+@media (max-width: 640px) {
+  .dropdown-results {
+    max-height: 200px;
+  }
+}
+
+// Style pour le focus
+input:focus + .dropdown-results {
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+// Amélioration de l'accessibilité
+.option-item[aria-selected="true"] {
+  background-color: rgba(139, 92, 246, 0.3);
+}
+
+// Style pour les badges de code de langue
+.language-code-badge {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  letter-spacing: 0.5px;
+}

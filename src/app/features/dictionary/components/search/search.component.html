@@ -71,14 +71,19 @@
       <section>
         <h2 class="text-2xl font-semibold mb-6">Mots en vedette</h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" *ngIf="featuredWords.length > 0">
           <app-word-card *ngFor="let word of featuredWords" [word]="word"
             (favoriteToggle)="toggleFavorite(word)"></app-word-card>
         </div>
+        
+        <!-- Fallback si pas de mots -->
+        <div *ngIf="featuredWords.length === 0" class="text-center py-8">
+          <p class="text-gray-400">Aucun mot en vedette disponible pour le moment.</p>
+        </div>
       </section>
 
-      <!-- Appel à l'action -->
-      <section class="mt-16 bg-gradient-to-r from-purple-800 to-indigo-800 rounded-lg p-8 text-center">
+      <!-- Appel à l'action (seulement pour les utilisateurs connectés) -->
+      <section *ngIf="isAuthenticated" class="mt-16 bg-gradient-to-r from-purple-800 to-indigo-800 rounded-lg p-8 text-center">
         <h2 class="text-2xl font-bold mb-4">Contribuez à notre dictionnaire</h2>
         <p class="text-lg text-gray-200 mb-6">Vous connaissez un mot qui n'est pas dans notre dictionnaire ? Contribuez
           en l'ajoutant dès maintenant !</p>

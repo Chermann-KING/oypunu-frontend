@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
 import { RegisterResponse } from '../../../../core/models/auth-response';
+import { Language } from '../../../../core/services/languages.service';
 
 @Component({
   selector: 'app-register',
@@ -15,26 +16,41 @@ export class RegisterComponent implements OnInit {
   isSubmitting = false;
   errorMessage = '';
   successMessage = '';
+  contextMessage = '';
+  selectedLanguage: Language | null = null;
 
   constructor(
     private _fb: FormBuilder,
     private _router: Router,
+    private _route: ActivatedRoute,
     private _authService: AuthService
   ) {
     this.registerForm = this._fb.group(
       {
-        username: ['', Validators.required],
+        username: ['', [
+          Validators.required,
+          Validators.pattern(/^[a-zA-Z0-9_-]+$/),
+          Validators.minLength(3),
+          Validators.maxLength(30)
+        ]],
         email: ['', [Validators.required, Validators.email]],
         password: ['', [Validators.required, Validators.minLength(6)]],
         confirmPassword: ['', Validators.required],
         nativeLanguage: [''],
-        terms: [false, Validators.requiredTrue],
+        hasAcceptedTerms: [false, Validators.requiredTrue],
       },
       { validators: this.passwordMatchValidator }
     );
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    // Vérifier s'il y a un contexte spécifique dans les paramètres de la route
+    this._route.queryParams.subscribe(params => {
+      if (params['action'] === 'favorite') {
+        this.contextMessage = '💙 Créez votre compte pour ajouter des mots à vos favoris et accéder à toutes les fonctionnalités !';
+      }
+    });
+  }
 
   passwordMatchValidator(g: FormGroup) {
     const password = g.get('password')?.value;
@@ -51,11 +67,14 @@ export class RegisterComponent implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
 
-    const { username, email, password, nativeLanguage } =
+    const { username, email, password, nativeLanguage, hasAcceptedTerms } =
       this.registerForm.value;
 
+    // Utiliser l'ID de la langue sélectionnée ou le code si pas de langue sélectionnée
+    const languageValue = this.selectedLanguage ? this.selectedLanguage._id : nativeLanguage;
+
     this._authService
-      .register(username, email, password, nativeLanguage)
+      .register(username, email, password, languageValue, hasAcceptedTerms)
       .subscribe({
         next: (response: RegisterResponse) => {
           this.isSubmitting = false;
@@ -80,5 +99,10 @@ export class RegisterComponent implements OnInit {
             error.message || "Une erreur est survenue lors de l'inscription";
         },
       });
+  }
+
+  onLanguageSelected(language: Language): void {
+    this.selectedLanguage = language;
+    // La valeur est automatiquement mise à jour via le ControlValueAccessor
   }
 }

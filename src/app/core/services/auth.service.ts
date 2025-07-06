@@ -52,7 +52,8 @@ export class AuthService {
     username: string,
     email: string,
     password: string,
-    nativeLanguage?: string
+    nativeLanguage?: string,
+    hasAcceptedTerms: boolean = true
   ): Observable<RegisterResponse> {
     return this._http
       .post<RegisterResponse>(`${this._API_URL}/register`, {
@@ -60,6 +61,8 @@ export class AuthService {
         email,
         password,
         nativeLanguage,
+        hasAcceptedTerms: hasAcceptedTerms,
+        hasAcceptedPrivacyPolicy: hasAcceptedTerms, // Les deux sont acceptés via une seule case
       })
       .pipe(
         tap((response) => {
@@ -323,6 +326,53 @@ export class AuthService {
   updateCurrentUser(user: User): void {
     localStorage.setItem('user', JSON.stringify(user));
     this._currentUserSubject.next(user);
+  }
+
+  /**
+   * Récupère les statistiques personnelles de l'utilisateur
+   */
+  getUserStats(): Observable<{
+    totalWordsAdded: number;
+    totalCommunityPosts: number;
+    favoriteWordsCount: number;
+    joinDate: Date;
+    streak: number;
+    languagesContributed: number;
+    languagesExplored: number;
+    contributionScore: number;
+    activitiesThisWeek: number;
+    lastActivityDate?: Date;
+  }> {
+    return this._http.get<any>(`${environment.apiUrl}/users/profile/stats`).pipe(
+      catchError((error) => {
+        console.error('Erreur lors de la récupération des stats:', error);
+        return throwError(() => new Error('Erreur lors de la récupération des statistiques'));
+      })
+    );
+  }
+
+  /**
+   * Récupère les contributions récentes de l'utilisateur
+   */
+  getUserRecentContributions(limit: number = 5): Observable<any> {
+    return this._http.get<any>(`${environment.apiUrl}/users/profile/recent-contributions?limit=${limit}`).pipe(
+      catchError((error) => {
+        console.error('Erreur lors de la récupération des contributions:', error);
+        return throwError(() => new Error('Erreur lors de la récupération des contributions'));
+      })
+    );
+  }
+
+  /**
+   * Récupère les consultations récentes de l'utilisateur
+   */
+  getUserRecentConsultations(limit: number = 5): Observable<any> {
+    return this._http.get<any>(`${environment.apiUrl}/users/profile/recent-consultations?limit=${limit}`).pipe(
+      catchError((error) => {
+        console.error('Erreur lors de la récupération des consultations:', error);
+        return throwError(() => new Error('Erreur lors de la récupération des consultations'));
+      })
+    );
   }
 
   /**

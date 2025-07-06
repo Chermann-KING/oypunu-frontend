@@ -19,18 +19,9 @@ export class FavoriteWordsComponent implements OnInit, OnDestroy {
   currentWordId = '';
   errorMessage = '';
 
-  // Options pour les langages
-  languages = {
-    fr: 'Français',
-    en: 'Anglais',
-    es: 'Espagnol',
-    de: 'Allemand',
-    it: 'Italien',
-    pt: 'Portugais',
-    ru: 'Russe',
-    ja: 'Japonais',
-    zh: 'Chinois',
-  };
+  // Options pour les langages (chargées dynamiquement)
+  languages: { [key: string]: string } = {};
+  availableLanguages: DropdownOption[] = [];
 
   // Options pour les parties du discours
   partsOfSpeech = {
@@ -70,6 +61,9 @@ export class FavoriteWordsComponent implements OnInit, OnDestroy {
       'Utilisateur authentifié:',
       this._authService.isAuthenticated()
     );
+    
+    // Charger les langues disponibles d'abord
+    this.loadAvailableLanguages();
     this.loadFavoriteWords();
 
     // S'abonner aux changements de favoris
@@ -79,6 +73,9 @@ export class FavoriteWordsComponent implements OnInit, OnDestroy {
         console.log('Mise à jour des favoris:', words);
         this.favoriteWords = words;
         this.isLoading = false;
+        
+        // Reconstruire les options de langues quand les favoris changent
+        this.buildLanguageOptions();
       });
   }
 
@@ -100,22 +97,8 @@ export class FavoriteWordsComponent implements OnInit, OnDestroy {
 
   // Méthode pour convertir les langues disponibles en options de dropdown
   getLanguageOptions(): DropdownOption[] {
-    const languages = this.getAvailableLanguages();
-
-    // Ajouter l'option "Toutes les langues"
-    const options: DropdownOption[] = [
-      { value: '', label: 'Toutes les langues' },
-    ];
-
-    // Ajouter les langues disponibles
-    languages.forEach((lang) => {
-      options.push({
-        value: lang,
-        label: this.getLanguageName(lang),
-      });
-    });
-
-    return options;
+    // Retourner directement la liste des langues chargées dynamiquement
+    return this.availableLanguages;
   }
 
   // Méthode pour convertir les parties du discours en options de dropdown
@@ -188,8 +171,8 @@ export class FavoriteWordsComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Récupérer toutes les langues disponibles dans les favoris
-  getAvailableLanguages(): string[] {
+  // Récupérer toutes les langues présentes dans les mots favoris
+  getLanguagesInFavorites(): string[] {
     return [...new Set(this.favoriteWords.map((word) => word.language))];
   }
 
@@ -206,6 +189,85 @@ export class FavoriteWordsComponent implements OnInit, OnDestroy {
   resetFilters(): void {
     this.languageFilter = null;
     this.partOfSpeechFilter = null;
+  }
+
+  loadAvailableLanguages(): void {
+    console.log('🔄 Chargement des langues disponibles depuis la base de données...');
+    
+    this._dictionaryService
+      .getAvailableLanguages()
+      .pipe(takeUntil(this._destroy$))
+      .subscribe({
+        next: (languages: any[]) => {
+          console.log('✅ Langues disponibles récupérées:', languages);
+          
+          // Construire le dictionnaire des langues
+          this.languages = {};
+          languages.forEach((lang: any) => {
+            const code = lang.code;
+            this.languages[code] = lang.name;
+          });
+          
+          // Les options de langues seront construites après le chargement des favoris
+          // pour pouvoir compter les favoris par langue
+          this.buildLanguageOptions();
+          
+          console.log('🎯 Dictionnaire des langues construit:', this.languages);
+        },
+        error: (error: any) => {
+          console.error('❌ Erreur lors du chargement des langues:', error);
+          // Fallback vers langues par défaut si l'API échoue
+          this.languages = {
+            fr: 'Français',
+            en: 'Anglais',
+            es: 'Espagnol',
+            de: 'Allemand'
+          };
+          this.buildLanguageOptions();
+        }
+      });
+  }
+
+  private buildLanguageOptions(): void {
+    // Compter les favoris par langue
+    const favoritesByLanguage: { [key: string]: number } = {};
+    this.favoriteWords.forEach(word => {
+      const lang = word.language;
+      favoritesByLanguage[lang] = (favoritesByLanguage[lang] || 0) + 1;
+    });
+
+    console.log('📊 Favoris par langue:', favoritesByLanguage);
+
+    // Construire les options du dropdown avec les comptages de favoris
+    this.availableLanguages = [];
+    
+    // Ajouter seulement les langues qui ont des favoris
+    Object.keys(favoritesByLanguage).forEach(langCode => {
+      const langName = this.languages[langCode] || langCode;
+      const count = favoritesByLanguage[langCode];
+      const flag = this.getLanguageFlag(langCode);
+      
+      this.availableLanguages.push({
+        label: `${flag} ${langName} (${count} favoris)`,
+        value: langCode
+      });
+    });
+
+    // Trier par nombre de favoris (décroissant)
+    this.availableLanguages.sort((a, b) => {
+      const countA = parseInt(a.label.match(/\((\d+) favoris\)/)?.[1] || '0');
+      const countB = parseInt(b.label.match(/\((\d+) favoris\)/)?.[1] || '0');
+      return countB - countA;
+    });
+
+    // Ajouter l'option "Toutes les langues" au début
+    const totalFavorites = this.favoriteWords.length;
+    this.availableLanguages.unshift({
+      label: `🌍 Toutes les langues (${totalFavorites} favoris)`,
+      value: ''
+    });
+
+    console.log('🎯 Options de langues avec comptages:', this.availableLanguages);
   }
 
   loadFavoriteWords(): void {
@@ -277,5 +339,22 @@ export class FavoriteWordsComponent implements OnInit, OnDestroy {
 
   getPartOfSpeechName(code: string): string {
     return this.partsOfSpeech[code as keyof typeof this.partsOfSpeech] || code;
+  }
+
+  getLanguageFlag(code: string): string {
+    const flags: { [key: string]: string } = {
+      fr: '🇫🇷',
+      en: '🇺🇸',
+      es: '🇪🇸',
+      de: '🇩🇪',
+      it: '🇮🇹',
+      pt: '🇵🇹',
+      ru: '🇷🇺',
+      ja: '🇯🇵',
+      zh: '🇨🇳',
+      zu: '🇿🇦',
+      da: '🇩🇰'
+    };
+    return flags[code] || '🌐';
   }
 }

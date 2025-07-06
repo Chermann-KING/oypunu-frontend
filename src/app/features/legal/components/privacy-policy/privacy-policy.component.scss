@@ -1,0 +1,27 @@
+// Styles spécifiques pour la politique de confidentialité
+h2 {
+  scroll-margin-top: 2rem;
+}
+
+section {
+  scroll-margin-top: 2rem;
+}
+
+// Amélioration de la lisibilité
+p, li {
+  line-height: 1.7;
+}
+
+// Liens
+a {
+  transition: color 0.2s ease;
+  
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Mise en évidence du texte important
+strong {
+  color: #e5e7eb;
+}

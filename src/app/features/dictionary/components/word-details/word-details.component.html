@@ -93,8 +93,7 @@
             Mots associés
           </button>
           <button (click)="switchTab('translations')" [class.border-purple-500]="activeTab === 'translations'"
-            [class.text-purple-400]="activeTab === 'translations'"
-            [class.border-transparent]="activeTab !== 'translations'"
+            [class.text-purple-400]="activeTab === 'translations'" [class.border-transparent]="activeTab !== 'translations'"
             [class.text-gray-400]="activeTab !== 'translations'"
             class="border-b-2 py-4 px-1 font-medium text-sm cursor-pointer">
             🌐 Traductions
@@ -293,3 +292,16 @@
     </div>
   </div>
 </div>
+
+<!-- Modal d'inscription pour les visiteurs qui ont atteint leurs limites -->
+<app-signup-prompt-modal 
+  *ngIf="showSignupModal && !isAuthenticated && guestLimits"
+  [isOpen]="showSignupModal"
+  [wordsViewed]="guestLimits.wordsViewed"
+  [maxWords]="guestLimits.maxWordsPerDay"
+  [communitiesViewed]="guestLimits.communitiesViewed"
+  [maxCommunities]="guestLimits.maxCommunitiesPerDay"
+  (onClose)="closeSignupModal()"
+  (onSignup)="goToSignup()"
+  (onLogin)="goToLogin()">
+</app-signup-prompt-modal>

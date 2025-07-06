@@ -5,7 +5,6 @@ import { AuthGuard } from './core/guards/auth.guard';
 const routes: Routes = [
   {
     path: '',
-    canActivate: [AuthGuard],
     loadChildren: () =>
       import('./features/home/home.module').then((m) => m.HomeModule),
   },
@@ -27,7 +26,6 @@ const routes: Routes = [
   },
   {
     path: 'dictionary',
-    canActivate: [AuthGuard],
     loadChildren: () =>
       import('./features/dictionary/dictionary.module').then(
         (m) => m.DictionaryModule
@@ -51,7 +49,6 @@ const routes: Routes = [
   },
   {
     path: 'communities',
-    canActivate: [AuthGuard],
     loadChildren: () =>
       import('./features/communities/communities.module').then(
         (m) => m.CommunitiesModule
@@ -62,6 +59,11 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     loadChildren: () =>
       import('./features/admin/admin.module').then((m) => m.AdminModule),
+  },
+  {
+    path: 'legal',
+    loadChildren: () =>
+      import('./features/legal/legal.module').then((m) => m.LegalModule),
   },
   { path: '**', redirectTo: '' },
 ];

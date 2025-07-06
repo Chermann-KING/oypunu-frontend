@@ -4,6 +4,8 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { DictionaryService } from '../../../../core/services/dictionary.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { GuestLimitsService } from '../../../../core/services/guest-limits.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import { Word } from '../../../../core/models/word';
 
 @Component({
@@ -22,6 +24,11 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
     'definitions';
   canEdit = false;
   currentUser: any = null;
+  
+  // Gestion des limitations pour visiteurs
+  showSignupModal = false;
+  limitReached = false;
+  guestLimits: any = null;
 
   // Options pour les parties du discours
   partsOfSpeech = {
@@ -54,7 +61,9 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
     private _route: ActivatedRoute,
     private _router: Router,
     private _dictionaryService: DictionaryService,
-    private _authService: AuthService
+    private _authService: AuthService,
+    private _guestLimitsService: GuestLimitsService,
+    private _toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -91,6 +100,20 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
 
   loadWord(wordId: string): void {
     this.isLoading = true;
+    
+    // Vérifier les limitations pour les visiteurs non authentifiés
+    if (!this.isAuthenticated) {
+      const limitResult = this._guestLimitsService.canViewWord();
+      if (!limitResult.allowed) {
+        this.limitReached = true;
+        this.showSignupModal = true;
+        this.guestLimits = this._guestLimitsService.getCurrentLimits();
+        this.error = limitResult.message || 'Limite de consultation atteinte';
+        this.isLoading = false;
+        return;
+      }
+    }
+
     this._dictionaryService
       .getWordById(wordId)
       .pipe(takeUntil(this._destroy$))
@@ -99,6 +122,32 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
           if (word) {
             this.word = word;
             this._checkEditPermissions();
+            // Enregistrer la consultation pour les visiteurs
+            if (!this.isAuthenticated) {
+              this._guestLimitsService.recordWordView();
+              
+              // Donner du feedback discret sur les consultations restantes
+              const stats = this._guestLimitsService.getCurrentStats();
+              if (stats.wordsRemaining === 1) {
+                this._toastService.warning(
+                  'Dernière consultation gratuite',
+                  'Inscrivez-vous pour un accès illimité aux mots et traductions !',
+                  4000
+                );
+              } else if (stats.wordsRemaining === 0) {
+                this._toastService.info(
+                  'Découverte terminée',
+                  'Créez votre compte gratuit pour continuer à explorer le dictionnaire !',
+                  5000
+                );
+              }
+            }
+          } else if (!this.isAuthenticated) {
+            // Pour les visiteurs, si le mot n'est pas trouvé, cela peut être dû aux limitations
+            this.limitReached = true;
+            this.showSignupModal = true;
+            this.guestLimits = this._guestLimitsService.getCurrentLimits();
+            this.error = 'Limite de consultation atteinte. Inscrivez-vous pour accéder à plus de mots.';
           } else {
             this.error = 'Mot non trouvé';
           }
@@ -118,8 +167,14 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
     if (!this.word) return;
 
     if (!this.isAuthenticated) {
-      // Rediriger vers la page de connexion si l'utilisateur n'est pas authentifié
-      this._router.navigate(['/auth/login']);
+      // Afficher la modal d'inscription pour les visiteurs avec un message informatif
+      this._toastService.info(
+        'Fonctionnalité réservée aux membres',
+        'Inscrivez-vous gratuitement pour ajouter des mots à vos favoris et accéder à toutes les fonctionnalités !',
+        4000
+      );
+      this.showSignupModal = true;
+      this.guestLimits = this._guestLimitsService.getCurrentLimits();
       return;
     }
     console.log('avant la condition de mise en favoris');
@@ -242,7 +297,7 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
           error: (error) => {
             console.error('Error checking edit permissions:', error);
             this.canEdit = false;
-          },
+          }
         });
     }
   }
@@ -288,64 +343,81 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Fermer la modal d'inscription
+   */
+  closeSignupModal(): void {
+    this.showSignupModal = false;
+  }
+
+  /**
+   * Naviguer vers la page d'inscription
+   */
+  goToSignup(): void {
+    this._router.navigate(['/auth/register']);
+  }
+
+  /**
+   * Naviguer vers la page de connexion
+   */
+  goToLogin(): void {
+    this._router.navigate(['/auth/login']);
+  }
+
+  /**
    * Navigate vers la page de détail d'un synonyme/antonyme
    */
   navigateToWord(wordText: string): void {
     if (!wordText || !this.word) return;
-
+    
     console.log(`🔍 Navigation vers: "${wordText}"`);
-
+    
     // Rechercher le mot dans la même langue que le mot actuel
     const currentLanguage = this.word.language;
-
-    this._dictionaryService
-      .searchWords({
-        query: wordText,
-        languages: [currentLanguage],
-        limit: 5,
-        page: 1,
-      })
-      .pipe(takeUntil(this._destroy$))
-      .subscribe({
-        next: (results) => {
-          if (results.words && results.words.length > 0) {
-            // Chercher une correspondance exacte
-            const exactMatch = results.words.find(
-              (word) => word.word.toLowerCase() === wordText.toLowerCase()
-            );
-
-            if (exactMatch) {
-              console.log(`✅ Correspondance exacte trouvée: ${exactMatch.id}`);
-              this._router.navigate(['/dictionary/word', exactMatch.id]);
-            } else {
-              // Prendre le premier résultat si pas de correspondance exacte
-              const foundWord = results.words[0];
-              console.log(`✅ Mot similaire trouvé: ${foundWord.id}`);
-              this._router.navigate(['/dictionary/word', foundWord.id]);
-            }
+    
+    this._dictionaryService.searchWords({
+      query: wordText,
+      languages: [currentLanguage],
+      limit: 5,
+      page: 1
+    }).pipe(takeUntil(this._destroy$))
+    .subscribe({
+      next: (results) => {
+        if (results.words && results.words.length > 0) {
+          // Chercher une correspondance exacte
+          const exactMatch = results.words.find(word => 
+            word.word.toLowerCase() === wordText.toLowerCase()
+          );
+          
+          if (exactMatch) {
+            console.log(`✅ Correspondance exacte trouvée: ${exactMatch.id}`);
+            this._router.navigate(['/dictionary/word', exactMatch.id]);
           } else {
-            // Mot non trouvé, faire une recherche générale
-            console.log(
-              `⚠️ Mot "${wordText}" non trouvé, redirection vers la recherche`
-            );
-            this._router.navigate(['/dictionary'], {
-              queryParams: {
-                q: wordText,
-                language: currentLanguage,
-              },
-            });
+            // Prendre le premier résultat si pas de correspondance exacte
+            const foundWord = results.words[0];
+            console.log(`✅ Mot similaire trouvé: ${foundWord.id}`);
+            this._router.navigate(['/dictionary/word', foundWord.id]);
           }
-        },
-        error: (error) => {
-          console.error('❌ Erreur lors de la recherche du mot:', error);
-          // En cas d'erreur, rediriger vers la recherche
-          this._router.navigate(['/dictionary'], {
-            queryParams: {
+        } else {
+          // Mot non trouvé, faire une recherche générale
+          console.log(`⚠️ Mot "${wordText}" non trouvé, redirection vers la recherche`);
+          this._router.navigate(['/dictionary'], { 
+            queryParams: { 
               q: wordText,
-              language: currentLanguage,
-            },
+              language: currentLanguage 
+            } 
           });
-        },
-      });
+        }
+      },
+      error: (error) => {
+        console.error('❌ Erreur lors de la recherche du mot:', error);
+        // En cas d'erreur, rediriger vers la recherche
+        this._router.navigate(['/dictionary'], { 
+          queryParams: { 
+            q: wordText,
+            language: currentLanguage 
+          } 
+        });
+      }
+    });
   }
 }

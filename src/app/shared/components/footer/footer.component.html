@@ -66,8 +66,8 @@
       [class.border-t]="isAuthenticated" [class.border-gray-800]="isAuthenticated">
       <p>© {{now}} O'Ypunu. Tous droits réservés.</p>
       <div class="mt-4 md:mt-0 flex space-x-6">
-        <a [routerLink]="['/privacy']" class="hover:text-white">Politique de confidentialité</a>
-        <a [routerLink]="['/terms']" class="hover:text-white">Conditions d'utilisation</a>
+        <a routerLink="/legal/privacy" class="hover:text-white">Politique de confidentialité</a>
+        <a routerLink="/legal/terms" class="hover:text-white">Conditions d'utilisation</a>
       </div>
     </div>
   </div>

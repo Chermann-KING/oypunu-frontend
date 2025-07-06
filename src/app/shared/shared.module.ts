@@ -16,6 +16,11 @@ import { TranslationWidgetComponent } from './components/translation-widget/tran
 import { WordTranslationsComponent } from './components/word-translations/word-translations.component';
 import { RevisionHistoryComponent } from './components/revision-history/revision-history.component';
 import { WordStatusBadgeComponent } from './components/word-status-badge/word-status-badge.component';
+import { GuestLimitsBadgeComponent } from './components/guest-limits-badge/guest-limits-badge.component';
+import { SignupPromptModalComponent } from './components/signup-prompt-modal/signup-prompt-modal.component';
+import { ToastContainerComponent } from './components/toast-container/toast-container.component';
+import { LanguageAutocompleteComponent } from './components/language-autocomplete/language-autocomplete.component';
+// import { IntelligentRecommendationsComponent } from './components/intelligent-recommendations/intelligent-recommendations.component';
 
 @NgModule({
   declarations: [
@@ -33,6 +38,11 @@ import { WordStatusBadgeComponent } from './components/word-status-badge/word-st
     WordTranslationsComponent,
     RevisionHistoryComponent,
     WordStatusBadgeComponent,
+    GuestLimitsBadgeComponent,
+    SignupPromptModalComponent,
+    ToastContainerComponent,
+    LanguageAutocompleteComponent,
+    // IntelligentRecommendationsComponent,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
   exports: [
@@ -50,6 +60,11 @@ import { WordStatusBadgeComponent } from './components/word-status-badge/word-st
     WordTranslationsComponent,
     RevisionHistoryComponent,
     WordStatusBadgeComponent,
+    GuestLimitsBadgeComponent,
+    SignupPromptModalComponent,
+    ToastContainerComponent,
+    LanguageAutocompleteComponent,
+    // IntelligentRecommendationsComponent,
   ],
 })
 export class SharedModule {}

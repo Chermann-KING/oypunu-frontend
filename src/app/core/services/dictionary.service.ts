@@ -8,6 +8,7 @@ import { SearchParams } from '../models/search-params';
 import { SearchResults } from '../models/search-results';
 import { Category } from '../models/category';
 import { AuthService } from './auth.service';
+import { GuestLimitsService } from './guest-limits.service';
 
 interface MongoDBWord extends Omit<Word, 'id'> {
   _id: string;
@@ -68,9 +69,43 @@ export class DictionaryService {
   recentSearches$ = this._recentSearches.asObservable();
   favoriteWords$ = this._favoriteWords.asObservable();
 
-  constructor(private _http: HttpClient, private _authService: AuthService) {
+  constructor(
+    private _http: HttpClient, 
+    private _authService: AuthService, 
+    private _guestLimitsService: GuestLimitsService
+  ) {
     this._loadRecentSearches();
     this._loadFavoriteWords();
+  }
+
+  // Obtenir les statistiques des contributeurs en ligne
+  getOnlineContributorsStats(): Observable<{
+    onlineContributors: number;
+    activeUsers: number;
+    timestamp: string;
+  }> {
+    return this._http.get<{
+      onlineContributors: number;
+      activeUsers: number;
+      timestamp: string;
+    }>(`${environment.apiUrl}/users/analytics/online-contributors`);
+  }
+
+  // Obtenir les statistiques des mots en temps réel
+  getWordsStatistics(): Observable<{
+    totalApprovedWords: number;
+    wordsAddedToday: number;
+    wordsAddedThisWeek: number;
+    wordsAddedThisMonth: number;
+    timestamp: string;
+  }> {
+    return this._http.get<{
+      totalApprovedWords: number;
+      wordsAddedToday: number;
+      wordsAddedThisWeek: number;
+      wordsAddedThisMonth: number;
+      timestamp: string;
+    }>(`${this._WORDS_API_URL}/analytics/statistics`);
   }
 
   // Fonction utilitaire pour normaliser les ID de MongoDB (_id → id)
@@ -144,7 +179,7 @@ export class DictionaryService {
 
   // Obtenir un mot par ID
   getWordById(id: string): Observable<Word | null> {
-    // Vérifier si l'utilisateur est authentifié
+    // Pour les visiteurs non authentifiés, juste récupérer le mot
     if (!this._authService.isAuthenticated()) {
       return this._http.get<any>(`${this._WORDS_API_URL}/${id}`).pipe(
         map((response) => (response ? this._normalizeId(response) : null)),
@@ -177,13 +212,12 @@ export class DictionaryService {
   }
 
   // Obtenir les mots mis en vedette/populaires
-  getFeaturedWords(limit: number = 6): Observable<Word[]> {
+  getFeaturedWords(limit: number = 3): Observable<Word[]> {
     return this._http
-      .get<any>(`${this._WORDS_API_URL}/featured?limit=${limit}`)
+      .get<any[]>(`${this._WORDS_API_URL}/featured?limit=${limit}`)
       .pipe(
-        map((response) => response.words || []),
         map((words) =>
-          this._normalizeIds(words).map((word) => this._checkIfFavorite(word))
+          this._normalizeIds(words || []).map((word) => this._checkIfFavorite(word))
         ),
         catchError((error) => {
           console.error('Error fetching featured words:', error);
@@ -221,7 +255,7 @@ export class DictionaryService {
       return of({ success: false });
     }
 
-    console.log(`Ajout aux favoris avec l'ID: ${wordId}`);
+    console.log(`🔥 Frontend: Ajout aux favoris avec l'ID: ${wordId}`);
 
     return this._http
       .post<{ success: boolean }>(
@@ -230,8 +264,12 @@ export class DictionaryService {
       )
       .pipe(
         tap((response) => {
+          console.log('🔥 Frontend: Réponse addToFavorites:', response);
           if (response.success) {
+            console.log('🔥 Frontend: Succès, mise à jour de l\'état local et rechargement des favoris');
             this._updateFavoriteStatus(wordId, true);
+            // Recharger les favoris depuis l'API pour synchroniser
+            this.getFavoriteWords().subscribe();
           }
         }),
         catchError((error) => {
@@ -292,7 +330,7 @@ export class DictionaryService {
       return of([]);
     }
 
-    console.log('Appel API getFavoriteWords');
+    console.log(`🔥 Frontend: Appel API getFavoriteWords (page=${page}, limit=${limit})`);
 
     // return this._http.get<any>(`${this._WORDS_API_URL}/favorites/user?page=${page}&limit=${limit}`)
     return this._http
@@ -321,12 +359,20 @@ export class DictionaryService {
   // Vérifier si un mot est dans les favoris
   checkIfFavorite(wordId: string): Observable<boolean> {
     if (!this._authService.isAuthenticated()) {
+      console.log('🔥 Frontend: Utilisateur non authentifié, mot pas en favoris');
       return of(false);
     }
 
+    console.log(`🔥 Frontend: Vérification si mot ${wordId} est en favoris`);
     return this._http
       .get<boolean>(`${environment.apiUrl}/favorite-words/check/${wordId}`)
-      .pipe(catchError(() => of(false)));
+      .pipe(
+        tap(result => console.log(`🔥 Frontend: Résultat checkIfFavorite pour ${wordId}:`, result)),
+        catchError((error) => {
+          console.error(`🔥 Frontend: Erreur checkIfFavorite pour ${wordId}:`, error);
+          return of(false);
+        })
+      );
   }
 
   // Partager un mot favori avec un autre utilisateur

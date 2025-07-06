@@ -4,6 +4,8 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { Subject, Observable } from 'rxjs';
 import { takeUntil, debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { DictionaryService } from '../../../../core/services/dictionary.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { LanguagesService } from '../../../../core/services/languages.service';
 import { Word } from '../../../../core/models/word';
 import { Category } from '../../../../core/models/category';
 import { SearchResults } from '../../../../core/models/search-results';
@@ -31,19 +33,8 @@ export class SearchComponent implements OnInit, OnDestroy {
   categoryOptions: DropdownOption[] = [];
   partOfSpeechOptions: DropdownOption[] = [];
 
-  // Options pour les filtres
-  languages = [
-    { code: 'fr', name: 'Français' },
-    { code: 'en', name: 'Anglais' },
-    { code: 'es', name: 'Espagnol' },
-    { code: 'de', name: 'Allemand' },
-    { code: 'it', name: 'Italien' },
-    { code: 'pt', name: 'Portugais' },
-    { code: 'ru', name: 'Russe' },
-    { code: 'ja', name: 'Japonais' },
-    { code: 'zh', name: 'Chinois' },
-  ];
-
+  // Options pour les filtres (chargées dynamiquement)
+  languages: any[] = [];
   partsOfSpeech = [
     { code: 'noun', name: 'Nom' },
     { code: 'verb', name: 'Verbe' },
@@ -60,6 +51,8 @@ export class SearchComponent implements OnInit, OnDestroy {
   constructor(
     private _fb: FormBuilder,
     private _dictionaryService: DictionaryService,
+    private _authService: AuthService,
+    private _languagesService: LanguagesService,
     private _router: Router,
     private _route: ActivatedRoute
   ) {
@@ -72,12 +65,24 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Initialiser les options pour les dropdowns
-    this.languageOptions = this.languages.map((lang) => ({
-      value: lang.code,
-      label: lang.name,
-    }));
+    // Charger les langues actives depuis la base de données
+    this._languagesService
+      .getActiveLanguages()
+      .pipe(takeUntil(this._destroy$))
+      .subscribe((languages) => {
+        this.languages = languages.map(lang => ({
+          code: lang.iso639_1 || lang.iso639_2 || lang.iso639_3 || lang._id,
+          name: lang.name
+        }));
+        
+        // Initialiser les options pour le dropdown des langues
+        this.languageOptions = this.languages.map((lang) => ({
+          value: lang.code,
+          label: lang.name,
+        }));
+      });
 
+    // Initialiser les options pour les types de mots
     this.partOfSpeechOptions = this.partsOfSpeech.map((pos) => ({
       value: pos.code,
       label: pos.name,
@@ -98,7 +103,7 @@ export class SearchComponent implements OnInit, OnDestroy {
 
     // Charger les mots vedettes
     this._dictionaryService
-      .getFeaturedWords(6)
+      .getFeaturedWords(3)
       .pipe(takeUntil(this._destroy$))
       .subscribe((words) => {
         this.featuredWords = words;
@@ -269,5 +274,9 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   getPartOfSpeechName(code: string): string {
     return this.partsOfSpeech.find((p) => p.code === code)?.name || '';
+  }
+
+  get isAuthenticated(): boolean {
+    return this._authService.isAuthenticated();
   }
 }

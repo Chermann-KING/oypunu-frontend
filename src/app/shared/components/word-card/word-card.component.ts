@@ -4,6 +4,7 @@ import { Word } from '../../../core/models/word';
 import { User } from '../../../core/models/user';
 import { DictionaryService } from '../../../core/services/dictionary.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-word-card',
@@ -71,7 +72,8 @@ export class WordCardComponent implements OnInit {
   constructor(
     private _dictionaryService: DictionaryService,
     private _router: Router,
-    private _authService: AuthService
+    private _authService: AuthService,
+    private _toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -104,13 +106,22 @@ export class WordCardComponent implements OnInit {
 
     // Vérifier si l'utilisateur est authentifié (via le service auth)
     if (!this._authService.isAuthenticated()) {
-      // Redirectionner vers la page de connexion
-      this._router.navigate(['/auth/login'], {
-        queryParams: {
-          returnUrl: this._router.url,
-          message: 'Connectez-vous pour ajouter des mots à vos favoris',
-        },
-      });
+      // Afficher un message informatif au lieu d'une redirection brutale
+      this._toastService.info(
+        'Fonctionnalité réservée aux membres',
+        'Créez votre compte gratuit pour ajouter des mots à vos favoris et accéder à toutes les fonctionnalités !',
+        4000
+      );
+      
+      // Redirection avec délai pour que l'utilisateur voie le message
+      setTimeout(() => {
+        this._router.navigate(['/auth/register'], {
+          queryParams: {
+            returnUrl: this._router.url,
+            action: 'favorite'
+          }
+        });
+      }, 1500);
       return;
     }
 

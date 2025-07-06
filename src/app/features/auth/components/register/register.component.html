@@ -21,6 +21,13 @@
         </button>
       </div>
 
+      <!-- Message contextuel -->
+      <div *ngIf="contextMessage" class="mb-6 p-4 bg-blue-900/50 border border-blue-500/30 rounded-lg">
+        <p class="text-blue-200 text-sm text-center">
+          {{ contextMessage }}
+        </p>
+      </div>
+
       <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="space-y-6">
         <!-- Username -->
         <div>
@@ -30,10 +37,21 @@
           <div class="mt-1">
             <input id="username" name="username" type="text" formControlName="username"
               class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 bg-gray-700 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm"
-              placeholder="JohnDoe">
+              placeholder="johndoe_123">
             <div *ngIf="registerForm.get('username')?.invalid && registerForm.get('username')?.touched"
               class="text-red-500 text-xs mt-1">
-              Le nom d'utilisateur est requis
+              <span *ngIf="registerForm.get('username')?.errors?.['required']">
+                Le nom d'utilisateur est requis
+              </span>
+              <span *ngIf="registerForm.get('username')?.errors?.['pattern']">
+                Le nom d'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores (pas d'espaces)
+              </span>
+              <span *ngIf="registerForm.get('username')?.errors?.['minlength']">
+                Le nom d'utilisateur doit faire au moins 3 caractères
+              </span>
+              <span *ngIf="registerForm.get('username')?.errors?.['maxlength']">
+                Le nom d'utilisateur ne peut pas dépasser 30 caractères
+              </span>
             </div>
           </div>
         </div>
@@ -93,27 +111,30 @@
             Langue maternelle
           </label>
           <div class="mt-1">
-            <select id="nativeLanguage" name="nativeLanguage" formControlName="nativeLanguage"
-              class="appearance-none block w-full px-3 py-2 border border-gray-700 rounded-md shadow-sm placeholder-gray-500 bg-gray-700 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm">
-              <option value="" disabled>Sélectionnez votre langue maternelle</option>
-              <option value="fr">Français</option>
-              <option value="en">Anglais</option>
-              <option value="es">Espagnol</option>
-              <!-- Autres langues... -->
-            </select>
+            <app-language-autocomplete
+              formControlName="nativeLanguage"
+              placeholder="Sélectionnez ou tapez votre langue maternelle..."
+              (languageSelected)="onLanguageSelected($event)">
+            </app-language-autocomplete>
           </div>
         </div>
 
         <!-- Terms & Conditions -->
         <div class="flex items-center">
-          <input id="terms" name="terms" type="checkbox" formControlName="terms"
+          <input id="hasAcceptedTerms" name="hasAcceptedTerms" type="checkbox" formControlName="hasAcceptedTerms"
             class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-700 rounded bg-gray-700">
-          <label for="terms" class="ml-2 block text-sm text-gray-300">
-            J'accepte les <a href="#" class="text-purple-400 hover:text-purple-300">conditions d'utilisation</a> et la
-            <a href="#" class="text-purple-400 hover:text-purple-300">politique de confidentialité</a>
+          <label for="hasAcceptedTerms" class="ml-2 block text-sm text-gray-300">
+            J'accepte les
+            <a routerLink="/legal/terms" target="_blank" class="text-purple-400 hover:text-purple-300 underline">
+              conditions d'utilisation
+            </a>
+            et la
+            <a routerLink="/legal/privacy" target="_blank" class="text-purple-400 hover:text-purple-300 underline">
+              politique de confidentialité
+            </a>
           </label>
         </div>
-        <div *ngIf="registerForm.get('terms')?.invalid && registerForm.get('terms')?.touched"
+        <div *ngIf="registerForm.get('hasAcceptedTerms')?.invalid && registerForm.get('hasAcceptedTerms')?.touched"
           class="text-red-500 text-xs">
           Vous devez accepter les conditions d'utilisation
         </div>

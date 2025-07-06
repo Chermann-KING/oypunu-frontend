@@ -1,7 +1,44 @@
 <header class="bg-gray-900 text-white p-4 border-b border-gray-800">
-  <div class="container mx-auto flex justify-between items-center">
-    <!-- Logo -->
+  <div class="container mx-auto flex items-center justify-between">
+    <!-- Logo (toujours visible) -->
     <app-logo></app-logo>
+
+    <!-- Navigation et Actions pour visiteurs (masquée sur page d'accueil) -->
+    <div *ngIf="!isAuthenticated && !isHomePage" class="flex items-center space-x-6">
+      <!-- Navigation principale -->
+      <nav class="flex items-center space-x-4">
+        <a routerLink="/dictionary" 
+           routerLinkActive="nav-link-active" 
+           [routerLinkActiveOptions]="{exact: false}"
+           class="nav-link flex items-center transition-colors duration-200 hover:text-blue-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Dictionnaire
+        </a>
+        <a routerLink="/communities" 
+           routerLinkActive="nav-link-active" 
+           [routerLinkActiveOptions]="{exact: false}"
+           class="nav-link flex items-center transition-colors duration-200 hover:text-blue-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="nav-icon h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          Communauté
+        </a>
+      </nav>
+
+      <!-- Boutons d'authentification avec hiérarchie claire -->
+      <div class="flex items-center space-x-3 ml-6 border-l border-gray-700 pl-6">
+        <a routerLink="/auth/login" 
+           class="text-gray-300 hover:text-white transition-colors duration-200 font-medium">
+          Se connecter
+        </a>
+        <a routerLink="/auth/register" 
+           class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-4 py-2 rounded-lg transition-all duration-200 font-semibold text-sm shadow-lg hover:shadow-xl transform hover:scale-105">
+          S'inscrire gratuitement
+        </a>
+      </div>
+    </div>
 
     <!-- Navigation (visible uniquement si authentifié) -->
     <app-main-nav *ngIf="isAuthenticated"></app-main-nav>
