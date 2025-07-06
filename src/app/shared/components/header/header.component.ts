@@ -12,25 +12,36 @@ import { filter } from 'rxjs/operators';
 export class HeaderComponent implements OnInit {
   isAuthenticated = false;
   isHomePage = false;
+  isAuthPage = false;
+  isMobileMenuOpen = false;
 
-  constructor(
-    private _authService: AuthService,
-    private _router: Router
-  ) {}
+  constructor(private _authService: AuthService, private _router: Router) {}
 
   ngOnInit(): void {
     this._authService.currentUser$.subscribe((user) => {
       this.isAuthenticated = !!user;
     });
 
-    // Détecter si on est sur la page d'accueil
+    // Détecter la page courante
     this._router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
+      .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.isHomePage = event.url === '/' || event.url === '/home';
+        this.isAuthPage = event.url.startsWith('/auth');
+        // Fermer le menu mobile lors de la navigation
+        this.isMobileMenuOpen = false;
       });
 
     // Vérifier la route initiale
     this.isHomePage = this._router.url === '/' || this._router.url === '/home';
+    this.isAuthPage = this._router.url.startsWith('/auth');
+  }
+
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+  }
+
+  closeMobileMenu(): void {
+    this.isMobileMenuOpen = false;
   }
 }
