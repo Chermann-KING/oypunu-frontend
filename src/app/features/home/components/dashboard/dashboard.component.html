@@ -36,7 +36,7 @@
       [class.translate-y-10]="!showStats" class="transition-all duration-1000 ease-out delay-300">
       <h2 class="text-2xl font-bold mb-6">Actions Rapides</h2>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         <div *ngFor="let action of quickActions; trackBy: trackByActionId" (click)="navigateToAction(action)"
           class="group cursor-pointer p-6 bg-gray-900 hover:bg-gray-800 rounded-2xl border border-gray-800 hover:border-purple-500 transition-all duration-300 transform hover:scale-105">
 
@@ -240,7 +240,7 @@
     <div class="mt-8">
       <section [class.opacity-0]="!showRecommendations" [class.transform]="!showRecommendations"
         [class.translate-y-10]="!showRecommendations" class="transition-all duration-1000 ease-out delay-900">
-        
+
         <!-- Recommandations temporairement désactivées pour résoudre le blocage -->
         <div class="text-center py-8">
           <h3 class="text-xl font-bold text-white mb-4">🎯 Recommandations Personnalisées</h3>
