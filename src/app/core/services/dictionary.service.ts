@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, BehaviorSubject } from 'rxjs';
+import { Observable, of, BehaviorSubject, Subject } from 'rxjs';
 import { map, catchError, tap, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Word } from '../models/word';
@@ -65,9 +65,15 @@ export class DictionaryService {
   private _favoriteWords: BehaviorSubject<Word[]> = new BehaviorSubject<Word[]>(
     []
   );
+  private _favoriteWordIds: BehaviorSubject<Set<string>> = new BehaviorSubject<Set<string>>(
+    new Set()
+  );
+  private _favoriteStatusChanged: Subject<{wordId: string, isFavorite: boolean}> = new Subject();
 
   recentSearches$ = this._recentSearches.asObservable();
   favoriteWords$ = this._favoriteWords.asObservable();
+  favoriteWordIds$ = this._favoriteWordIds.asObservable();
+  favoriteStatusChanged$ = this._favoriteStatusChanged.asObservable();
 
   constructor(
     private _http: HttpClient, 
@@ -196,13 +202,9 @@ export class DictionaryService {
         if (!response) return of(null);
         const wordWithId = this._normalizeId(response);
 
-        // Vérifier si le mot est en favoris
-        return this.checkIfFavorite(wordWithId.id).pipe(
-          map((isFavorite) => ({
-            ...wordWithId,
-            isFavorite,
-          }))
-        );
+        // Utiliser le cache local pour les favoris (plus rapide et cohérent)
+        console.log(`🔥 Frontend: Vérification favoris locale pour ${wordWithId.id}`);
+        return of(this._checkIfFavorite(wordWithId));
       }),
       catchError((error) => {
         console.error(`Error fetching word with ID ${id}:`, error);
@@ -257,6 +259,9 @@ export class DictionaryService {
 
     console.log(`🔥 Frontend: Ajout aux favoris avec l'ID: ${wordId}`);
 
+    // Mise à jour optimiste de l'état local
+    this._setFavoriteStatus(wordId, true);
+
     return this._http
       .post<{ success: boolean }>(
         `${environment.apiUrl}/favorite-words/${wordId}`,
@@ -265,15 +270,16 @@ export class DictionaryService {
       .pipe(
         tap((response) => {
           console.log('🔥 Frontend: Réponse addToFavorites:', response);
-          if (response.success) {
-            console.log('🔥 Frontend: Succès, mise à jour de l\'état local et rechargement des favoris');
-            this._updateFavoriteStatus(wordId, true);
-            // Recharger les favoris depuis l'API pour synchroniser
-            this.getFavoriteWords().subscribe();
+          if (!response.success) {
+            // Rollback en cas d'échec
+            console.log('🔥 Frontend: Échec API, rollback de l\'état');
+            this._setFavoriteStatus(wordId, false);
           }
         }),
         catchError((error) => {
           console.error(`Error adding word ${wordId} to favorites:`, error);
+          // Rollback en cas d'erreur
+          this._setFavoriteStatus(wordId, false);
           return of({ success: false });
         })
       );
@@ -285,7 +291,10 @@ export class DictionaryService {
       return of({ success: false });
     }
 
-    console.log(`Suppression des favoris avec l'ID: ${wordId}`);
+    console.log(`🔥 Frontend: Suppression des favoris avec l'ID: ${wordId}`);
+
+    // Mise à jour optimiste de l'état local
+    this._setFavoriteStatus(wordId, false);
 
     return this._http
       .delete<{ success: boolean }>(
@@ -293,12 +302,17 @@ export class DictionaryService {
       )
       .pipe(
         tap((response) => {
-          if (response.success) {
-            this._updateFavoriteStatus(wordId, false);
+          console.log(`🔥 Frontend: Réponse removeFromFavorites pour ${wordId}:`, response);
+          if (!response.success) {
+            // Rollback en cas d'échec
+            console.log('🔥 Frontend: Échec API, rollback de l\'état');
+            this._setFavoriteStatus(wordId, true);
           }
         }),
         catchError((error) => {
           console.error(`Error removing word ${wordId} from favorites:`, error);
+          // Rollback en cas d'erreur
+          this._setFavoriteStatus(wordId, true);
           return of({ success: false });
         })
       );
@@ -342,12 +356,20 @@ export class DictionaryService {
         map((response) => response.words || []),
         map((words) => this._normalizeIds(words)),
         tap((words) => {
-          console.log('Mots normalisés:', words);
+          console.log('🔥 Frontend: Mots favoris récupérés:', words.length);
           const favoritesWithFlag = words.map((word) => ({
             ...word,
             isFavorite: true,
           }));
+          
+          // Mettre à jour la liste des favoris
           this._favoriteWords.next(favoritesWithFlag);
+          
+          // Mettre à jour le Set des IDs pour les vérifications rapides
+          const favoriteIds = new Set(words.map(word => word.id));
+          this._favoriteWordIds.next(favoriteIds);
+          
+          console.log(`🔥 Frontend: Cache favoris mis à jour - ${favoriteIds.size} IDs`);
         }),
         catchError((error) => {
           console.error('Error fetching favorite words:', error);
@@ -356,18 +378,37 @@ export class DictionaryService {
       );
   }
 
-  // Vérifier si un mot est dans les favoris
+  // Vérifier si un mot est dans les favoris (utilise le cache local)
   checkIfFavorite(wordId: string): Observable<boolean> {
     if (!this._authService.isAuthenticated()) {
       console.log('🔥 Frontend: Utilisateur non authentifié, mot pas en favoris');
       return of(false);
     }
 
-    console.log(`🔥 Frontend: Vérification si mot ${wordId} est en favoris`);
+    // Utiliser le cache local pour une réponse immédiate
+    const result = this.isFavorite(wordId);
+    console.log(`🔥 Frontend: Vérification cache local pour ${wordId}:`, result);
+    return of(result);
+  }
+
+  // Vérifier si un mot est dans les favoris via l'API (pour la synchronisation)
+  checkIfFavoriteAPI(wordId: string): Observable<boolean> {
+    if (!this._authService.isAuthenticated()) {
+      return of(false);
+    }
+
+    console.log(`🔥 Frontend: Vérification API pour ${wordId}`);
     return this._http
       .get<boolean>(`${environment.apiUrl}/favorite-words/check/${wordId}`)
       .pipe(
-        tap(result => console.log(`🔥 Frontend: Résultat checkIfFavorite pour ${wordId}:`, result)),
+        tap(result => {
+          console.log(`🔥 Frontend: Résultat API checkIfFavorite pour ${wordId}:`, result);
+          // Synchroniser avec l'état local si différent
+          if (result !== this.isFavorite(wordId)) {
+            console.log(`🔥 Frontend: Désynchronisation détectée, mise à jour cache`);
+            this._setFavoriteStatus(wordId, result);
+          }
+        }),
         catchError((error) => {
           console.error(`🔥 Frontend: Erreur checkIfFavorite pour ${wordId}:`, error);
           return of(false);
@@ -683,45 +724,91 @@ export class DictionaryService {
   }
 
   private _loadFavoriteWords(): void {
+    // Charger les favoris au démarrage si authentifié
     if (this._authService.isAuthenticated()) {
       this.getFavoriteWords().subscribe();
     }
 
+    // Réagir aux changements d'authentification
     this._authService.currentUser$.subscribe((user) => {
       if (user) {
+        // Utilisateur connecté - charger ses favoris
         this.getFavoriteWords().subscribe();
       } else {
+        // Utilisateur déconnecté - nettoyer le cache
         this._favoriteWords.next([]);
+        this._favoriteWordIds.next(new Set());
+        console.log('🔥 Frontend: Cache favoris nettoyé - utilisateur déconnecté');
       }
     });
   }
 
-  private _updateFavoriteStatus(wordId: string, isFavorite: boolean): void {
-    const currentFavorites = this._favoriteWords.value;
-
+  /**
+   * Méthode centrale pour mettre à jour l'état des favoris
+   * Gère la synchronisation entre tous les états locaux
+   */
+  private _setFavoriteStatus(wordId: string, isFavorite: boolean): void {
+    console.log(`🔥 Frontend: _setFavoriteStatus - wordId: ${wordId}, isFavorite: ${isFavorite}`);
+    
+    // 1. Mettre à jour le Set des IDs favoris pour les vérifications rapides
+    const currentIds = this._favoriteWordIds.value;
+    const newIds = new Set(currentIds);
+    
     if (isFavorite) {
+      newIds.add(wordId);
+    } else {
+      newIds.delete(wordId);
+    }
+    this._favoriteWordIds.next(newIds);
+    
+    // 2. Mettre à jour la liste complète des favoris
+    const currentFavorites = this._favoriteWords.value;
+    
+    if (isFavorite) {
+      // Ajouter si pas déjà présent
       const existingFavorite = currentFavorites.find((w) => w.id === wordId);
       if (!existingFavorite) {
-        this.getWordById(wordId).subscribe((word) => {
-          if (word) {
-            this._favoriteWords.next([
-              ...currentFavorites,
-              { ...word, isFavorite: true },
-            ]);
-          }
-        });
+        // On a besoin du mot complet, le chercher si nécessaire
+        this._addWordToFavoritesList(wordId);
       }
     } else {
+      // Supprimer de la liste
       const updatedFavorites = currentFavorites.filter((w) => w.id !== wordId);
       this._favoriteWords.next(updatedFavorites);
     }
+    
+    // 3. Notifier tous les composants du changement
+    this._favoriteStatusChanged.next({wordId, isFavorite});
+    
+    console.log(`🔥 Frontend: État favoris mis à jour - Total IDs: ${newIds.size}`);
+  }
+
+  /**
+   * Ajouter un mot à la liste des favoris (récupère le mot complet si nécessaire)
+   */
+  private _addWordToFavoritesList(wordId: string): void {
+    // D'abord chercher si on a le mot en cache dans une recherche récente
+    // Sinon le récupérer via l'API
+    this.getWordById(wordId).subscribe((word) => {
+      if (word) {
+        const currentFavorites = this._favoriteWords.value;
+        const updatedFavorites = [...currentFavorites, { ...word, isFavorite: true }];
+        this._favoriteWords.next(updatedFavorites);
+      }
+    });
+  }
+
+  /**
+   * Méthode rapide pour vérifier si un mot est favori
+   */
+  isFavorite(wordId: string): boolean {
+    return this._favoriteWordIds.value.has(wordId);
   }
 
   private _checkIfFavorite(word: Word): Word {
-    const favorites = this._favoriteWords.value;
     return {
       ...word,
-      isFavorite: favorites.some((f) => f.id === word.id),
+      isFavorite: this.isFavorite(word.id),
     };
   }
 

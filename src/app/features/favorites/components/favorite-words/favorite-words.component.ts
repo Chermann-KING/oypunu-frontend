@@ -292,12 +292,23 @@ export class FavoriteWordsComponent implements OnInit, OnDestroy {
   }
 
   removeFromFavorites(word: Word): void {
+    console.log(`🔥 Component: Tentative de suppression du mot ${word.id} (${word.word})`);
+    
+    // L'état local sera mis à jour immédiatement par la mise à jour optimiste
     this._dictionaryService
       .removeFromFavorites(word.id)
       .pipe(takeUntil(this._destroy$))
-      .subscribe((response) => {
-        if (response.success) {
-          // Mise à jour de la liste est gérée via l'observable favoriteWords$
+      .subscribe({
+        next: (response) => {
+          console.log(`🔥 Component: Réponse removeFromFavorites:`, response);
+          if (response.success) {
+            console.log(`🔥 Component: Suppression confirmée par API`);
+          } else {
+            console.log(`🔥 Component: Suppression échouée, état restauré automatiquement`);
+          }
+        },
+        error: (error) => {
+          console.error(`🔥 Component: Erreur lors de la suppression (état restauré):`, error);
         }
       });
   }

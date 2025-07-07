@@ -91,6 +91,16 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
     });
 
     this.currentUser = this._authService.getCurrentUser();
+
+    // Écouter les changements de statut des favoris pour synchroniser l'affichage
+    this._dictionaryService.favoriteStatusChanged$
+      .pipe(takeUntil(this._destroy$))
+      .subscribe(({wordId, isFavorite}) => {
+        if (this.word && this.word.id === wordId) {
+          console.log(`🔥 WordDetails: Synchronisation statut favori ${wordId}: ${isFavorite}`);
+          this.word.isFavorite = isFavorite;
+        }
+      });
   }
 
   ngOnDestroy(): void {
@@ -179,33 +189,25 @@ export class WordDetailsComponent implements OnInit, OnDestroy {
     }
     console.log('avant la condition de mise en favoris');
 
-    if (this.word.isFavorite) {
-      console.log('dans la condition de suppréssion');
-
-      this._dictionaryService
-        .removeFromFavorites(this.word.id)
-        .pipe(takeUntil(this._destroy$))
-        .subscribe((response) => {
+    // Utiliser toggleFavorite qui gère automatiquement l'état avec mise à jour optimiste
+    console.log(`🔥 WordDetails: Toggle favori pour ${this.word.id} (état actuel: ${this.word.isFavorite})`);
+    
+    this._dictionaryService
+      .toggleFavorite(this.word)
+      .pipe(takeUntil(this._destroy$))
+      .subscribe({
+        next: (response) => {
+          console.log(`🔥 WordDetails: Réponse toggleFavorite:`, response);
           if (response.success) {
-            if (this.word) {
-              this.word.isFavorite = false;
-            }
+            console.log(`🔥 WordDetails: Toggle confirmé par API`);
+          } else {
+            console.log(`🔥 WordDetails: Toggle échoué, état restauré automatiquement`);
           }
-        });
-    } else {
-      console.log("dans la condition d'ajout");
-
-      this._dictionaryService
-        .addToFavorites(this.word.id)
-        .pipe(takeUntil(this._destroy$))
-        .subscribe((response) => {
-          if (response.success) {
-            if (this.word) {
-              this.word.isFavorite = true;
-            }
-          }
-        });
-    }
+        },
+        error: (error) => {
+          console.error(`🔥 WordDetails: Erreur toggle (état restauré):`, error);
+        }
+      });
   }
 
   switchTab(

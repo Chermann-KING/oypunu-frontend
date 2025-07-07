@@ -9,6 +9,7 @@ import { UserRole } from '../../core/models/admin';
 import { AdminDashboardComponent } from './components/dashboard/admin-dashboard.component';
 import { UserManagementComponent } from './components/users/user-management.component';
 import { AddLanguageComponent } from './components/languages/add-language.component';
+import { ContributorRequestsComponent } from './components/contributor-requests/contributor-requests.component';
 
 const routes: Routes = [
   {
@@ -36,6 +37,15 @@ const routes: Routes = [
         data: {
           roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
           title: 'Gestion des utilisateurs',
+        },
+      },
+      {
+        path: 'contributor-requests',
+        component: ContributorRequestsComponent,
+        canActivate: [RoleGuard],
+        data: {
+          roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
+          title: 'Demandes de contribution',
         },
       },
       {

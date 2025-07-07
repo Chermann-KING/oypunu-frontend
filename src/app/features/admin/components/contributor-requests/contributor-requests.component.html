@@ -1,0 +1,591 @@
+<div class="min-h-screen bg-gray-950 text-white">
+  <div class="container mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold text-white">Demandes de Contribution</h1>
+        <p class="text-gray-400 mt-1">Gérez les demandes de devenir contributeur</p>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <button (click)="refreshData()"
+          class="px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors"
+          [disabled]="loading">
+          <span class="flex items-center space-x-2">
+            <span class="animate-spin" *ngIf="loading">🔄</span>
+            <span *ngIf="!loading">🔄</span>
+            <span>Actualiser</span>
+          </span>
+        </button>
+
+        <button (click)="exportRequests()"
+          class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors">
+          📊 Exporter
+        </button>
+      </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">En attente</p>
+            <p class="text-2xl font-bold text-yellow-400">{{ statistics.pending || 0 }}</p>
+          </div>
+          <div class="text-3xl">⏳</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Approuvées</p>
+            <p class="text-2xl font-bold text-green-400">{{ statistics.approved || 0 }}</p>
+          </div>
+          <div class="text-3xl">✅</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Taux d'approbation</p>
+            <p class="text-2xl font-bold text-blue-400">{{ statistics.approvalRate || 0 }}%</p>
+          </div>
+          <div class="text-3xl">📊</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-400 text-sm">Temps moyen (jours)</p>
+            <p class="text-2xl font-bold text-purple-400">{{ statistics.avgProcessingDays || 0 }}</p>
+          </div>
+          <div class="text-3xl">⏱️</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 mb-8">
+      <form [formGroup]="filtersForm" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-white">Filtres</h3>
+          <button type="button" (click)="showAdvancedFilters = !showAdvancedFilters"
+            class="text-emerald-400 hover:text-emerald-300 text-sm">
+            {{ showAdvancedFilters ? 'Masquer' : 'Afficher' }} les filtres avancés
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Recherche -->
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Recherche</label>
+            <input type="text" formControlName="search" placeholder="Nom, email, motivation..."
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
+          </div>
+
+          <!-- Statut -->
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Statut</label>
+            <select formControlName="status"
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+              <option *ngFor="let option of statusOptions" [value]="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Priorité -->
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Priorité</label>
+            <select formControlName="priority"
+              class="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+              <option *ngFor="let option of priorityOptions" [value]="option.value">
+                {{ option.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Filtres avancés -->
+        <div *ngIf="showAdvancedFilters" class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-gray-700">
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" id="highPriorityOnly" formControlName="highPriorityOnly"
+              class="rounded border-gray-600 bg-gray-800 text-emerald-600 focus:ring-emerald-500" />
+            <label for="highPriorityOnly" class="text-sm text-gray-300">Priorité élevée uniquement</label>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" id="specialReviewOnly" formControlName="specialReviewOnly"
+              class="rounded border-gray-600 bg-gray-800 text-emerald-600 focus:ring-emerald-500" />
+            <label for="specialReviewOnly" class="text-sm text-gray-300">Révision spéciale requise</label>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <input type="checkbox" id="expiringSoon" formControlName="expiringSoon"
+              class="rounded border-gray-600 bg-gray-800 text-emerald-600 focus:ring-emerald-500" />
+            <label for="expiringSoon" class="text-sm text-gray-300">Expirant bientôt</label>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-300 mb-1">Max jours depuis création</label>
+            <input type="number" formControlName="maxDaysOld" placeholder="30" min="1" max="365"
+              class="w-full px-3 py-1 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-4">
+          <button type="button" (click)="resetFilters()"
+            class="px-4 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors">
+            Réinitialiser
+          </button>
+
+          <div class="text-sm text-gray-400">
+            {{ totalRequests }} demande(s) trouvée(s)
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Actions en lot -->
+    <div *ngIf="getSelectedCount() > 0" class="bg-emerald-900/20 border border-emerald-600 rounded-xl p-4 mb-6">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <span class="text-emerald-300 font-medium">
+            {{ getSelectedCount() }} demande(s) sélectionnée(s)
+          </span>
+          <button (click)="selectedRequests.clear(); selectAll = false"
+            class="text-emerald-400 hover:text-emerald-300 text-sm">
+            Désélectionner tout
+          </button>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button (click)="openBulkActionModal()"
+            class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors text-sm">
+            Actions en lot
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste des demandes -->
+    <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+      <!-- En-tête du tableau -->
+      <div class="bg-gray-800 px-6 py-4 border-b border-gray-700">
+        <div class="flex items-center space-x-4">
+          <input type="checkbox" [checked]="selectAll" (change)="toggleSelectAll()"
+            class="rounded border-gray-600 bg-gray-800 text-emerald-600 focus:ring-emerald-500" />
+          <span class="text-sm font-medium text-gray-300">Sélectionner tout</span>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div *ngIf="loading" class="p-8 text-center">
+        <div class="animate-spin text-4xl mb-4">🔄</div>
+        <p class="text-gray-400">Chargement des demandes...</p>
+      </div>
+
+      <!-- Erreur -->
+      <div *ngIf="error && !loading" class="p-8 text-center">
+        <div class="text-4xl mb-4">⚠️</div>
+        <p class="text-red-400 mb-4">{{ error }}</p>
+        <button (click)="loadRequests()" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+          Réessayer
+        </button>
+      </div>
+
+      <!-- Liste vide -->
+      <div *ngIf="!loading && !error && requests.length === 0" class="p-8 text-center">
+        <div class="text-4xl mb-4">📝</div>
+        <p class="text-gray-400 mb-2">Aucune demande trouvée</p>
+        <p class="text-gray-500 text-sm">Essayez de modifier vos filtres</p>
+      </div>
+
+      <!-- Demandes -->
+      <div *ngIf="!loading && !error && requests.length > 0" class="divide-y divide-gray-700">
+        <div *ngFor="let request of requests; trackBy: trackByRequestId"
+          class="p-6 hover:bg-gray-800/50 transition-colors">
+          <div class="flex items-start space-x-4">
+            <!-- Checkbox -->
+            <input type="checkbox" [checked]="isRequestSelected(request._id)"
+              (change)="toggleSelectRequest(request._id)"
+              class="rounded border-gray-600 bg-gray-800 text-emerald-600 focus:ring-emerald-500 mt-1" />
+
+            <!-- Contenu principal -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <!-- Header avec nom et badges -->
+                  <div class="flex items-center space-x-3 mb-3">
+                    <h3 class="text-lg font-semibold text-white">
+                      {{ request.username }}
+                    </h3>
+
+                    <span [class]="getStatusBadgeClass(request.status)">
+                      {{ Helper.getStatusIcon(request.status) }}
+                      {{ Helper.getStatusLabel(request.status) }}
+                    </span>
+
+                    <span [class]="getPriorityBadgeClass(request.priority)">
+                      {{ Helper.getPriorityIcon(request.priority) }}
+                      {{ Helper.getPriorityLabel(request.priority) }}
+                    </span>
+
+                    <span *ngIf="request.isHighPriority"
+                      class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
+                      🚨 Priorité élevée
+                    </span>
+
+                    <span *ngIf="isExpiringSoon(request)"
+                      class="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs font-medium">
+                      ⏰ Expire bientôt
+                    </span>
+
+                    <span *ngIf="isExpired(request)"
+                      class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
+                      ⚠️ Expirée
+                    </span>
+                  </div>
+
+                  <!-- Informations utilisateur -->
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                      <p class="text-sm text-gray-400">Email</p>
+                      <p class="text-white">{{ request.email }}</p>
+                    </div>
+                    <div>
+                      <p class="text-sm text-gray-400">Membre depuis</p>
+                      <p class="text-white">{{ getDaysOldText(request.userJoinDate || request.createdAt) }}</p>
+                    </div>
+                    <div>
+                      <p class="text-sm text-gray-400">Activité</p>
+                      <p class="text-white">
+                        {{ request.userWordsCount }} mots • {{ request.userCommunityPostsCount }} posts
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Motivation -->
+                  <div class="mb-4">
+                    <p class="text-sm text-gray-400 mb-1">Motivation</p>
+                    <p class="text-gray-200 text-sm leading-relaxed">
+                      {{ getMotivationPreview(request.motivation) }}
+                    </p>
+                  </div>
+
+                  <!-- Langues et expérience -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"
+                    *ngIf="request.languages || request.experience">
+                    <div *ngIf="request.languages">
+                      <p class="text-sm text-gray-400 mb-1">Langues</p>
+                      <p class="text-gray-200 text-sm">{{ request.languages }}</p>
+                    </div>
+                    <div *ngIf="request.experience">
+                      <p class="text-sm text-gray-400 mb-1">Expérience</p>
+                      <p class="text-gray-200 text-sm">{{ request.experience }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Liens externes -->
+                  <div class="flex items-center space-x-4 mb-4"
+                    *ngIf="request.linkedIn || request.github || request.portfolio">
+                    <a *ngIf="request.linkedIn" [href]="request.linkedIn" target="_blank"
+                      class="text-blue-400 hover:text-blue-300 text-sm flex items-center space-x-1">
+                      <span>🔗</span>
+                      <span>LinkedIn</span>
+                    </a>
+                    <a *ngIf="request.github" [href]="request.github" target="_blank"
+                      class="text-gray-400 hover:text-gray-300 text-sm flex items-center space-x-1">
+                      <span>📂</span>
+                      <span>GitHub</span>
+                    </a>
+                    <a *ngIf="request.portfolio" [href]="request.portfolio" target="_blank"
+                      class="text-emerald-400 hover:text-emerald-300 text-sm flex items-center space-x-1">
+                      <span>🌐</span>
+                      <span>Portfolio</span>
+                    </a>
+                  </div>
+
+                  <!-- Métadonnées -->
+                  <div class="flex items-center justify-between text-sm text-gray-400">
+                    <div class="flex items-center space-x-4">
+                      <span>📅 {{ getDaysOldText(request.createdAt) }}</span>
+                      <span *ngIf="request.reviewedBy">
+                        👤 Révisé par {{ request.reviewedBy.username }}
+                      </span>
+                      <span *ngIf="request.evaluationScore">
+                        📊 Score: {{ request.evaluationScore }}/100
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center space-x-2 ml-4">
+                  <button (click)="openDetailModal(request)"
+                    class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm transition-colors">
+                    👁️ Détails
+                  </button>
+
+                  <button *ngIf="request.status === StatusEnum.PENDING || request.status === StatusEnum.UNDER_REVIEW"
+                    (click)="openReviewModal(request)"
+                    class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 rounded text-sm transition-colors">
+                    ✏️ Réviser
+                  </button>
+
+                  <!-- Menu priorité -->
+                  <div class="relative" *ngIf="request.status === StatusEnum.PENDING">
+                    <select                      [value]="request.priority"
+                      (change)="updatePriority(request, $any($event.target).value)"
+                      class="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-sm text-white focus:ring-2 focus:ring-emerald-500">
+                      <option *ngFor="let option of priorityOptions.slice(1)" [value]="option.value">
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="totalPages > 1" class="mt-8 flex items-center justify-between">
+      <div class="text-sm text-gray-400">
+        Page {{ currentPage }} sur {{ totalPages }} • {{ totalRequests }} demandes au total
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button (click)="onPageChange(currentPage - 1)" [disabled]="currentPage === 1"
+          class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600 rounded transition-colors">
+          ← Précédent
+        </button>
+
+        <span class="px-3 py-1 bg-emerald-600 rounded text-white">
+          {{ currentPage }}
+        </span>
+
+        <button (click)="onPageChange(currentPage + 1)" [disabled]="currentPage === totalPages"
+          class="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed border border-gray-600 rounded transition-colors">
+          Suivant →
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de révision -->
+<div *ngIf="showReviewModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+  (click)="closeReviewModal()">
+  <div (click)="$event.stopPropagation()"
+    class="bg-gray-900 rounded-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold text-white">
+        Réviser la demande de {{ selectedRequest?.username }}
+      </h2>
+      <button (click)="closeReviewModal()" class="text-gray-400 hover:text-white text-2xl">
+        ×
+      </button>
+    </div>
+
+    <form [formGroup]="reviewForm" (ngSubmit)="submitReview()">
+      <!-- Action -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-300 mb-3">Action à effectuer</label>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <button *ngFor="let option of reviewStatusOptions" type="button"
+            (click)="reviewForm.patchValue({ status: option.value })"
+            [class]="'px-4 py-3 rounded-lg text-white font-medium transition-colors ' + option.class + (reviewForm.value.status === option.value ? ' ring-2 ring-white' : '')">
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Notes de révision -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-300 mb-2">Notes de révision</label>
+        <textarea formControlName="reviewNotes" rows="4" placeholder="Commentaires sur la demande..."
+          class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500"></textarea>
+      </div>
+
+      <!-- Raison de rejet (si rejet) -->
+      <div *ngIf="reviewForm.value.status === StatusEnum.REJECTED" class="mb-6">
+        <label class="block text-sm font-medium text-gray-300 mb-2">
+          Raison du rejet <span class="text-red-400">*</span>
+        </label>
+        <textarea formControlName="rejectionReason" rows="3"
+          placeholder="Expliquez pourquoi cette demande est rejetée..."
+          class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500"></textarea>
+      </div>
+
+      <!-- Score d'évaluation -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-300 mb-2">Score d'évaluation (0-100)</label>
+        <input type="number" formControlName="evaluationScore" min="0" max="100" placeholder="85"
+          class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500" />
+      </div>
+
+      <!-- Options avancées -->
+      <div class="mb-6 space-y-3">
+        <div class="flex items-center space-x-3">
+          <input type="checkbox" id="isHighPriority" formControlName="isHighPriority"
+            class="rounded border-gray-600 bg-gray-800 text-emerald-600 focus:ring-emerald-500" />
+          <label for="isHighPriority" class="text-sm text-gray-300">
+            Marquer comme priorité élevée
+          </label>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <input type="checkbox" id="requiresSpecialReview" formControlName="requiresSpecialReview"
+            class="rounded border-gray-600 bg-gray-800 text-emerald-600 focus:ring-emerald-500" />
+          <label for="requiresSpecialReview" class="text-sm text-gray-300">
+            Nécessite une révision spéciale
+          </label>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-end space-x-4">
+        <button type="button" (click)="closeReviewModal()"
+          class="px-6 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors">
+          Annuler
+        </button>
+        <button type="submit" [disabled]="!reviewForm.value.status"
+          class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors">
+          Confirmer la révision
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de détails -->
+<div *ngIf="showDetailModal && selectedRequest"
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" (click)="closeDetailModal()">
+  <div (click)="$event.stopPropagation()"
+    class="bg-gray-900 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold text-white">
+        Détails - {{ selectedRequest.username }}
+      </h2>
+      <button (click)="closeDetailModal()" class="text-gray-400 hover:text-white text-2xl">
+        ×
+      </button>
+    </div>
+
+    <!-- Contenu complet de la demande -->
+    <div class="space-y-6">
+      <!-- Status et badges -->
+      <div class="flex items-center space-x-4">
+        <span [class]="getStatusBadgeClass(selectedRequest.status)">
+          {{ Helper.getStatusIcon(selectedRequest.status) }}
+          {{ Helper.getStatusLabel(selectedRequest.status) }}
+        </span>
+        <span [class]="getPriorityBadgeClass(selectedRequest.priority)">
+          {{ Helper.getPriorityIcon(selectedRequest.priority) }}
+          {{ Helper.getPriorityLabel(selectedRequest.priority) }}
+        </span>
+      </div>
+
+      <!-- Motivation complète -->
+      <div>
+        <h3 class="text-lg font-semibold text-white mb-3">Motivation</h3>
+        <div class="bg-gray-800 rounded-lg p-4">
+          <p class="text-gray-200 leading-relaxed">{{ selectedRequest.motivation }}</p>
+        </div>
+      </div>
+
+      <!-- Expérience et langues -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div *ngIf="selectedRequest.experience">
+          <h3 class="text-lg font-semibold text-white mb-3">Expérience</h3>
+          <div class="bg-gray-800 rounded-lg p-4">
+            <p class="text-gray-200">{{ selectedRequest.experience }}</p>
+          </div>
+        </div>
+        <div *ngIf="selectedRequest.languages">
+          <h3 class="text-lg font-semibold text-white mb-3">Langues</h3>
+          <div class="bg-gray-800 rounded-lg p-4">
+            <p class="text-gray-200">{{ selectedRequest.languages }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historique d'activité -->
+      <div *ngIf="selectedRequest.activityLog && selectedRequest.activityLog.length > 0">
+        <h3 class="text-lg font-semibold text-white mb-3">Historique d'activité</h3>
+        <div class="space-y-3">
+          <div *ngFor="let log of selectedRequest.activityLog"
+            class="bg-gray-800 rounded-lg p-4 flex items-start space-x-3">
+            <div class="text-2xl">📝</div>
+            <div class="flex-1">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-medium text-white">{{ log.action }}</span>
+                <span class="text-sm text-gray-400">
+                  {{ log.performedAt | date:'dd/MM/yyyy HH:mm' }}
+                </span>
+              </div>
+              <p class="text-gray-300 text-sm">Par {{ log.performedBy.username }}</p>
+              <p *ngIf="log.notes" class="text-gray-200 text-sm mt-1">{{ log.notes }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal d'actions en lot -->
+<div *ngIf="showBulkActionModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+  (click)="closeBulkActionModal()">
+  <div (click)="$event.stopPropagation()" class="bg-gray-900 rounded-xl p-6 max-w-lg w-full border border-gray-700">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-xl font-bold text-white">
+        Actions en lot ({{ getSelectedCount() }} demandes)
+      </h2>
+      <button (click)="closeBulkActionModal()" class="text-gray-400 hover:text-white text-2xl">
+        ×
+      </button>
+    </div>
+
+    <form [formGroup]="bulkActionForm" (ngSubmit)="submitBulkAction()">
+      <!-- Action -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-300 mb-3">Action à appliquer</label>
+        <div class="space-y-2">
+          <button *ngFor="let option of reviewStatusOptions" type="button"
+            (click)="bulkActionForm.patchValue({ action: option.value })"
+            [class]="'w-full px-4 py-3 rounded-lg text-white font-medium transition-colors text-left ' + option.class + (bulkActionForm.value.action === option.value ? ' ring-2 ring-white' : '')">
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-300 mb-2">Notes (optionnel)</label>
+        <textarea formControlName="notes" rows="3" placeholder="Commentaires pour toutes les demandes sélectionnées..."
+          class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-emerald-500"></textarea>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center justify-end space-x-4">
+        <button type="button" (click)="closeBulkActionModal()"
+          class="px-6 py-2 text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors">
+          Annuler
+        </button>
+        <button type="submit" [disabled]="!bulkActionForm.value.action"
+          class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-white font-medium transition-colors">
+          Appliquer l'action
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

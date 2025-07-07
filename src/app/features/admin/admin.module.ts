@@ -7,6 +7,7 @@ import { RouterModule } from '@angular/router';
 import { AdminDashboardComponent } from './components/dashboard/admin-dashboard.component';
 import { UserManagementComponent } from './components/users/user-management.component';
 import { AddLanguageComponent } from './components/languages/add-language.component';
+import { ContributorRequestsComponent } from './components/contributor-requests/contributor-requests.component';
 
 // Services
 import { PermissionService } from './services/permission.service';
@@ -24,6 +25,7 @@ import { SharedModule } from '../../shared/shared.module';
     AdminDashboardComponent,
     UserManagementComponent,
     AddLanguageComponent,
+    ContributorRequestsComponent,
   ],
   imports: [
     CommonModule,
