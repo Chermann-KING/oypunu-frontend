@@ -65,10 +65,13 @@ export class DictionaryService {
   private _favoriteWords: BehaviorSubject<Word[]> = new BehaviorSubject<Word[]>(
     []
   );
-  private _favoriteWordIds: BehaviorSubject<Set<string>> = new BehaviorSubject<Set<string>>(
-    new Set()
-  );
-  private _favoriteStatusChanged: Subject<{wordId: string, isFavorite: boolean}> = new Subject();
+  private _favoriteWordIds: BehaviorSubject<Set<string>> = new BehaviorSubject<
+    Set<string>
+  >(new Set());
+  private _favoriteStatusChanged: Subject<{
+    wordId: string;
+    isFavorite: boolean;
+  }> = new Subject();
 
   recentSearches$ = this._recentSearches.asObservable();
   favoriteWords$ = this._favoriteWords.asObservable();
@@ -76,8 +79,8 @@ export class DictionaryService {
   favoriteStatusChanged$ = this._favoriteStatusChanged.asObservable();
 
   constructor(
-    private _http: HttpClient, 
-    private _authService: AuthService, 
+    private _http: HttpClient,
+    private _authService: AuthService,
     private _guestLimitsService: GuestLimitsService
   ) {
     this._loadRecentSearches();
@@ -164,12 +167,37 @@ export class DictionaryService {
     return this._http
       .get<any>(`${this._WORDS_API_URL}/search`, { params: httpParams })
       .pipe(
-        map((results) => ({
-          ...results,
-          words: this._normalizeIds(results.words).map((word) =>
-            this._checkIfFavorite(word)
-          ),
-        })),
+        switchMap((results) => {
+          const normalizedWords = this._normalizeIds(results.words);
+
+          // Si l'utilisateur est authentifié et que le cache favoris n'est pas initialisé
+          if (
+            this._authService.isAuthenticated() &&
+            this._favoriteWordIds.value.size === 0
+          ) {
+            console.log(
+              '🔥 Frontend: Cache favoris vide pour recherche, chargement en cours...'
+            );
+            // Charger les favoris d'abord, puis marquer les mots
+            return this.getFavoriteWords().pipe(
+              map(() => ({
+                ...results,
+                words: normalizedWords.map((word) =>
+                  this._checkIfFavorite(word)
+                ),
+              }))
+            );
+          } else {
+            // Cache déjà prêt ou utilisateur non authentifié
+            console.log(
+              '🔥 Frontend: Cache favoris prêt pour recherche, vérification directe'
+            );
+            return of({
+              ...results,
+              words: normalizedWords.map((word) => this._checkIfFavorite(word)),
+            });
+          }
+        }),
         catchError((error) => {
           console.error('Error searching words:', error);
           return of({
@@ -203,7 +231,9 @@ export class DictionaryService {
         const wordWithId = this._normalizeId(response);
 
         // Utiliser le cache local pour les favoris (plus rapide et cohérent)
-        console.log(`🔥 Frontend: Vérification favoris locale pour ${wordWithId.id}`);
+        console.log(
+          `🔥 Frontend: Vérification favoris locale pour ${wordWithId.id}`
+        );
         return of(this._checkIfFavorite(wordWithId));
       }),
       catchError((error) => {
@@ -215,12 +245,38 @@ export class DictionaryService {
 
   // Obtenir les mots mis en vedette/populaires
   getFeaturedWords(limit: number = 3): Observable<Word[]> {
+    console.log('🔥 Frontend: Chargement mots en vedette...');
+
     return this._http
       .get<any[]>(`${this._WORDS_API_URL}/featured?limit=${limit}`)
       .pipe(
-        map((words) =>
-          this._normalizeIds(words || []).map((word) => this._checkIfFavorite(word))
-        ),
+        switchMap((words) => {
+          const normalizedWords = this._normalizeIds(words || []);
+
+          // Si l'utilisateur est authentifié et que le cache favoris n'est pas initialisé
+          if (
+            this._authService.isAuthenticated() &&
+            this._favoriteWordIds.value.size === 0
+          ) {
+            console.log(
+              '🔥 Frontend: Cache favoris vide, chargement en cours...'
+            );
+            // Charger les favoris d'abord, puis marquer les mots
+            return this.getFavoriteWords().pipe(
+              map(() =>
+                normalizedWords.map((word) => this._checkIfFavorite(word))
+              )
+            );
+          } else {
+            // Cache déjà prêt ou utilisateur non authentifié
+            console.log(
+              '🔥 Frontend: Cache favoris prêt, vérification directe'
+            );
+            return of(
+              normalizedWords.map((word) => this._checkIfFavorite(word))
+            );
+          }
+        }),
         catchError((error) => {
           console.error('Error fetching featured words:', error);
           return of([]);
@@ -272,7 +328,7 @@ export class DictionaryService {
           console.log('🔥 Frontend: Réponse addToFavorites:', response);
           if (!response.success) {
             // Rollback en cas d'échec
-            console.log('🔥 Frontend: Échec API, rollback de l\'état');
+            console.log("🔥 Frontend: Échec API, rollback de l'état");
             this._setFavoriteStatus(wordId, false);
           }
         }),
@@ -302,10 +358,13 @@ export class DictionaryService {
       )
       .pipe(
         tap((response) => {
-          console.log(`🔥 Frontend: Réponse removeFromFavorites pour ${wordId}:`, response);
+          console.log(
+            `🔥 Frontend: Réponse removeFromFavorites pour ${wordId}:`,
+            response
+          );
           if (!response.success) {
             // Rollback en cas d'échec
-            console.log('🔥 Frontend: Échec API, rollback de l\'état');
+            console.log("🔥 Frontend: Échec API, rollback de l'état");
             this._setFavoriteStatus(wordId, true);
           }
         }),
@@ -344,7 +403,9 @@ export class DictionaryService {
       return of([]);
     }
 
-    console.log(`🔥 Frontend: Appel API getFavoriteWords (page=${page}, limit=${limit})`);
+    console.log(
+      `🔥 Frontend: Appel API getFavoriteWords (page=${page}, limit=${limit})`
+    );
 
     // return this._http.get<any>(`${this._WORDS_API_URL}/favorites/user?page=${page}&limit=${limit}`)
     return this._http
@@ -361,15 +422,17 @@ export class DictionaryService {
             ...word,
             isFavorite: true,
           }));
-          
+
           // Mettre à jour la liste des favoris
           this._favoriteWords.next(favoritesWithFlag);
-          
+
           // Mettre à jour le Set des IDs pour les vérifications rapides
-          const favoriteIds = new Set(words.map(word => word.id));
+          const favoriteIds = new Set(words.map((word) => word.id));
           this._favoriteWordIds.next(favoriteIds);
-          
-          console.log(`🔥 Frontend: Cache favoris mis à jour - ${favoriteIds.size} IDs`);
+
+          console.log(
+            `🔥 Frontend: Cache favoris mis à jour - ${favoriteIds.size} IDs`
+          );
         }),
         catchError((error) => {
           console.error('Error fetching favorite words:', error);
@@ -381,13 +444,18 @@ export class DictionaryService {
   // Vérifier si un mot est dans les favoris (utilise le cache local)
   checkIfFavorite(wordId: string): Observable<boolean> {
     if (!this._authService.isAuthenticated()) {
-      console.log('🔥 Frontend: Utilisateur non authentifié, mot pas en favoris');
+      console.log(
+        '🔥 Frontend: Utilisateur non authentifié, mot pas en favoris'
+      );
       return of(false);
     }
 
     // Utiliser le cache local pour une réponse immédiate
     const result = this.isFavorite(wordId);
-    console.log(`🔥 Frontend: Vérification cache local pour ${wordId}:`, result);
+    console.log(
+      `🔥 Frontend: Vérification cache local pour ${wordId}:`,
+      result
+    );
     return of(result);
   }
 
@@ -401,16 +469,24 @@ export class DictionaryService {
     return this._http
       .get<boolean>(`${environment.apiUrl}/favorite-words/check/${wordId}`)
       .pipe(
-        tap(result => {
-          console.log(`🔥 Frontend: Résultat API checkIfFavorite pour ${wordId}:`, result);
+        tap((result) => {
+          console.log(
+            `🔥 Frontend: Résultat API checkIfFavorite pour ${wordId}:`,
+            result
+          );
           // Synchroniser avec l'état local si différent
           if (result !== this.isFavorite(wordId)) {
-            console.log(`🔥 Frontend: Désynchronisation détectée, mise à jour cache`);
+            console.log(
+              `🔥 Frontend: Désynchronisation détectée, mise à jour cache`
+            );
             this._setFavoriteStatus(wordId, result);
           }
         }),
         catchError((error) => {
-          console.error(`🔥 Frontend: Erreur checkIfFavorite pour ${wordId}:`, error);
+          console.error(
+            `🔥 Frontend: Erreur checkIfFavorite pour ${wordId}:`,
+            error
+          );
           return of(false);
         })
       );
@@ -738,7 +814,9 @@ export class DictionaryService {
         // Utilisateur déconnecté - nettoyer le cache
         this._favoriteWords.next([]);
         this._favoriteWordIds.next(new Set());
-        console.log('🔥 Frontend: Cache favoris nettoyé - utilisateur déconnecté');
+        console.log(
+          '🔥 Frontend: Cache favoris nettoyé - utilisateur déconnecté'
+        );
       }
     });
   }
@@ -748,22 +826,24 @@ export class DictionaryService {
    * Gère la synchronisation entre tous les états locaux
    */
   private _setFavoriteStatus(wordId: string, isFavorite: boolean): void {
-    console.log(`🔥 Frontend: _setFavoriteStatus - wordId: ${wordId}, isFavorite: ${isFavorite}`);
-    
+    console.log(
+      `🔥 Frontend: _setFavoriteStatus - wordId: ${wordId}, isFavorite: ${isFavorite}`
+    );
+
     // 1. Mettre à jour le Set des IDs favoris pour les vérifications rapides
     const currentIds = this._favoriteWordIds.value;
     const newIds = new Set(currentIds);
-    
+
     if (isFavorite) {
       newIds.add(wordId);
     } else {
       newIds.delete(wordId);
     }
     this._favoriteWordIds.next(newIds);
-    
+
     // 2. Mettre à jour la liste complète des favoris
     const currentFavorites = this._favoriteWords.value;
-    
+
     if (isFavorite) {
       // Ajouter si pas déjà présent
       const existingFavorite = currentFavorites.find((w) => w.id === wordId);
@@ -776,11 +856,13 @@ export class DictionaryService {
       const updatedFavorites = currentFavorites.filter((w) => w.id !== wordId);
       this._favoriteWords.next(updatedFavorites);
     }
-    
+
     // 3. Notifier tous les composants du changement
-    this._favoriteStatusChanged.next({wordId, isFavorite});
-    
-    console.log(`🔥 Frontend: État favoris mis à jour - Total IDs: ${newIds.size}`);
+    this._favoriteStatusChanged.next({ wordId, isFavorite });
+
+    console.log(
+      `🔥 Frontend: État favoris mis à jour - Total IDs: ${newIds.size}`
+    );
   }
 
   /**
@@ -792,7 +874,10 @@ export class DictionaryService {
     this.getWordById(wordId).subscribe((word) => {
       if (word) {
         const currentFavorites = this._favoriteWords.value;
-        const updatedFavorites = [...currentFavorites, { ...word, isFavorite: true }];
+        const updatedFavorites = [
+          ...currentFavorites,
+          { ...word, isFavorite: true },
+        ];
         this._favoriteWords.next(updatedFavorites);
       }
     });
@@ -816,15 +901,20 @@ export class DictionaryService {
    * ✨ NOUVELLE MÉTHODE : Récupère les langues disponibles avec comptage des mots
    */
   getAvailableLanguages(): Observable<any[]> {
-    return this._http.get<any[]>(`${this._WORDS_API_URL}/available-languages`).pipe(
-      tap(languages => {
-        console.log('🌍 Langues disponibles récupérées:', languages);
-      }),
-      catchError(error => {
-        console.error('❌ Erreur lors de la récupération des langues:', error);
-        // Retourner une liste vide en cas d'erreur
-        return of([]);
-      })
-    );
+    return this._http
+      .get<any[]>(`${this._WORDS_API_URL}/available-languages`)
+      .pipe(
+        tap((languages) => {
+          console.log('🌍 Langues disponibles récupérées:', languages);
+        }),
+        catchError((error) => {
+          console.error(
+            '❌ Erreur lors de la récupération des langues:',
+            error
+          );
+          // Retourner une liste vide en cas d'erreur
+          return of([]);
+        })
+      );
   }
 }

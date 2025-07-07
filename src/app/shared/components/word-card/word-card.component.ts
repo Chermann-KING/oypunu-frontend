@@ -1,10 +1,19 @@
-import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnInit,
+  OnDestroy,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { Word } from '../../../core/models/word';
 import { User } from '../../../core/models/user';
 import { DictionaryService } from '../../../core/services/dictionary.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
 @Component({
   selector: 'app-word-card',
@@ -12,7 +21,7 @@ import { ToastService } from '../../../core/services/toast.service';
   templateUrl: './word-card.component.html',
   styleUrls: ['./word-card.component.scss'],
 })
-export class WordCardComponent implements OnInit {
+export class WordCardComponent implements OnInit, OnDestroy {
   @Input() word!: Word;
   @Input() showLanguage = true;
   @Input() showDefinition = true;
@@ -20,6 +29,7 @@ export class WordCardComponent implements OnInit {
 
   @Output() favoriteToggle = new EventEmitter<void>();
 
+  private _destroy$ = new Subject<void>();
   arobase = '@';
 
   // Map pour stocker les catégories récupérées
@@ -89,6 +99,23 @@ export class WordCardComponent implements OnInit {
           }, {} as Record<string, string>);
         });
     }
+
+    // Écouter les changements de statut des favoris pour synchroniser l'affichage
+    this._dictionaryService.favoriteStatusChanged$
+      .pipe(takeUntil(this._destroy$))
+      .subscribe(({ wordId, isFavorite }) => {
+        if (this.word && this.word.id === wordId) {
+          console.log(
+            `🔥 WordCard: Synchronisation statut favori ${wordId}: ${isFavorite}`
+          );
+          this.word.isFavorite = isFavorite;
+        }
+      });
+  }
+
+  ngOnDestroy(): void {
+    this._destroy$.next();
+    this._destroy$.complete();
   }
 
   // Naviguer vers la page de détails du mot
@@ -112,31 +139,39 @@ export class WordCardComponent implements OnInit {
         'Créez votre compte gratuit pour ajouter des mots à vos favoris et accéder à toutes les fonctionnalités !',
         4000
       );
-      
+
       // Redirection avec délai pour que l'utilisateur voie le message
       setTimeout(() => {
         this._router.navigate(['/auth/register'], {
           queryParams: {
             returnUrl: this._router.url,
-            action: 'favorite'
-          }
+            action: 'favorite',
+          },
         });
       }, 1500);
       return;
     }
 
-    // Toggle du statut favori
+    // Toggle du statut favori - l'état sera mis à jour automatiquement par le service
+    console.log(
+      `🔥 WordCard: Toggle favori pour ${this.word.id} (état actuel: ${this.word.isFavorite})`
+    );
+
     this._dictionaryService.toggleFavorite(this.word).subscribe({
       next: (response) => {
+        console.log(`🔥 WordCard: Réponse toggleFavorite:`, response);
         if (response.success) {
-          // Inverser le statut local du favori
-          this.word.isFavorite = !this.word.isFavorite;
-          // Émettre l'événement
+          console.log(`🔥 WordCard: Toggle confirmé par API`);
+          // Émettre l'événement pour notifier le parent si nécessaire
           this.favoriteToggle.emit();
+        } else {
+          console.log(
+            `🔥 WordCard: Toggle échoué, état restauré automatiquement`
+          );
         }
       },
       error: (error) => {
-        console.error('Erreur lors du toggle du favori:', error);
+        console.error('🔥 WordCard: Erreur toggle (état restauré):', error);
       },
     });
   }
