@@ -10,6 +10,7 @@ import { ForgotPasswordComponent } from './components/forgot-password/forgot-pas
 import { ResetPasswordComponent } from './components/reset-password/reset-password.component';
 import { VerifyEmailComponent } from './components/verify-email/verify-email.component';
 import { SocialAuthComponent } from './components/social-auth/social-auth.component';
+import { ContributorRequestComponent } from './components/contributor-request/contributor-request.component';
 
 @NgModule({
   declarations: [
@@ -19,7 +20,9 @@ import { SocialAuthComponent } from './components/social-auth/social-auth.compon
     ResetPasswordComponent,
     VerifyEmailComponent,
     SocialAuthComponent,
+    ContributorRequestComponent,
   ],
   imports: [CommonModule, ReactiveFormsModule, AuthRoutingModule, SharedModule],
+  exports: [ContributorRequestComponent],
 })
 export class AuthModule {}

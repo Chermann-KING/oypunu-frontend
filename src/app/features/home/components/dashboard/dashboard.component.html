@@ -169,9 +169,10 @@
           <div *ngIf="recentContributions.length === 0" class="text-center py-8 text-gray-500">
             <div class="text-4xl mb-4">✍️</div>
             <p class="mb-4">Aucune contribution récente</p>
-            <button (click)="navigateToAction(quickActions[1])"
-              class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm transition-colors">
-              Ajouter votre premier mot
+            <button (click)="navigateToAction(getContributeAction())"
+              class="px-4 py-2 rounded-lg text-sm transition-colors"
+              [ngClass]="getContributeButtonClass()">
+              {{ getContributeButtonText() }}
             </button>
           </div>
         </div>
@@ -240,7 +241,7 @@
     <div class="mt-8">
       <section [class.opacity-0]="!showRecommendations" [class.transform]="!showRecommendations"
         [class.translate-y-10]="!showRecommendations" class="transition-all duration-1000 ease-out delay-900">
-
+        
         <!-- Recommandations temporairement désactivées pour résoudre le blocage -->
         <div class="text-center py-8">
           <h3 class="text-xl font-bold text-white mb-4">🎯 Recommandations Personnalisées</h3>

@@ -15,6 +15,7 @@ import { AppComponent } from './app.component';
 import { CoreModule } from './core/core.module';
 import { SharedModule } from './shared/shared.module';
 import { HomeModule } from './features/home/home.module';
+import { AuthModule } from './features/auth/auth.module';
 
 registerLocaleData(localeFr);
 
@@ -27,6 +28,7 @@ registerLocaleData(localeFr);
     CoreModule,
     SharedModule,
     HomeModule,
+    AuthModule,
   ],
   providers: [
     provideHttpClient(withFetch(), withInterceptorsFromDi()),

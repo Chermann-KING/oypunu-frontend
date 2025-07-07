@@ -16,7 +16,10 @@ export class HeaderComponent implements OnInit {
   isDashboardPage = false;
   isMobileMenuOpen = false;
 
-  constructor(private _authService: AuthService, private _router: Router) {}
+  constructor(
+    private _authService: AuthService,
+    private _router: Router
+  ) {}
 
   ngOnInit(): void {
     this._authService.currentUser$.subscribe((user) => {
@@ -26,7 +29,7 @@ export class HeaderComponent implements OnInit {
 
     // Détecter la page courante
     this._router.events
-      .pipe(filter((event) => event instanceof NavigationEnd))
+      .pipe(filter(event => event instanceof NavigationEnd))
       .subscribe((event: NavigationEnd) => {
         this.isHomePage = event.url === '/' || event.url === '/home';
         this.isAuthPage = event.url.startsWith('/auth');

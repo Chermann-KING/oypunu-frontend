@@ -6,10 +6,8 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { DictionaryService } from '../../../../core/services/dictionary.service';
 import { HomeDataService } from '../../services/home-data.service';
 import { RecommendationService } from '../../../../core/services/recommendation.service';
-import {
-  RecommendedWord,
-  RecommendationFeedback,
-} from '../../../../core/models/recommendation';
+import { RecommendedWord, RecommendationFeedback } from '../../../../core/models/recommendation';
+import { UserRole } from '../../../../core/models/admin';
 
 interface QuickAction {
   id: string;
@@ -43,64 +41,19 @@ interface PersonalStats {
   streak: number;
 }
 
+
 @Component({
   selector: 'app-dashboard',
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss'],
-  standalone: false,
+  standalone: false
 })
 export class DashboardComponent implements OnInit, OnDestroy {
   currentUser: any = null;
   isLoading = true;
 
-  // Actions rapides
-  quickActions: QuickAction[] = [
-    {
-      id: 'search',
-      title: 'Rechercher',
-      description: 'Explorez notre dictionnaire',
-      icon: '🔍',
-      route: '/dictionary',
-      color: 'purple',
-      gradient: 'from-purple-500 to-blue-500',
-    },
-    {
-      id: 'add-word',
-      title: 'Ajouter un mot',
-      description: 'Contribuez à la communauté',
-      icon: '➕',
-      route: '/dictionary/add',
-      color: 'green',
-      gradient: 'from-green-500 to-teal-500',
-    },
-    {
-      id: 'favorites',
-      title: 'Mes favoris',
-      description: 'Vos mots sauvegardés',
-      icon: '❤️',
-      route: '/favorites',
-      color: 'red',
-      gradient: 'from-red-500 to-pink-500',
-    },
-    {
-      id: 'messaging',
-      title: 'Messagerie',
-      description: 'Conversations privées',
-      icon: '💬',
-      route: '/messaging',
-      color: 'indigo',
-      gradient: 'from-indigo-500 to-purple-500',
-    },
-    {
-      id: 'communities',
-      title: 'Communautés',
-      description: 'Rejoignez les discussions',
-      icon: '👥',
-      route: '/communities',
-      color: 'blue',
-      gradient: 'from-blue-500 to-cyan-500',
-    },
-  ];
+  // Actions rapides - seront initialisées selon le rôle
+  quickActions: QuickAction[] = [];
 
   // Données personnelles
   personalStats: PersonalStats = {
@@ -109,13 +62,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
     languagesContributed: 0,
     languagesExplored: 0,
     contributionScore: 0,
-    streak: 0,
+    streak: 0
   };
 
   recentContributions: RecentWord[] = [];
   recentConsultations: RecentWord[] = [];
   // recommendedWords: RecommendedWord[] = [];
-
+  
   // État de l'interface
   showWelcomeAnimation = false;
   showStats = false;
@@ -143,25 +96,126 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private initAnimations(): void {
-    setTimeout(() => (this.showWelcomeAnimation = true), 100);
-    setTimeout(() => (this.showStats = true), 300);
-    setTimeout(() => (this.showRecentWords = true), 500);
-    setTimeout(() => (this.showRecommendations = true), 700);
+    setTimeout(() => this.showWelcomeAnimation = true, 100);
+    setTimeout(() => this.showStats = true, 300);
+    setTimeout(() => this.showRecentWords = true, 500);
+    setTimeout(() => this.showRecommendations = true, 700);
+  }
+
+  private initQuickActions(user: any): void {
+    if (!user) {
+      this.quickActions = [];
+      return;
+    }
+
+    // Actions de base pour tous les utilisateurs connectés
+    const baseActions: QuickAction[] = [
+      {
+        id: 'search',
+        title: 'Rechercher',
+        description: 'Explorez notre dictionnaire',
+        icon: '🔍',
+        route: '/dictionary',
+        color: 'purple',
+        gradient: 'from-purple-500 to-blue-500'
+      },
+      {
+        id: 'favorites',
+        title: 'Mes favoris',
+        description: 'Vos mots sauvegardés',
+        icon: '❤️',
+        route: '/favorites',
+        color: 'red',
+        gradient: 'from-red-500 to-pink-500'
+      },
+      {
+        id: 'messaging',
+        title: 'Messagerie',
+        description: 'Conversations privées',
+        icon: '💬',
+        route: '/messaging',
+        color: 'indigo',
+        gradient: 'from-indigo-500 to-purple-500'
+      },
+      {
+        id: 'communities',
+        title: 'Communautés',
+        description: 'Rejoignez les discussions',
+        icon: '👥',
+        route: '/communities',
+        color: 'blue',
+        gradient: 'from-blue-500 to-cyan-500'
+      }
+    ];
+
+    const userRole = user.role as UserRole;
+
+    // Ajouter l'action spécifique selon le rôle
+    if (this.hasContributorPermissions(userRole)) {
+      // Utilisateur avec permissions de contributeur
+      baseActions.splice(1, 0, {
+        id: 'add-word',
+        title: 'Ajouter un mot',
+        description: 'Contribuez à la communauté',
+        icon: '➕',
+        route: '/dictionary/add',
+        color: 'green',
+        gradient: 'from-green-500 to-teal-500'
+      });
+    } else {
+      // Utilisateur normal - proposer de devenir contributeur
+      baseActions.splice(1, 0, {
+        id: 'become-contributor',
+        title: 'Devenir contributeur',
+        description: 'Demandez à contribuer',
+        icon: '✍️',
+        route: '/contributor-request',
+        color: 'emerald',
+        gradient: 'from-emerald-500 to-green-500'
+      });
+    }
+
+    this.quickActions = baseActions;
+  }
+
+  private hasContributorPermissions(userRole: UserRole): boolean {
+    return [UserRole.CONTRIBUTOR, UserRole.ADMIN, UserRole.SUPERADMIN].includes(userRole);
+  }
+
+  getContributeAction(): QuickAction {
+    return this.quickActions.find(action => 
+      action.id === 'add-word' || action.id === 'become-contributor'
+    ) || this.quickActions[1];
+  }
+
+  getContributeButtonText(): string {
+    const userRole = this.currentUser?.role as UserRole;
+    return this.hasContributorPermissions(userRole) 
+      ? 'Ajouter votre premier mot' 
+      : 'Demander à devenir contributeur';
+  }
+
+  getContributeButtonClass(): string {
+    const userRole = this.currentUser?.role as UserRole;
+    return this.hasContributorPermissions(userRole)
+      ? 'bg-green-600 hover:bg-green-700'
+      : 'bg-emerald-600 hover:bg-emerald-700';
   }
 
   private loadUserData(): void {
     this.authService.currentUser$
       .pipe(
         takeUntil(this.destroy$),
-        switchMap((user) => {
+        switchMap(user => {
           this.currentUser = user;
+          this.initQuickActions(user);
           if (user) {
             return forkJoin({
-              favorites: this.dictionaryService.getFavoriteWords(1, 5),
+              favorites: this.dictionaryService.getFavoriteWords(1, 5), 
               stats: this.loadPersonalStats(),
               contributions: this.loadRecentContributions(),
               consultations: this.loadRecentConsultations(),
-              recommendations: of([]),
+              recommendations: of([])
             });
           }
           return forkJoin({
@@ -169,7 +223,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
             stats: this.getDefaultStats(),
             contributions: of([]),
             consultations: of([]),
-            recommendations: of([]),
+            recommendations: of([])
           });
         })
       )
@@ -184,107 +238,90 @@ export class DashboardComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Erreur lors du chargement des données:', error);
           this.isLoading = false;
-        },
+        }
       });
   }
 
   private loadPersonalStats(): Promise<PersonalStats> {
     // Charger les vraies statistiques depuis l'API
-    return this.authService
-      .getUserStats()
-      .toPromise()
-      .then((stats) => {
-        if (!stats) {
-          throw new Error('Pas de données reçues');
-        }
-        return {
-          wordsAdded: stats.totalWordsAdded || 0,
-          favoritesCount: stats.favoriteWordsCount || 0,
-          languagesContributed: stats.languagesContributed || 0,
-          languagesExplored: stats.languagesExplored || 0,
-          contributionScore: stats.contributionScore || 0,
-          streak: stats.streak || 0,
-        };
-      })
-      .catch((error) => {
-        console.error('Erreur lors du chargement des stats:', error);
-        // Fallback en cas d'erreur
-        return {
-          wordsAdded: 0,
-          favoritesCount: 0,
-          languagesContributed: 0,
-          languagesExplored: 0,
-          contributionScore: 0,
-          streak: 0,
-        };
-      });
+    return this.authService.getUserStats().toPromise().then(stats => {
+      if (!stats) {
+        throw new Error('Pas de données reçues');
+      }
+      return {
+        wordsAdded: stats.totalWordsAdded || 0,
+        favoritesCount: stats.favoriteWordsCount || 0,
+        languagesContributed: stats.languagesContributed || 0,
+        languagesExplored: stats.languagesExplored || 0,
+        contributionScore: stats.contributionScore || 0,
+        streak: stats.streak || 0
+      };
+    }).catch(error => {
+      console.error('Erreur lors du chargement des stats:', error);
+      // Fallback en cas d'erreur
+      return {
+        wordsAdded: 0,
+        favoritesCount: 0,
+        languagesContributed: 0,
+        languagesExplored: 0,
+        contributionScore: 0,
+        streak: 0
+      };
+    });
   }
 
   private loadRecentContributions(): Promise<RecentWord[]> {
-    return this.authService
-      .getUserRecentContributions(3)
-      .toPromise()
-      .then((response) => {
-        if (!response || !response.contributions) {
-          return [];
-        }
-        return response.contributions.map((contrib: any) => ({
-          id: contrib.id,
-          word: contrib.word,
-          language: contrib.language,
-          definition: contrib.definition,
-          createdAt: new Date(contrib.createdAt),
-          isOwner: contrib.isOwner,
-          isFavorite: false, // À implémenter avec le système de favoris
-        }));
-      })
-      .catch((error) => {
-        console.error('Erreur lors du chargement des contributions:', error);
+    return this.authService.getUserRecentContributions(3).toPromise().then(response => {
+      if (!response || !response.contributions) {
         return [];
-      });
+      }
+      return response.contributions.map((contrib: any) => ({
+        id: contrib.id,
+        word: contrib.word,
+        language: contrib.language,
+        definition: contrib.definition,
+        createdAt: new Date(contrib.createdAt),
+        isOwner: contrib.isOwner,
+        isFavorite: false // À implémenter avec le système de favoris
+      }));
+    }).catch(error => {
+      console.error('Erreur lors du chargement des contributions:', error);
+      return [];
+    });
   }
 
   private loadRecentConsultations(): Promise<RecentWord[]> {
     console.log('🔍 Frontend: Chargement des consultations récentes...');
-
-    return this.authService
-      .getUserRecentConsultations(3)
-      .toPromise()
-      .then((response) => {
-        console.log('📥 Frontend: Réponse reçue:', response);
-
-        if (!response || !response.consultations) {
-          console.log('⚠️ Frontend: Pas de consultations dans la réponse');
-          return [];
-        }
-
-        console.log(
-          '✅ Frontend: Consultations trouvées:',
-          response.consultations.length
-        );
-
-        const consultations = response.consultations.map((consult: any) => ({
-          id: consult.id,
-          word: consult.word,
-          language: consult.language,
-          definition: consult.definition,
-          lastViewedAt: new Date(consult.lastViewedAt),
-          viewCount: consult.viewCount,
-          isOwner: consult.isOwner,
-          isFavorite: false, // À implémenter avec le système de favoris
-        }));
-
-        console.log('📋 Frontend: Consultations mappées:', consultations);
-        return consultations;
-      })
-      .catch((error) => {
-        console.error(
-          '❌ Frontend: Erreur lors du chargement des consultations:',
-          error
-        );
+    
+    return this.authService.getUserRecentConsultations(3).toPromise().then(response => {
+      console.log('📥 Frontend: Réponse reçue:', response);
+      
+      if (!response || !response.consultations) {
+        console.log('⚠️ Frontend: Pas de consultations dans la réponse');
         return [];
-      });
+      }
+      
+      console.log('✅ Frontend: Consultations trouvées:', response.consultations.length);
+      
+      const consultations = response.consultations.map((consult: any) => ({
+        id: consult.id,
+        word: consult.word,
+        language: consult.language,
+        definition: consult.definition,
+        lastViewedAt: new Date(consult.lastViewedAt),
+        viewCount: consult.viewCount,
+        isOwner: consult.isOwner,
+        isFavorite: false // À implémenter avec le système de favoris
+      }));
+      
+      console.log('📋 Frontend: Consultations mappées:', consultations);
+      return consultations;
+    }).catch(error => {
+      console.error('❌ Frontend: Erreur lors du chargement des consultations:', error);
+      return [];
+    });
   }
+
 
   private getDefaultStats(): Promise<PersonalStats> {
     return Promise.resolve({
@@ -293,7 +330,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       languagesContributed: 0,
       languagesExplored: 0,
       contributionScore: 0,
-      streak: 0,
+      streak: 0
     });
   }
 
@@ -308,16 +345,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   toggleFavorite(word: RecentWord): void {
     if (word.isFavorite) {
-      this.dictionaryService
-        .removeFromFavorites(word.id)
+      this.dictionaryService.removeFromFavorites(word.id)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => {
           word.isFavorite = false;
           this.personalStats.favoritesCount--;
         });
     } else {
-      this.dictionaryService
-        .addToFavorites(word.id)
+      this.dictionaryService.addToFavorites(word.id)
         .pipe(takeUntil(this.destroy$))
         .subscribe(() => {
           word.isFavorite = true;
@@ -360,7 +395,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       it: 'Italien',
       pt: 'Portugais',
       zu: 'Zoulou',
-      da: 'Danois',
+      da: 'Danois'
     };
     return languages[code] || code.toUpperCase();
   }
@@ -374,7 +409,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       it: '🇮🇹',
       pt: '🇵🇹',
       zu: '🇿🇦',
-      da: '🇩🇰',
+      da: '🇩🇰'
     };
     return flags[code] || '🌐';
   }
@@ -385,9 +420,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     } else if (this.personalStats.streak >= 3) {
       return `✨ Super ! ${this.personalStats.streak} jours d'affilée !`;
     } else {
-      return `🌱 ${this.personalStats.streak} jour${
-        this.personalStats.streak > 1 ? 's' : ''
-      } de suite`;
+      return `🌱 ${this.personalStats.streak} jour${this.personalStats.streak > 1 ? 's' : ''} de suite`;
     }
   }
 
@@ -406,7 +439,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   getUserGreeting(): string {
     const hour = new Date().getHours();
     const name = this.currentUser?.username || 'ami';
-
+    
     if (hour < 12) {
       return `Bonjour ${name} !`;
     } else if (hour < 18) {
@@ -436,7 +469,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
    */
   onRecommendationSelected(recommendation: RecommendedWord): void {
     console.log('🎯 Dashboard: Recommandation sélectionnée', recommendation);
-
+    
     // La navigation est déjà gérée par le composant de recommandations
     // On peut ici ajouter des analytics ou d'autres traitements
   }
@@ -446,10 +479,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
    */
   onRecommendationFeedback(feedback: RecommendationFeedback): void {
     console.log('📝 Dashboard: Feedback reçu', feedback);
-
+    
     // Ici on peut mettre à jour l'interface utilisateur
     // ou effectuer d'autres actions basées sur le feedback
-
+    
     switch (feedback.feedbackType) {
       case 'like':
         // Pourrait afficher une notification positive

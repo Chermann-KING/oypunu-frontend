@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './core/guards/auth.guard';
+import { ContributorRequestComponent } from './features/auth/components/contributor-request/contributor-request.component';
 
 const routes: Routes = [
   {
@@ -64,6 +65,11 @@ const routes: Routes = [
     path: 'legal',
     loadChildren: () =>
       import('./features/legal/legal.module').then((m) => m.LegalModule),
+  },
+  {
+    path: 'contributor-request',
+    component: ContributorRequestComponent,
+    canActivate: [AuthGuard],
   },
   { path: '**', redirectTo: '' },
 ];
