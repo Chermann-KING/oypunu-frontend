@@ -14,7 +14,7 @@
 
     <!-- Header avec Salutation -->
     <header class="mb-12" [class.opacity-0]="!showWelcomeAnimation" [class.transform]="!showWelcomeAnimation"
-      [class.translate-y-10]="!showWelcomeAnimation" class="transition-all duration-1000 ease-out">
+      [class.translate-y-10]="!showWelcomeAnimation" class="transition-all duration-1000 ease-out mb-6">
       <div class="text-center md:text-left">
         <h1 class="text-4xl md:text-5xl font-bold mb-4">
           {{ getUserGreeting() }}
@@ -33,7 +33,7 @@
 
     <!-- Actions Rapides -->
     <section class="mb-12" [class.opacity-0]="!showStats" [class.transform]="!showStats"
-      [class.translate-y-10]="!showStats" class="transition-all duration-1000 ease-out delay-300">
+      [class.translate-y-10]="!showStats" class="transition-all duration-1000 ease-out delay-300 mb-6">
       <h2 class="text-2xl font-bold mb-6">Actions Rapides</h2>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
@@ -67,7 +67,7 @@
 
     <!-- Statistiques Personnelles -->
     <section class="mb-12" [class.opacity-0]="!showStats" [class.transform]="!showStats"
-      [class.translate-y-10]="!showStats" class="transition-all duration-1000 ease-out delay-500">
+      [class.translate-y-10]="!showStats" class="transition-all duration-1000 ease-out delay-500 mb-6">
       <h2 class="text-2xl font-bold mb-6">Vos Statistiques</h2>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
@@ -131,7 +131,7 @@
 
       <!-- Mes Contributions Récentes -->
       <section [class.opacity-0]="!showRecentWords" [class.transform]="!showRecentWords"
-        [class.translate-y-10]="!showRecentWords" class="transition-all duration-1000 ease-out delay-700">
+        [class.translate-y-10]="!showRecentWords" class="transition-all duration-1000 ease-out delay-700 mb-6">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-2xl font-bold">Mes Contributions Récentes</h2>
           <button (click)="navigateToAction(quickActions[1])" class="text-green-400 hover:text-green-300 text-sm">
@@ -170,8 +170,7 @@
             <div class="text-4xl mb-4">✍️</div>
             <p class="mb-4">Aucune contribution récente</p>
             <button (click)="navigateToAction(getContributeAction())"
-              class="px-4 py-2 rounded-lg text-sm transition-colors"
-              [ngClass]="getContributeButtonClass()">
+              class="px-4 py-2 rounded-lg text-sm transition-colors" [ngClass]="getContributeButtonClass()">
               {{ getContributeButtonText() }}
             </button>
           </div>
@@ -240,8 +239,8 @@
     <!-- Recommandations Intelligentes -->
     <div class="mt-8">
       <section [class.opacity-0]="!showRecommendations" [class.transform]="!showRecommendations"
-        [class.translate-y-10]="!showRecommendations" class="transition-all duration-1000 ease-out delay-900">
-        
+        [class.translate-y-10]="!showRecommendations" class="transition-all duration-1000 ease-out delay-900 mb-6">
+
         <!-- Recommandations temporairement désactivées pour résoudre le blocage -->
         <div class="text-center py-8">
           <h3 class="text-xl font-bold text-white mb-4">🎯 Recommandations Personnalisées</h3>
