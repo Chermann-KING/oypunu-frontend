@@ -1,351 +1,359 @@
 <div class="admin-dashboard">
-    <!-- En-tête avec informations utilisateur -->
-    <div class="dashboard-header">
-        <div class="header-content">
-            <div class="user-info">
-                <div class="avatar">
-                    {{ getUserInitials }}
-                </div>
-                <div class="user-details">
-                    <h2>Tableau de bord administration</h2>
-                    <p class="role-badge" [ngClass]="'role-' + userRole">
-                        {{ getRoleDisplayName }}
-                    </p>
-                </div>
-            </div>
-
-            <div class="header-actions">
-                <button class="refresh-btn" (click)="refreshData()" [disabled]="isLoading" title="Actualiser">
-                    <i class="fas fa-sync" [class.fa-spin]="isLoading"></i>
-                </button>
-            </div>
+  <!-- En-tête avec informations utilisateur -->
+  <div class="dashboard-header">
+    <div class="header-content">
+      <div class="user-info">
+        <div class="avatar">
+          {{ getUserInitials }}
         </div>
-    </div>
+        <div class="user-details">
+          <h2>Tableau de bord administration</h2>
+          <p class="role-badge" [ngClass]="'role-' + userRole">
+            {{ getRoleDisplayName }}
+          </p>
+        </div>
+      </div>
 
-    <!-- Messages d'erreur -->
-    <div *ngIf="errorMessage" class="error-message">
-        <i class="fas fa-exclamation-triangle"></i>
-        {{ errorMessage }}
-        <button class="close-error" (click)="clearError()">
-            <i class="fas fa-times"></i>
+      <div class="header-actions">
+        <button class="refresh-btn" (click)="refreshData()" [disabled]="isLoading" title="Actualiser">
+          <i class="fas fa-sync" [class.fa-spin]="isLoading"></i>
         </button>
+      </div>
     </div>
+  </div>
 
-    <!-- Messages de succès -->
-    <div *ngIf="successMessage" class="success-message">
-        <i class="fas fa-check-circle"></i>
-        {{ successMessage }}
-        <button class="close-success" (click)="successMessage = ''">
+  <!-- Messages d'erreur -->
+  <div *ngIf="errorMessage" class="error-message">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ errorMessage }}
+    <button class="close-error" (click)="clearError()">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Messages de succès -->
+  <div *ngIf="successMessage" class="success-message">
+    <i class="fas fa-check-circle"></i>
+    {{ successMessage }}
+    <button class="close-success" (click)="successMessage = ''">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="isLoading && !errorMessage" class="loading-container">
+    <div class="loading-spinner">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Chargement du tableau de bord...</p>
+    </div>
+  </div>
+
+  <!-- Dashboard content selon le rôle -->
+  <div *ngIf="!isLoading && !errorMessage && dashboardStats" class="dashboard-content">
+
+    <!-- Dashboard CONTRIBUTEUR -->
+    <div *ngIf="userRole === UserRole.CONTRIBUTOR">
+      <h3 class="section-title">
+        <i class="fas fa-edit"></i>
+        Modération des mots
+      </h3>
+
+      <div class="stats-grid stats-grid-small">
+        <div class="stat-card pending">
+          <div class="stat-icon">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.pendingWords }}</div>
+            <div class="stat-label">Mots en attente</div>
+          </div>
+        </div>
+
+        <div class="stat-card approved">
+          <div class="stat-icon">
+            <i class="fas fa-check"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.approvedWords }}</div>
+            <div class="stat-label">Mots approuvés</div>
+          </div>
+        </div>
+
+        <div class="stat-card rejected">
+          <div class="stat-icon">
             <i class="fas fa-times"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.rejectedWords }}</div>
+            <div class="stat-label">Mots rejetés</div>
+          </div>
+        </div>
+
+        <div class="stat-card new">
+          <div class="stat-icon">
+            <i class="fas fa-plus"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.newWordsThisWeek }}</div>
+            <div class="stat-label">Nouveaux cette semaine</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <a routerLink="/admin/moderation" class="action-btn primary">
+          <i class="fas fa-list"></i>
+          <span>Modérer les mots</span>
+        </a>
+        <a routerLink="/admin/languages/add" class="action-btn secondary">
+          <i class="fas fa-globe"></i>
+          <span>Proposer une langue</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Dashboard ADMIN -->
+    <div *ngIf="userRole === UserRole.ADMIN">
+      <h3 class="section-title">
+        <i class="fas fa-tachometer-alt"></i>
+        Vue d'ensemble administration
+      </h3>
+
+      <!-- Statistiques principales -->
+      <div class="stats-grid">
+        <div class="stat-card users">
+          <div class="stat-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.totalUsers }}</div>
+            <div class="stat-label">Utilisateurs totaux</div>
+            <div class="stat-detail">{{ dashboardStats.activeUsers }} actifs</div>
+          </div>
+        </div>
+
+        <div class="stat-card words">
+          <div class="stat-icon">
+            <i class="fas fa-book"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.totalWords }}</div>
+            <div class="stat-label">Mots au total</div>
+            <div class="stat-detail">{{ dashboardStats.pendingWords }} en attente</div>
+          </div>
+        </div>
+
+        <div class="stat-card communities">
+          <div class="stat-icon">
+            <i class="fas fa-globe"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.totalCommunities }}</div>
+            <div class="stat-label">Communautés</div>
+            <div class="stat-detail">{{ dashboardStats.activeCommunities }} actives</div>
+          </div>
+        </div>
+
+        <div class="stat-card messages">
+          <div class="stat-icon">
+            <i class="fas fa-comments"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.totalMessages }}</div>
+            <div class="stat-label">Messages totaux</div>
+            <div class="stat-detail">{{ dashboardStats.totalPosts }} posts</div>
+          </div>
+        </div>
+
+        <div class="stat-card growth">
+          <div class="stat-icon">
+            <i class="fas fa-chart-line"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.newUsersThisMonth }}</div>
+            <div class="stat-label">Nouveaux utilisateurs</div>
+            <div class="stat-detail">Ce mois</div>
+          </div>
+        </div>
+
+        <div class="stat-card suspensions">
+          <div class="stat-icon">
+            <i class="fas fa-ban"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.suspendedUsers }}</div>
+            <div class="stat-label">Utilisateurs suspendus</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions rapides -->
+      <div class="quick-actions mt-16">
+        <a routerLink="/admin/users" class="action-btn primary">
+          <i class="fas fa-users"></i>
+          <span>Gérer les utilisateurs</span>
+        </a>
+        <a routerLink="/admin/contributor-requests" class="action-btn primary">
+          <i class="fas fa-user-plus"></i>
+          <span>Demandes de contribution</span>
+        </a>
+        <a routerLink="/admin/moderation" class="action-btn secondary">
+          <i class="fas fa-clipboard-list"></i>
+          <span>Modérer les mots</span>
+        </a>
+        <a routerLink="/admin/moderation/languages" class="action-btn secondary">
+          <i class="fas fa-globe-americas"></i>
+          <span>Modérer les langues</span>
+        </a>
+        <a routerLink="/admin/languages/add" class="action-btn secondary">
+          <i class="fas fa-language"></i>
+          <span>Ajouter une langue</span>
+        </a>
+        <button class="action-btn secondary" disabled>
+          <i class="fas fa-globe"></i>
+          <span>Gérer les communautés</span>
         </button>
+        <button class="action-btn secondary" disabled>
+          <i class="fas fa-history"></i>
+          <span>Voir l'activité</span>
+        </button>
+      </div>
+
+      <!-- Activité récente (aperçu) -->
+      <div class="recent-activity-preview mt-16" *ngIf="recentActivity">
+        <h4>
+          <i class="fas fa-clock"></i>
+          Activité récente
+        </h4>
+        <div class="activity-summary">
+          <div class="activity-item" *ngFor="let user of recentActivity.recentUsers?.slice(0, 3)">
+            <i class="fas fa-user-plus"></i>
+            <span>{{ user.username }} s'est inscrit</span>
+            <small>{{ user.createdAt | date:'short' }}</small>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Loading state -->
-    <div *ngIf="isLoading && !errorMessage" class="loading-container">
-        <div class="loading-spinner">
-            <i class="fas fa-spinner fa-spin"></i>
-            <p>Chargement du tableau de bord...</p>
+    <!-- Dashboard SUPERADMIN -->
+    <div *ngIf="userRole === UserRole.SUPERADMIN">
+      <h3 class="section-title">
+        <i class="fas fa-crown"></i>
+        Administration système
+      </h3>
+
+      <!-- Statistiques complètes -->
+      <div class="stats-grid stats-grid-large">
+        <div class="stat-card users">
+          <div class="stat-icon">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.totalUsers }}</div>
+            <div class="stat-label">Utilisateurs totaux</div>
+            <div class="stat-breakdown">
+              <span>{{ dashboardStats.activeUsers }} actifs</span>
+              <span>{{ dashboardStats.suspendedUsers }} suspendus</span>
+            </div>
+          </div>
         </div>
+
+        <div class="stat-card words">
+          <div class="stat-icon">
+            <i class="fas fa-book"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.totalWords }}</div>
+            <div class="stat-label">Mots au total</div>
+            <div class="stat-breakdown">
+              <span>{{ dashboardStats.approvedWords }} approuvés</span>
+              <span>{{ dashboardStats.pendingWords }} en attente</span>
+              <span>{{ dashboardStats.rejectedWords }} rejetés</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card communities">
+          <div class="stat-icon">
+            <i class="fas fa-globe"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.totalCommunities }}</div>
+            <div class="stat-label">Communautés</div>
+            <div class="stat-detail">{{ dashboardStats.activeCommunities }} actives</div>
+          </div>
+        </div>
+
+        <div class="stat-card messages">
+          <div class="stat-icon">
+            <i class="fas fa-comments"></i>
+          </div>
+          <div class="stat-info">
+            <div class="stat-number">{{ dashboardStats.totalMessages }}</div>
+            <div class="stat-label">Messages totaux</div>
+            <div class="stat-detail">{{ dashboardStats.totalPosts }} posts</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions rapides superadmin -->
+      <div class="quick-actions">
+        <a routerLink="/admin/users" class="action-btn primary">
+          <i class="fas fa-users"></i>
+          <span>Gérer les utilisateurs</span>
+        </a>
+        <a routerLink="/admin/contributor-requests" class="action-btn primary">
+          <i class="fas fa-user-plus"></i>
+          <span>Demandes de contribution</span>
+        </a>
+        <a routerLink="/admin/moderation" class="action-btn secondary">
+          <i class="fas fa-clipboard-list"></i>
+          <span>Modérer les mots</span>
+        </a>
+        <a routerLink="/admin/moderation/languages" class="action-btn secondary">
+          <i class="fas fa-globe-americas"></i>
+          <span>Modérer les langues</span>
+        </a>
+        <a routerLink="/admin/languages/add" class="action-btn secondary">
+          <i class="fas fa-language"></i>
+          <span>Ajouter une langue</span>
+        </a>
+        <button class="action-btn secondary" disabled>
+          <i class="fas fa-globe"></i>
+          <span>Gérer les communautés</span>
+        </button>
+        <button class="action-btn warning" disabled>
+          <i class="fas fa-cog"></i>
+          <span>Paramètres système</span>
+        </button>
+        <button class="action-btn secondary" disabled>
+          <i class="fas fa-chart-bar"></i>
+          <span>Rapports avancés</span>
+        </button>
+      </div>
+
+      <!-- Métriques système (superadmin uniquement) -->
+      <div class="system-metrics" *ngIf="systemMetrics && canAccessSystemMetrics">
+        <h4>
+          <i class="fas fa-server"></i>
+          Métriques système
+        </h4>
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <span class="metric-label">Uptime</span>
+            <span class="metric-value">{{ systemMetrics.uptime | number:'1.0-0' }}s</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Version Node.js</span>
+            <span class="metric-value">{{ systemMetrics.nodeVersion }}</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Mémoire utilisée</span>
+            <span class="metric-value">{{ (systemMetrics.memory.heapUsed / 1024 / 1024) | number:'1.0-0' }}
+              MB</span>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <!-- Dashboard content selon le rôle -->
-    <div *ngIf="!isLoading && !errorMessage && dashboardStats" class="dashboard-content">
-
-        <!-- Dashboard CONTRIBUTEUR -->
-        <div *ngIf="userRole === UserRole.CONTRIBUTOR">
-            <h3 class="section-title">
-                <i class="fas fa-edit"></i>
-                Modération des mots
-            </h3>
-
-            <div class="stats-grid stats-grid-small">
-                <div class="stat-card pending">
-                    <div class="stat-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.pendingWords }}</div>
-                        <div class="stat-label">Mots en attente</div>
-                    </div>
-                </div>
-
-                <div class="stat-card approved">
-                    <div class="stat-icon">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.approvedWords }}</div>
-                        <div class="stat-label">Mots approuvés</div>
-                    </div>
-                </div>
-
-                <div class="stat-card rejected">
-                    <div class="stat-icon">
-                        <i class="fas fa-times"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.rejectedWords }}</div>
-                        <div class="stat-label">Mots rejetés</div>
-                    </div>
-                </div>
-
-                <div class="stat-card new">
-                    <div class="stat-icon">
-                        <i class="fas fa-plus"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.newWordsThisWeek }}</div>
-                        <div class="stat-label">Nouveaux cette semaine</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="quick-actions">
-                <a routerLink="/admin/moderation" class="action-btn primary">
-                    <i class="fas fa-list"></i>
-                    <span>Modérer les mots</span>
-                </a>
-                <a routerLink="/admin/languages/add" class="action-btn secondary">
-                    <i class="fas fa-globe"></i>
-                    <span>Proposer une langue</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- Dashboard ADMIN -->
-        <div *ngIf="userRole === UserRole.ADMIN">
-            <h3 class="section-title">
-                <i class="fas fa-tachometer-alt"></i>
-                Vue d'ensemble administration
-            </h3>
-
-            <!-- Statistiques principales -->
-            <div class="stats-grid">
-                <div class="stat-card users">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.totalUsers }}</div>
-                        <div class="stat-label">Utilisateurs totaux</div>
-                        <div class="stat-detail">{{ dashboardStats.activeUsers }} actifs</div>
-                    </div>
-                </div>
-
-                <div class="stat-card words">
-                    <div class="stat-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.totalWords }}</div>
-                        <div class="stat-label">Mots au total</div>
-                        <div class="stat-detail">{{ dashboardStats.pendingWords }} en attente</div>
-                    </div>
-                </div>
-
-                <div class="stat-card communities">
-                    <div class="stat-icon">
-                        <i class="fas fa-globe"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.totalCommunities }}</div>
-                        <div class="stat-label">Communautés</div>
-                        <div class="stat-detail">{{ dashboardStats.activeCommunities }} actives</div>
-                    </div>
-                </div>
-
-                <div class="stat-card messages">
-                    <div class="stat-icon">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.totalMessages }}</div>
-                        <div class="stat-label">Messages totaux</div>
-                        <div class="stat-detail">{{ dashboardStats.totalPosts }} posts</div>
-                    </div>
-                </div>
-
-                <div class="stat-card growth">
-                    <div class="stat-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.newUsersThisMonth }}</div>
-                        <div class="stat-label">Nouveaux utilisateurs</div>
-                        <div class="stat-detail">Ce mois</div>
-                    </div>
-                </div>
-
-                <div class="stat-card suspensions">
-                    <div class="stat-icon">
-                        <i class="fas fa-ban"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.suspendedUsers }}</div>
-                        <div class="stat-label">Utilisateurs suspendus</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Actions rapides -->
-            <div class="quick-actions">
-                <a routerLink="/admin/users" class="action-btn primary">
-                    <i class="fas fa-users"></i>
-                    <span>Gérer les utilisateurs</span>
-                </a>
-                <a routerLink="/admin/moderation" class="action-btn secondary">
-                    <i class="fas fa-clipboard-list"></i>
-                    <span>Modérer les mots</span>
-                </a>
-                <a routerLink="/admin/moderation/languages" class="action-btn secondary">
-                    <i class="fas fa-globe-americas"></i>
-                    <span>Modérer les langues</span>
-                </a>
-                <a routerLink="/admin/languages/add" class="action-btn secondary">
-                    <i class="fas fa-language"></i>
-                    <span>Ajouter une langue</span>
-                </a>
-                <button class="action-btn secondary" disabled>
-                    <i class="fas fa-globe"></i>
-                    <span>Gérer les communautés</span>
-                </button>
-                <button class="action-btn secondary" disabled>
-                    <i class="fas fa-history"></i>
-                    <span>Voir l'activité</span>
-                </button>
-            </div>
-
-            <!-- Activité récente (aperçu) -->
-            <div class="recent-activity-preview" *ngIf="recentActivity">
-                <h4>
-                    <i class="fas fa-clock"></i>
-                    Activité récente
-                </h4>
-                <div class="activity-summary">
-                    <div class="activity-item" *ngFor="let user of recentActivity.recentUsers?.slice(0, 3)">
-                        <i class="fas fa-user-plus"></i>
-                        <span>{{ user.username }} s'est inscrit</span>
-                        <small>{{ user.createdAt | date:'short' }}</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Dashboard SUPERADMIN -->
-        <div *ngIf="userRole === UserRole.SUPERADMIN">
-            <h3 class="section-title">
-                <i class="fas fa-crown"></i>
-                Administration système
-            </h3>
-
-            <!-- Statistiques complètes -->
-            <div class="stats-grid stats-grid-large">
-                <div class="stat-card users">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.totalUsers }}</div>
-                        <div class="stat-label">Utilisateurs totaux</div>
-                        <div class="stat-breakdown">
-                            <span>{{ dashboardStats.activeUsers }} actifs</span>
-                            <span>{{ dashboardStats.suspendedUsers }} suspendus</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card words">
-                    <div class="stat-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.totalWords }}</div>
-                        <div class="stat-label">Mots au total</div>
-                        <div class="stat-breakdown">
-                            <span>{{ dashboardStats.approvedWords }} approuvés</span>
-                            <span>{{ dashboardStats.pendingWords }} en attente</span>
-                            <span>{{ dashboardStats.rejectedWords }} rejetés</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stat-card communities">
-                    <div class="stat-icon">
-                        <i class="fas fa-globe"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.totalCommunities }}</div>
-                        <div class="stat-label">Communautés</div>
-                        <div class="stat-detail">{{ dashboardStats.activeCommunities }} actives</div>
-                    </div>
-                </div>
-
-                <div class="stat-card messages">
-                    <div class="stat-icon">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    <div class="stat-info">
-                        <div class="stat-number">{{ dashboardStats.totalMessages }}</div>
-                        <div class="stat-label">Messages totaux</div>
-                        <div class="stat-detail">{{ dashboardStats.totalPosts }} posts</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Actions rapides superadmin -->
-            <div class="quick-actions">
-                <a routerLink="/admin/users" class="action-btn primary">
-                    <i class="fas fa-users"></i>
-                    <span>Gérer les utilisateurs</span>
-                </a>
-                <a routerLink="/admin/moderation" class="action-btn secondary">
-                    <i class="fas fa-clipboard-list"></i>
-                    <span>Modérer les mots</span>
-                </a>
-                <a routerLink="/admin/moderation/languages" class="action-btn secondary">
-                    <i class="fas fa-globe-americas"></i>
-                    <span>Modérer les langues</span>
-                </a>
-                <a routerLink="/admin/languages/add" class="action-btn secondary">
-                    <i class="fas fa-language"></i>
-                    <span>Ajouter une langue</span>
-                </a>
-                <button class="action-btn secondary" disabled>
-                    <i class="fas fa-globe"></i>
-                    <span>Gérer les communautés</span>
-                </button>
-                <button class="action-btn warning" disabled>
-                    <i class="fas fa-cog"></i>
-                    <span>Paramètres système</span>
-                </button>
-                <button class="action-btn secondary" disabled>
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Rapports avancés</span>
-                </button>
-            </div>
-
-            <!-- Métriques système (superadmin uniquement) -->
-            <div class="system-metrics" *ngIf="systemMetrics && canAccessSystemMetrics">
-                <h4>
-                    <i class="fas fa-server"></i>
-                    Métriques système
-                </h4>
-                <div class="metrics-grid">
-                    <div class="metric-item">
-                        <span class="metric-label">Uptime</span>
-                        <span class="metric-value">{{ systemMetrics.uptime | number:'1.0-0' }}s</span>
-                    </div>
-                    <div class="metric-item">
-                        <span class="metric-label">Version Node.js</span>
-                        <span class="metric-value">{{ systemMetrics.nodeVersion }}</span>
-                    </div>
-                    <div class="metric-item">
-                        <span class="metric-label">Mémoire utilisée</span>
-                        <span class="metric-value">{{ (systemMetrics.memory.heapUsed / 1024 / 1024) | number:'1.0-0' }}
-                            MB</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  </div>
 </div>

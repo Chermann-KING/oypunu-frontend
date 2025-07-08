@@ -22,10 +22,11 @@ export class AuthService {
   }
 
   private _loadUserFromStorage(): void {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
     const user = localStorage.getItem('user');
 
-    if (token && user) {
+    if (token && refreshToken && user) {
       this._currentUserSubject.next(JSON.parse(user));
     }
   }
@@ -35,7 +36,8 @@ export class AuthService {
       .post<AuthResponse>(`${this._API_URL}/login`, { email, password })
       .pipe(
         tap((response) => {
-          localStorage.setItem('token', response.tokens.access_token);
+          localStorage.setItem('access_token', response.tokens.access_token);
+          localStorage.setItem('refresh_token', response.tokens.refresh_token);
           localStorage.setItem('user', JSON.stringify(response.user));
           this._currentUserSubject.next(response.user);
         }),
@@ -283,20 +285,38 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('token');
+    const refreshToken = localStorage.getItem('refresh_token');
+
+    // Tenter de révoquer le refresh token côté serveur
+    if (refreshToken) {
+      this._http
+        .post(`${this._API_URL}/logout`, { refresh_token: refreshToken })
+        .subscribe({
+          next: () => console.log('Refresh token révoqué côté serveur'),
+          error: (error) =>
+            console.warn('Erreur lors de la révocation:', error),
+        });
+    }
+
+    // Nettoyer le localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     this._currentUserSubject.next(null);
     this._router.navigate(['/auth/login']);
   }
 
   isAuthenticated(): boolean {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
+    const refreshToken = localStorage.getItem('refresh_token');
     const user = localStorage.getItem('user');
-    return !!token && !!user && !!this._currentUserSubject.value;
+    return (
+      !!token && !!refreshToken && !!user && !!this._currentUserSubject.value
+    );
   }
 
   getToken(): string | null {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     if (!token) {
       return null;
     }
@@ -304,11 +324,13 @@ export class AuthService {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (payload.exp * 1000 < Date.now()) {
-        this.logout();
+        // Token expiré, mais ne pas logout immédiatement
+        // L'intercepteur va essayer de le rafraîchir
         return null;
       }
       return token;
     } catch {
+      // Token malformé, logout
       this.logout();
       return null;
     }
@@ -343,36 +365,58 @@ export class AuthService {
     activitiesThisWeek: number;
     lastActivityDate?: Date;
   }> {
-    return this._http.get<any>(`${environment.apiUrl}/users/profile/stats`).pipe(
-      catchError((error) => {
-        console.error('Erreur lors de la récupération des stats:', error);
-        return throwError(() => new Error('Erreur lors de la récupération des statistiques'));
-      })
-    );
+    return this._http
+      .get<any>(`${environment.apiUrl}/users/profile/stats`)
+      .pipe(
+        catchError((error) => {
+          console.error('Erreur lors de la récupération des stats:', error);
+          return throwError(
+            () => new Error('Erreur lors de la récupération des statistiques')
+          );
+        })
+      );
   }
 
   /**
    * Récupère les contributions récentes de l'utilisateur
    */
   getUserRecentContributions(limit: number = 5): Observable<any> {
-    return this._http.get<any>(`${environment.apiUrl}/users/profile/recent-contributions?limit=${limit}`).pipe(
-      catchError((error) => {
-        console.error('Erreur lors de la récupération des contributions:', error);
-        return throwError(() => new Error('Erreur lors de la récupération des contributions'));
-      })
-    );
+    return this._http
+      .get<any>(
+        `${environment.apiUrl}/users/profile/recent-contributions?limit=${limit}`
+      )
+      .pipe(
+        catchError((error) => {
+          console.error(
+            'Erreur lors de la récupération des contributions:',
+            error
+          );
+          return throwError(
+            () => new Error('Erreur lors de la récupération des contributions')
+          );
+        })
+      );
   }
 
   /**
    * Récupère les consultations récentes de l'utilisateur
    */
   getUserRecentConsultations(limit: number = 5): Observable<any> {
-    return this._http.get<any>(`${environment.apiUrl}/users/profile/recent-consultations?limit=${limit}`).pipe(
-      catchError((error) => {
-        console.error('Erreur lors de la récupération des consultations:', error);
-        return throwError(() => new Error('Erreur lors de la récupération des consultations'));
-      })
-    );
+    return this._http
+      .get<any>(
+        `${environment.apiUrl}/users/profile/recent-consultations?limit=${limit}`
+      )
+      .pipe(
+        catchError((error) => {
+          console.error(
+            'Erreur lors de la récupération des consultations:',
+            error
+          );
+          return throwError(
+            () => new Error('Erreur lors de la récupération des consultations')
+          );
+        })
+      );
   }
 
   /**
@@ -383,14 +427,16 @@ export class AuthService {
     if (!user) return false;
 
     const roleHierarchy = {
-      'user': 1,
-      'contributor': 2,
-      'admin': 3,
-      'superadmin': 4
+      user: 1,
+      contributor: 2,
+      admin: 3,
+      superadmin: 4,
     };
 
-    const userLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
-    const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
+    const userLevel =
+      roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
+    const requiredLevel =
+      roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
 
     return userLevel >= requiredLevel;
   }
@@ -401,5 +447,88 @@ export class AuthService {
   hasRole(role: string): boolean {
     const user = this.getCurrentUser();
     return user ? user.role === role : false;
+  }
+
+  /**
+   * Récupère le refresh token
+   */
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refresh_token');
+  }
+
+  /**
+   * Rafraîchit les tokens d'accès
+   */
+  refreshTokens(): Observable<AuthResponse> {
+    const refreshToken = this.getRefreshToken();
+
+    if (!refreshToken) {
+      return throwError(() => new Error('Aucun refresh token disponible'));
+    }
+
+    return this._http
+      .post<AuthResponse>(`${this._API_URL}/refresh`, {
+        refresh_token: refreshToken,
+      })
+      .pipe(
+        tap((response) => {
+          // Mettre à jour les tokens dans le localStorage
+          localStorage.setItem('access_token', response.tokens.access_token);
+          localStorage.setItem('refresh_token', response.tokens.refresh_token);
+          console.log('🔄 Tokens rafraîchis avec succès');
+        }),
+        catchError((error) => {
+          console.error('❌ Erreur lors du refresh des tokens:', error);
+          // Si le refresh échoue, déconnecter l'utilisateur
+          this.logout();
+          return throwError(() => new Error('Session expirée'));
+        })
+      );
+  }
+
+  /**
+   * Déconnexion globale - révoque tous les tokens
+   */
+  logoutAllDevices(): Observable<{ message: string }> {
+    return this._http
+      .post<{ message: string }>(`${this._API_URL}/logout-all`, {})
+      .pipe(
+        tap(() => {
+          // Après déconnexion globale, nettoyer aussi localement
+          this.logout();
+        }),
+        catchError((error) => {
+          console.error('Erreur lors de la déconnexion globale:', error);
+          return throwError(
+            () =>
+              new Error(
+                error.error?.message || 'Erreur lors de la déconnexion globale'
+              )
+          );
+        })
+      );
+  }
+
+  /**
+   * Vérifie si le token d'accès est expiré
+   */
+  isTokenExpired(): boolean {
+    const token = localStorage.getItem('access_token');
+    if (!token) return true;
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp * 1000 < Date.now();
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Vérifie si le refresh token est disponible et valide
+   */
+  hasValidRefreshToken(): boolean {
+    const refreshToken = this.getRefreshToken();
+    return !!refreshToken;
   }
 }

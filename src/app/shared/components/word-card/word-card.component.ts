@@ -1,11 +1,4 @@
-import {
-  Component,
-  Input,
-  Output,
-  EventEmitter,
-  OnInit,
-  OnDestroy,
-} from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { Word } from '../../../core/models/word';
 import { User } from '../../../core/models/user';
@@ -103,11 +96,9 @@ export class WordCardComponent implements OnInit, OnDestroy {
     // Écouter les changements de statut des favoris pour synchroniser l'affichage
     this._dictionaryService.favoriteStatusChanged$
       .pipe(takeUntil(this._destroy$))
-      .subscribe(({ wordId, isFavorite }) => {
+      .subscribe(({wordId, isFavorite}) => {
         if (this.word && this.word.id === wordId) {
-          console.log(
-            `🔥 WordCard: Synchronisation statut favori ${wordId}: ${isFavorite}`
-          );
+          console.log(`🔥 WordCard: Synchronisation statut favori ${wordId}: ${isFavorite}`);
           this.word.isFavorite = isFavorite;
         }
       });
@@ -139,24 +130,22 @@ export class WordCardComponent implements OnInit, OnDestroy {
         'Créez votre compte gratuit pour ajouter des mots à vos favoris et accéder à toutes les fonctionnalités !',
         4000
       );
-
+      
       // Redirection avec délai pour que l'utilisateur voie le message
       setTimeout(() => {
         this._router.navigate(['/auth/register'], {
           queryParams: {
             returnUrl: this._router.url,
-            action: 'favorite',
-          },
+            action: 'favorite'
+          }
         });
       }, 1500);
       return;
     }
 
     // Toggle du statut favori - l'état sera mis à jour automatiquement par le service
-    console.log(
-      `🔥 WordCard: Toggle favori pour ${this.word.id} (état actuel: ${this.word.isFavorite})`
-    );
-
+    console.log(`🔥 WordCard: Toggle favori pour ${this.word.id} (état actuel: ${this.word.isFavorite})`);
+    
     this._dictionaryService.toggleFavorite(this.word).subscribe({
       next: (response) => {
         console.log(`🔥 WordCard: Réponse toggleFavorite:`, response);
@@ -165,9 +154,7 @@ export class WordCardComponent implements OnInit, OnDestroy {
           // Émettre l'événement pour notifier le parent si nécessaire
           this.favoriteToggle.emit();
         } else {
-          console.log(
-            `🔥 WordCard: Toggle échoué, état restauré automatiquement`
-          );
+          console.log(`🔥 WordCard: Toggle échoué, état restauré automatiquement`);
         }
       },
       error: (error) => {
