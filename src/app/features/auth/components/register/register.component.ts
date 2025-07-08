@@ -29,12 +29,15 @@ export class RegisterComponent implements OnInit {
   ) {
     this.registerForm = this._fb.group(
       {
-        username: ['', [
-          Validators.required,
-          Validators.pattern(/^[a-zA-Z0-9_-]+$/),
-          Validators.minLength(3),
-          Validators.maxLength(30)
-        ]],
+        username: [
+          '',
+          [
+            Validators.required,
+            Validators.pattern(/^[a-zA-Z0-9_-]+$/),
+            Validators.minLength(3),
+            Validators.maxLength(30),
+          ],
+        ],
         email: ['', [Validators.required, Validators.email]],
         password: ['', [Validators.required, Validators.minLength(6)]],
         confirmPassword: ['', Validators.required],
@@ -47,9 +50,10 @@ export class RegisterComponent implements OnInit {
 
   ngOnInit(): void {
     // Vérifier s'il y a un contexte spécifique dans les paramètres de la route
-    this._route.queryParams.subscribe(params => {
+    this._route.queryParams.subscribe((params) => {
       if (params['action'] === 'favorite') {
-        this.contextMessage = '💙 Créez votre compte pour ajouter des mots à vos favoris et accéder à toutes les fonctionnalités !';
+        this.contextMessage =
+          '💙 Créez votre compte pour ajouter des mots à vos favoris et accéder à toutes les fonctionnalités !';
       }
     });
   }
@@ -77,14 +81,16 @@ export class RegisterComponent implements OnInit {
       this.registerForm.value;
 
     // Utiliser l'ID de la langue sélectionnée ou le code si pas de langue sélectionnée
-    const languageValue = this.selectedLanguage ? this.selectedLanguage._id : nativeLanguage;
+    const languageValue = this.selectedLanguage
+      ? this.selectedLanguage._id
+      : nativeLanguage;
 
     this._authService
       .register(username, email, password, languageValue, hasAcceptedTerms)
       .subscribe({
         next: (response: RegisterResponse) => {
           this.isSubmitting = false;
-          
+
           if (response.tokens && response.user) {
             // Cas de l'inscription par réseau social ou sans vérification email
             this._toastService.success(
@@ -92,7 +98,7 @@ export class RegisterComponent implements OnInit {
               `Bienvenue ${response.user.username} ! Votre compte a été créé avec succès.`,
               4000
             );
-            
+
             // Redirection immédiate vers l'accueil
             setTimeout(() => {
               this._router.navigate(['/']);
@@ -102,16 +108,18 @@ export class RegisterComponent implements OnInit {
             this._toastService.success(
               '📧 Inscription réussie !',
               'Un email de vérification a été envoyé à votre adresse. Vérifiez votre boîte email.',
-              6000
+              8000
             );
-            
-            // Feedback visuel avec compte à rebours
-            this.showEmailVerificationFeedback();
+
+            // Feedback visuel avec compte à rebours après un délai
+            setTimeout(() => {
+              this._showEmailVerificationFeedback();
+            }, 3000);
           }
         },
         error: (error) => {
           this.isSubmitting = false;
-          this.handleRegistrationError(error);
+          this._handleRegistrationError(error);
         },
       });
   }
@@ -124,43 +132,43 @@ export class RegisterComponent implements OnInit {
   /**
    * Affichage du feedback avec compte à rebours pour vérification email
    */
-  private showEmailVerificationFeedback(): void {
+  private _showEmailVerificationFeedback(): void {
     let countdown = 5;
-    
-    const updateToast = () => {
-      if (countdown > 0) {
-        this._toastService.info(
-          '⏱️ Redirection en cours',
-          `Redirection vers la page de connexion dans ${countdown} secondes...`,
-          1000
-        );
-        countdown--;
-        setTimeout(updateToast, 1000);
-      } else {
+
+    // Afficher le toast initial avec le compte à rebours
+    this._toastService.info(
+      '⏱️ Redirection en cours',
+      `Redirection vers la page de connexion dans ${countdown} secondes...`,
+      5000
+    );
+
+    // Démarrer le compte à rebours sans créer de nouveaux toasts
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(countdownInterval);
         this._router.navigate(['/auth/login']);
       }
-    };
-    
-    updateToast();
+    }, 1000);
   }
 
   /**
    * Gestion spécifique des erreurs d'inscription
    */
-  private handleRegistrationError(error: any): void {
-    console.error('Erreur d\'inscription:', error);
-    
-    let title = 'Erreur d\'inscription';
+  private _handleRegistrationError(error: any): void {
+    console.error("Erreur d'inscription:", error);
+
+    let title = "Erreur d'inscription";
     let message = 'Une erreur inattendue est survenue';
-    
+
     // Gestion spécifique selon le type d'erreur
     if (error.status === 409) {
       if (error.message?.includes('email')) {
         title = 'Email déjà utilisé';
         message = 'Cette adresse email est déjà associée à un compte existant.';
       } else if (error.message?.includes('username')) {
-        title = 'Nom d\'utilisateur déjà pris';
-        message = 'Ce nom d\'utilisateur est déjà utilisé. Essayez-en un autre.';
+        title = "Nom d'utilisateur déjà pris";
+        message = "Ce nom d'utilisateur est déjà utilisé. Essayez-en un autre.";
       } else {
         title = 'Compte existant';
         message = 'Un compte avec ces informations existe déjà.';
@@ -173,15 +181,17 @@ export class RegisterComponent implements OnInit {
       message = 'Certaines informations ne respectent pas les critères requis.';
     } else if (error.status === 429) {
       title = 'Trop de tentatives';
-      message = 'Trop de tentatives d\'inscription. Réessayez dans quelques minutes.';
+      message =
+        "Trop de tentatives d'inscription. Réessayez dans quelques minutes.";
     } else if (error.status === 0) {
       title = 'Problème de connexion';
       message = 'Vérifiez votre connexion internet et réessayez.';
     } else if (error.message?.includes('password')) {
       title = 'Mot de passe faible';
-      message = 'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre.';
+      message =
+        'Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre.';
     }
-    
+
     this._toastService.error(title, message, 6000);
   }
 
@@ -190,7 +200,7 @@ export class RegisterComponent implements OnInit {
    */
   registerWithGoogle(): void {
     this.isSubmitting = true;
-    
+
     this._toastService.info(
       'Redirection en cours...',
       'Vous allez être redirigé vers Google pour créer votre compte'
@@ -205,14 +215,14 @@ export class RegisterComponent implements OnInit {
           `Bienvenue ${username} ! Votre compte a été créé via Google.`,
           4000
         );
-        
+
         setTimeout(() => {
           this._router.navigate(['/']);
         }, 1500);
       },
       error: (error) => {
         this.isSubmitting = false;
-        this.handleSocialRegistrationError(error, 'Google');
+        this._handleSocialRegistrationError(error, 'Google');
       },
     });
   }
@@ -222,7 +232,7 @@ export class RegisterComponent implements OnInit {
    */
   registerWithFacebook(): void {
     this.isSubmitting = true;
-    
+
     this._toastService.info(
       'Redirection en cours...',
       'Vous allez être redirigé vers Facebook pour créer votre compte'
@@ -237,14 +247,14 @@ export class RegisterComponent implements OnInit {
           `Bienvenue ${username} ! Votre compte a été créé via Facebook.`,
           4000
         );
-        
+
         setTimeout(() => {
           this._router.navigate(['/']);
         }, 1500);
       },
       error: (error) => {
         this.isSubmitting = false;
-        this.handleSocialRegistrationError(error, 'Facebook');
+        this._handleSocialRegistrationError(error, 'Facebook');
       },
     });
   }
@@ -254,7 +264,7 @@ export class RegisterComponent implements OnInit {
    */
   registerWithTwitter(): void {
     this.isSubmitting = true;
-    
+
     this._toastService.info(
       'Redirection en cours...',
       'Vous allez être redirigé vers Twitter pour créer votre compte'
@@ -269,14 +279,14 @@ export class RegisterComponent implements OnInit {
           `Bienvenue ${username} ! Votre compte a été créé via Twitter.`,
           4000
         );
-        
+
         setTimeout(() => {
           this._router.navigate(['/']);
         }, 1500);
       },
       error: (error) => {
         this.isSubmitting = false;
-        this.handleSocialRegistrationError(error, 'Twitter');
+        this._handleSocialRegistrationError(error, 'Twitter');
       },
     });
   }
@@ -284,12 +294,12 @@ export class RegisterComponent implements OnInit {
   /**
    * Gestion spécifique des erreurs d'inscription sociale
    */
-  private handleSocialRegistrationError(error: any, provider: string): void {
+  private _handleSocialRegistrationError(error: any, provider: string): void {
     console.error(`Erreur d'inscription ${provider}:`, error);
-    
+
     let title = `Erreur d'inscription ${provider}`;
-    let message = 'Une erreur est survenue lors de l\'inscription';
-    
+    let message = "Une erreur est survenue lors de l'inscription";
+
     if (error.status === 401) {
       title = 'Autorisation refusée';
       message = `L'autorisation ${provider} a été refusée ou annulée.`;
@@ -306,7 +316,7 @@ export class RegisterComponent implements OnInit {
       title = 'Popup bloquée';
       message = 'Autorisez les popups pour vous inscrire via ' + provider;
     }
-    
+
     this._toastService.error(title, message, 6000);
   }
 }
