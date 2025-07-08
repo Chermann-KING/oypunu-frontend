@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ToastService } from '../../../../core/services/toast.service';
 
 @Component({
   selector: 'app-login',
@@ -18,7 +19,8 @@ export class LoginComponent implements OnInit {
   constructor(
     private _fb: FormBuilder,
     private _router: Router,
-    private _authService: AuthService
+    private _authService: AuthService,
+    private _toastService: ToastService
   ) {
     this.loginForm = this._fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -33,6 +35,10 @@ export class LoginComponent implements OnInit {
     this.formSubmitted = true;
 
     if (this.loginForm.invalid) {
+      this._toastService.warning(
+        'Formulaire invalide',
+        'Veuillez vérifier vos informations de connexion'
+      );
       return;
     }
 
@@ -42,14 +48,25 @@ export class LoginComponent implements OnInit {
     const { email, password } = this.loginForm.value;
 
     this._authService.login(email, password).subscribe({
-      next: () => {
+      next: (response) => {
         this.isSubmitting = false;
-        this._router.navigate(['/']);
+        
+        // Message de bienvenue personnalisé
+        const username = response.user?.username || 'utilisateur';
+        this._toastService.success(
+          '🎉 Connexion réussie !',
+          `Bienvenue ${username} ! Vous êtes maintenant connecté.`,
+          4000
+        );
+        
+        // Redirection avec un petit délai pour laisser voir le message
+        setTimeout(() => {
+          this._router.navigate(['/']);
+        }, 1500);
       },
       error: (error) => {
         this.isSubmitting = false;
-        this.errorMessage =
-          error.message || 'Une erreur est survenue lors de la connexion';
+        this.handleLoginError(error);
       },
     });
   }
@@ -58,16 +75,28 @@ export class LoginComponent implements OnInit {
     this.isSubmitting = true;
     this.errorMessage = '';
 
+    this._toastService.info(
+      'Redirection en cours...',
+      'Vous allez être redirigé vers Google pour vous connecter'
+    );
+
     this._authService.loginWithGoogle().subscribe({
-      next: () => {
+      next: (response) => {
         this.isSubmitting = false;
-        this._router.navigate(['/']);
+        const username = response.user?.username || 'utilisateur';
+        this._toastService.success(
+          '🎉 Connexion Google réussie !',
+          `Bienvenue ${username} ! Connecté via Google.`,
+          4000
+        );
+        
+        setTimeout(() => {
+          this._router.navigate(['/']);
+        }, 1500);
       },
       error: (error) => {
         this.isSubmitting = false;
-        this.errorMessage =
-          error.message ||
-          'Une erreur est survenue lors de la connexion avec Google';
+        this.handleSocialLoginError(error, 'Google');
       },
     });
   }
@@ -76,16 +105,28 @@ export class LoginComponent implements OnInit {
     this.isSubmitting = true;
     this.errorMessage = '';
 
+    this._toastService.info(
+      'Redirection en cours...',
+      'Vous allez être redirigé vers Facebook pour vous connecter'
+    );
+
     this._authService.loginWithFacebook().subscribe({
-      next: () => {
+      next: (response) => {
         this.isSubmitting = false;
-        this._router.navigate(['/']);
+        const username = response.user?.username || 'utilisateur';
+        this._toastService.success(
+          '🎉 Connexion Facebook réussie !',
+          `Bienvenue ${username} ! Connecté via Facebook.`,
+          4000
+        );
+        
+        setTimeout(() => {
+          this._router.navigate(['/']);
+        }, 1500);
       },
       error: (error) => {
         this.isSubmitting = false;
-        this.errorMessage =
-          error.message ||
-          'Une erreur est survenue lors de la connexion avec Facebook';
+        this.handleSocialLoginError(error, 'Facebook');
       },
     });
   }
@@ -94,17 +135,85 @@ export class LoginComponent implements OnInit {
     this.isSubmitting = true;
     this.errorMessage = '';
 
+    this._toastService.info(
+      'Redirection en cours...',
+      'Vous allez être redirigé vers Twitter pour vous connecter'
+    );
+
     this._authService.loginWithTwitter().subscribe({
-      next: () => {
+      next: (response) => {
         this.isSubmitting = false;
-        this._router.navigate(['/']);
+        const username = response.user?.username || 'utilisateur';
+        this._toastService.success(
+          '🎉 Connexion Twitter réussie !',
+          `Bienvenue ${username} ! Connecté via Twitter.`,
+          4000
+        );
+        
+        setTimeout(() => {
+          this._router.navigate(['/']);
+        }, 1500);
       },
       error: (error) => {
         this.isSubmitting = false;
-        this.errorMessage =
-          error.message ||
-          'Une erreur est survenue lors de la connexion avec Twitter';
+        this.handleSocialLoginError(error, 'Twitter');
       },
     });
+  }
+
+  /**
+   * Gestion spécifique des erreurs de connexion
+   */
+  private handleLoginError(error: any): void {
+    console.error('Erreur de connexion:', error);
+    
+    let title = 'Erreur de connexion';
+    let message = 'Une erreur inattendue est survenue';
+    
+    // Gestion spécifique selon le type d'erreur
+    if (error.status === 401) {
+      title = 'Identifiants incorrects';
+      message = 'Vérifiez votre email et mot de passe. Mot de passe oublié ?';
+    } else if (error.status === 403) {
+      title = 'Compte désactivé';
+      message = 'Votre compte a été désactivé. Contactez le support.';
+    } else if (error.status === 429) {
+      title = 'Trop de tentatives';
+      message = 'Trop de tentatives de connexion. Réessayez dans quelques minutes.';
+    } else if (error.status === 0) {
+      title = 'Problème de connexion';
+      message = 'Vérifiez votre connexion internet et réessayez.';
+    } else if (error.message?.includes('email')) {
+      title = 'Email non vérifié';
+      message = 'Vérifiez votre email pour activer votre compte.';
+    }
+    
+    this._toastService.error(title, message, 6000);
+  }
+
+  /**
+   * Gestion spécifique des erreurs de connexion sociale
+   */
+  private handleSocialLoginError(error: any, provider: string): void {
+    console.error(`Erreur de connexion ${provider}:`, error);
+    
+    let title = `Erreur de connexion ${provider}`;
+    let message = 'Une erreur est survenue lors de la connexion';
+    
+    if (error.status === 401) {
+      title = 'Autorisation refusée';
+      message = `L'autorisation ${provider} a été refusée ou annulée.`;
+    } else if (error.status === 403) {
+      title = 'Compte non autorisé';
+      message = `Votre compte ${provider} n'est pas autorisé à se connecter.`;
+    } else if (error.status === 0) {
+      title = 'Problème de connexion';
+      message = 'Vérifiez votre connexion internet et réessayez.';
+    } else if (error.message?.includes('popup')) {
+      title = 'Popup bloquée';
+      message = 'Autorisez les popups pour vous connecter via ' + provider;
+    }
+    
+    this._toastService.error(title, message, 6000);
   }
 }
