@@ -286,13 +286,15 @@ export class AuthService {
 
   logout(): void {
     const refreshToken = localStorage.getItem('refresh_token');
-    
+
     // Tenter de révoquer le refresh token côté serveur
     if (refreshToken) {
-      this._http.post(`${this._API_URL}/logout`, { refresh_token: refreshToken })
+      this._http
+        .post(`${this._API_URL}/logout`, { refresh_token: refreshToken })
         .subscribe({
           next: () => console.log('Refresh token révoqué côté serveur'),
-          error: (error) => console.warn('Erreur lors de la révocation:', error)
+          error: (error) =>
+            console.warn('Erreur lors de la révocation:', error),
         });
     }
 
@@ -308,7 +310,9 @@ export class AuthService {
     const token = localStorage.getItem('access_token');
     const refreshToken = localStorage.getItem('refresh_token');
     const user = localStorage.getItem('user');
-    return !!token && !!refreshToken && !!user && !!this._currentUserSubject.value;
+    return (
+      !!token && !!refreshToken && !!user && !!this._currentUserSubject.value
+    );
   }
 
   getToken(): string | null {
@@ -361,36 +365,58 @@ export class AuthService {
     activitiesThisWeek: number;
     lastActivityDate?: Date;
   }> {
-    return this._http.get<any>(`${environment.apiUrl}/users/profile/stats`).pipe(
-      catchError((error) => {
-        console.error('Erreur lors de la récupération des stats:', error);
-        return throwError(() => new Error('Erreur lors de la récupération des statistiques'));
-      })
-    );
+    return this._http
+      .get<any>(`${environment.apiUrl}/users/profile/stats`)
+      .pipe(
+        catchError((error) => {
+          console.error('Erreur lors de la récupération des stats:', error);
+          return throwError(
+            () => new Error('Erreur lors de la récupération des statistiques')
+          );
+        })
+      );
   }
 
   /**
    * Récupère les contributions récentes de l'utilisateur
    */
   getUserRecentContributions(limit: number = 5): Observable<any> {
-    return this._http.get<any>(`${environment.apiUrl}/users/profile/recent-contributions?limit=${limit}`).pipe(
-      catchError((error) => {
-        console.error('Erreur lors de la récupération des contributions:', error);
-        return throwError(() => new Error('Erreur lors de la récupération des contributions'));
-      })
-    );
+    return this._http
+      .get<any>(
+        `${environment.apiUrl}/users/profile/recent-contributions?limit=${limit}`
+      )
+      .pipe(
+        catchError((error) => {
+          console.error(
+            'Erreur lors de la récupération des contributions:',
+            error
+          );
+          return throwError(
+            () => new Error('Erreur lors de la récupération des contributions')
+          );
+        })
+      );
   }
 
   /**
    * Récupère les consultations récentes de l'utilisateur
    */
   getUserRecentConsultations(limit: number = 5): Observable<any> {
-    return this._http.get<any>(`${environment.apiUrl}/users/profile/recent-consultations?limit=${limit}`).pipe(
-      catchError((error) => {
-        console.error('Erreur lors de la récupération des consultations:', error);
-        return throwError(() => new Error('Erreur lors de la récupération des consultations'));
-      })
-    );
+    return this._http
+      .get<any>(
+        `${environment.apiUrl}/users/profile/recent-consultations?limit=${limit}`
+      )
+      .pipe(
+        catchError((error) => {
+          console.error(
+            'Erreur lors de la récupération des consultations:',
+            error
+          );
+          return throwError(
+            () => new Error('Erreur lors de la récupération des consultations')
+          );
+        })
+      );
   }
 
   /**
@@ -401,14 +427,16 @@ export class AuthService {
     if (!user) return false;
 
     const roleHierarchy = {
-      'user': 1,
-      'contributor': 2,
-      'admin': 3,
-      'superadmin': 4
+      user: 1,
+      contributor: 2,
+      admin: 3,
+      superadmin: 4,
     };
 
-    const userLevel = roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
-    const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
+    const userLevel =
+      roleHierarchy[user.role as keyof typeof roleHierarchy] || 0;
+    const requiredLevel =
+      roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
 
     return userLevel >= requiredLevel;
   }
@@ -420,8 +448,6 @@ export class AuthService {
     const user = this.getCurrentUser();
     return user ? user.role === role : false;
   }
-
-  // 🔄 NOUVELLES MÉTHODES POUR REFRESH TOKENS
 
   /**
    * Récupère le refresh token
@@ -435,14 +461,14 @@ export class AuthService {
    */
   refreshTokens(): Observable<AuthResponse> {
     const refreshToken = this.getRefreshToken();
-    
+
     if (!refreshToken) {
       return throwError(() => new Error('Aucun refresh token disponible'));
     }
 
     return this._http
-      .post<AuthResponse>(`${this._API_URL}/refresh`, { 
-        refresh_token: refreshToken 
+      .post<AuthResponse>(`${this._API_URL}/refresh`, {
+        refresh_token: refreshToken,
       })
       .pipe(
         tap((response) => {
@@ -474,7 +500,10 @@ export class AuthService {
         catchError((error) => {
           console.error('Erreur lors de la déconnexion globale:', error);
           return throwError(
-            () => new Error(error.error?.message || 'Erreur lors de la déconnexion globale')
+            () =>
+              new Error(
+                error.error?.message || 'Erreur lors de la déconnexion globale'
+              )
           );
         })
       );
@@ -500,6 +529,32 @@ export class AuthService {
    */
   hasValidRefreshToken(): boolean {
     const refreshToken = this.getRefreshToken();
-    return !!refreshToken;
+    if (!refreshToken) return false;
+
+    // Vérifier si c'est un JWT et s'il n'est pas expiré
+    try {
+      const parts = refreshToken.split('.');
+      if (parts.length === 3) {
+        // C'est un JWT, vérifier l'expiration
+        const payload = JSON.parse(atob(parts[1]));
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          console.warn('[AuthService] 🕐 Refresh token expiré côté client');
+          // Nettoyer les tokens expirés
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          this._currentUserSubject.next(null);
+          return false;
+        }
+      }
+    } catch (e) {
+      // Si ce n'est pas un JWT ou erreur de parsing,
+      // on laisse le serveur valider
+      console.debug(
+        "[AuthService] ⚠️ Impossible de vérifier l'expiration du refresh token côté client"
+      );
+    }
+
+    return true;
   }
 }
