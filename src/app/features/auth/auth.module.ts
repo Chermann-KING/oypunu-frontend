@@ -11,6 +11,7 @@ import { ResetPasswordComponent } from './components/reset-password/reset-passwo
 import { VerifyEmailComponent } from './components/verify-email/verify-email.component';
 import { SocialAuthComponent } from './components/social-auth/social-auth.component';
 import { ContributorRequestComponent } from './components/contributor-request/contributor-request.component';
+import { PasswordStrengthComponent } from '../../shared/components/password-strength/password-strength.component';
 
 @NgModule({
   declarations: [
@@ -22,7 +23,7 @@ import { ContributorRequestComponent } from './components/contributor-request/co
     SocialAuthComponent,
     ContributorRequestComponent,
   ],
-  imports: [CommonModule, ReactiveFormsModule, AuthRoutingModule, SharedModule],
+  imports: [CommonModule, ReactiveFormsModule, AuthRoutingModule, SharedModule, PasswordStrengthComponent],
   exports: [ContributorRequestComponent],
 })
 export class AuthModule {}
