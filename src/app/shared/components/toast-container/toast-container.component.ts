@@ -26,7 +26,7 @@ import { ToastService, Toast } from '../../../core/services/toast.service';
               <div class="flex-shrink-0 mt-0.5">
                 <div class="flex items-center justify-center w-8 h-8 rounded-full"
                      [ngClass]="getIconBackgroundClasses(toast.type)">
-                  <span class="text-sm" [innerHTML]="getToastIcon(toast.type)"></span>
+                  <span class="text-sm">{{ getToastIcon(toast.type) }}</span>
                 </div>
               </div>
               <div class="ml-3 flex-1">
