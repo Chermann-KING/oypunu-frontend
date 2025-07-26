@@ -1,6 +1,7 @@
-import { Component, OnInit, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 import { MessagingService } from '../../../../core/services/messaging.service';
 import { WebSocketService } from '../../../../core/services/websocket.service';
 import { Conversation } from '../../../../core/models/message';
@@ -13,7 +14,7 @@ import { User } from '../../../../core/models/user';
   templateUrl: './conversations-list.component.html',
   styleUrls: ['./conversations-list.component.scss'],
 })
-export class ConversationsListComponent implements OnInit {
+export class ConversationsListComponent implements OnInit, OnDestroy {
   @Output() conversationSelected = new EventEmitter<Conversation>();
 
   conversations: Conversation[] = [];
@@ -29,6 +30,9 @@ export class ConversationsListComponent implements OnInit {
   showFiltersMenu = false;
   currentFilter: 'all' | 'unread' | 'favorites' | 'contacts' | 'groups' = 'all';
 
+  // PHASE 2-3: Subject pour gérer le cleanup des subscriptions
+  private destroy$ = new Subject<void>();
+
   // Propriétés pour le modal de nouvelle conversation
   showNewConversationModal = false;
 
@@ -43,6 +47,15 @@ export class ConversationsListComponent implements OnInit {
     this.loadConversations();
     this.setupWebSocketListeners();
     this.setupSearchListener();
+  }
+
+  /**
+   * PHASE 2-3: Nettoyage des ressources pour éviter les memory leaks
+   */
+  ngOnDestroy(): void {
+    console.log('🧹 ConversationsListComponent: Cleanup des subscriptions WebSocket');
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   /**
@@ -283,54 +296,64 @@ export class ConversationsListComponent implements OnInit {
   /**
    * Configurer les écouteurs WebSocket pour le statut des utilisateurs
    */
+  // PHASE 2-3: Méthode corrigée avec protection contre memory leaks
   private setupWebSocketListeners(): void {
     console.log('🔌 Configuring WebSocket listeners for user status...');
 
-    // Écouter les changements de statut des utilisateurs
-    this.webSocketService.userStatus$.subscribe({
-      next: (status) => {
-        console.log('👤 User status received:', status);
-        if (status.isOnline) {
-          this.onlineUsers.add(status.userId);
-          console.log(
-            '✅ User added to online list:',
-            status.userId,
-            'Total online:',
-            this.onlineUsers.size
-          );
-        } else {
-          this.onlineUsers.delete(status.userId);
-          console.log(
-            '❌ User removed from online list:',
-            status.userId,
-            'Total online:',
-            this.onlineUsers.size
-          );
-        }
-      },
-      error: (error) => {
-        console.error('❌ Error in user status subscription:', error);
-      },
-    });
+    // Écouter les changements de statut des utilisateurs avec protection takeUntil
+    this.webSocketService.userStatus$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (status) => {
+          console.log('👤 User status received:', status);
+          if (status.isOnline) {
+            this.onlineUsers.add(status.userId);
+            console.log(
+              '✅ User added to online list:',
+              status.userId,
+              'Total online:',
+              this.onlineUsers.size
+            );
+          } else {
+            this.onlineUsers.delete(status.userId);
+            console.log(
+              '❌ User removed from online list:',
+              status.userId,
+              'Total online:',
+              this.onlineUsers.size
+            );
+          }
+        },
+        error: (error) => {
+          console.error('❌ Error in user status subscription:', error);
+        },
+      });
 
-    // Écouter aussi le statut de connexion WebSocket
-    this.webSocketService.connectionStatus$.subscribe({
-      next: (connected) => {
-        console.log(
-          '🔗 WebSocket connection status:',
-          connected ? 'Connected' : 'Disconnected'
-        );
-        this.isWebSocketConnected = connected;
-      },
-    });
+    // Écouter le statut de connexion WebSocket avec protection takeUntil
+    this.webSocketService.connectionStatus$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (connected) => {
+          console.log(
+            '🔗 WebSocket connection status:',
+            connected ? 'Connected' : 'Disconnected'
+          );
+          this.isWebSocketConnected = connected;
+        },
+      });
   }
 
   /**
    * Configurer l'écouteur de recherche
+   * PHASE 2-3: Méthode corrigée avec protection contre memory leaks
    */
   private setupSearchListener(): void {
     this.searchControl.valueChanges
-      .pipe(debounceTime(300), distinctUntilChanged())
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
       .subscribe(() => {
         this.filterConversations();
       });
