@@ -98,6 +98,13 @@ export class ChatWindowComponent
       this.webSocketService.leaveConversation(this.conversation._id);
       this.webSocketService.stopTyping(this.conversation._id);
     }
+    
+    // PHASE 2-3: Nettoyage du timer pour éviter memory leak
+    if (this.typingTimer) {
+      clearTimeout(this.typingTimer);
+      this.typingTimer = null;
+    }
+    
     this.subscriptions.unsubscribe();
   }
 
