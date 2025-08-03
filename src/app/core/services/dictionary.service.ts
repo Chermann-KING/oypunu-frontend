@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core'
+import { LoggerService } from './logger.service';;
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, of, BehaviorSubject, Subject } from 'rxjs';
 import { map, catchError, tap, switchMap } from 'rxjs/operators';
@@ -78,7 +79,8 @@ export class DictionaryService {
   constructor(
     private _http: HttpClient, 
     private _authService: AuthService, 
-    private _guestLimitsService: GuestLimitsService
+    private _guestLimitsService: GuestLimitsService,
+    private logger: LoggerService
   ) {
     this._loadRecentSearches();
     this._loadFavoriteWords();
@@ -169,7 +171,7 @@ export class DictionaryService {
           
           // Si l'utilisateur est authentifié et que le cache favoris n'est pas initialisé
           if (this._authService.isAuthenticated() && this._favoriteWordIds.value.size === 0) {
-            console.log('🔥 Frontend: Cache favoris vide pour recherche, chargement en cours...');
+            this.logger.debug('🔥 Frontend: Cache favoris vide pour recherche, chargement en cours...');
             // Charger les favoris d'abord, puis marquer les mots
             return this.getFavoriteWords().pipe(
               map(() => ({
@@ -179,7 +181,7 @@ export class DictionaryService {
             );
           } else {
             // Cache déjà prêt ou utilisateur non authentifié
-            console.log('🔥 Frontend: Cache favoris prêt pour recherche, vérification directe');
+            this.logger.debug('🔥 Frontend: Cache favoris prêt pour recherche, vérification directe');
             return of({
               ...results,
               words: normalizedWords.map((word) => this._checkIfFavorite(word)),
@@ -187,7 +189,7 @@ export class DictionaryService {
           }
         }),
         catchError((error) => {
-          console.error('Error searching words:', error);
+          this.logger.error('Error searching words:', error);
           return of({
             words: [],
             total: 0,
@@ -206,7 +208,7 @@ export class DictionaryService {
       return this._http.get<any>(`${this._WORDS_API_URL}/${id}`).pipe(
         map((response) => (response ? this._normalizeId(response) : null)),
         catchError((error) => {
-          console.error(`Error fetching word with ID ${id}:`, error);
+          this.logger.error(`Error fetching word with ID ${id}:`, error);
           return of(null);
         })
       );
@@ -219,11 +221,11 @@ export class DictionaryService {
         const wordWithId = this._normalizeId(response);
 
         // Utiliser le cache local pour les favoris (plus rapide et cohérent)
-        console.log(`🔥 Frontend: Vérification favoris locale pour ${wordWithId.id}`);
+        this.logger.debug(`🔥 Frontend: Vérification favoris locale pour ${wordWithId.id}`);
         return of(this._checkIfFavorite(wordWithId));
       }),
       catchError((error) => {
-        console.error(`Error fetching word with ID ${id}:`, error);
+        this.logger.error(`Error fetching word with ID ${id}:`, error);
         return of(null);
       })
     );
@@ -231,7 +233,7 @@ export class DictionaryService {
 
   // Obtenir les mots mis en vedette/populaires
   getFeaturedWords(limit: number = 3): Observable<Word[]> {
-    console.log('🔥 Frontend: Chargement mots en vedette...');
+    this.logger.debug('🔥 Frontend: Chargement mots en vedette...');
     
     return this._http
       .get<any[]>(`${this._WORDS_API_URL}/featured?limit=${limit}`)
@@ -241,19 +243,19 @@ export class DictionaryService {
           
           // Si l'utilisateur est authentifié et que le cache favoris n'est pas initialisé
           if (this._authService.isAuthenticated() && this._favoriteWordIds.value.size === 0) {
-            console.log('🔥 Frontend: Cache favoris vide, chargement en cours...');
+            this.logger.debug('🔥 Frontend: Cache favoris vide, chargement en cours...');
             // Charger les favoris d'abord, puis marquer les mots
             return this.getFavoriteWords().pipe(
               map(() => normalizedWords.map((word) => this._checkIfFavorite(word)))
             );
           } else {
             // Cache déjà prêt ou utilisateur non authentifié
-            console.log('🔥 Frontend: Cache favoris prêt, vérification directe');
+            this.logger.debug('🔥 Frontend: Cache favoris prêt, vérification directe');
             return of(normalizedWords.map((word) => this._checkIfFavorite(word)));
           }
         }),
         catchError((error) => {
-          console.error('Error fetching featured words:', error);
+          this.logger.error('Error fetching featured words:', error);
           return of([]);
         })
       );
@@ -276,7 +278,7 @@ export class DictionaryService {
           }));
         }),
         catchError((error) => {
-          console.error('Error fetching categories:', error);
+          this.logger.error('Error fetching categories:', error);
           return of([]);
         })
       );
@@ -288,7 +290,7 @@ export class DictionaryService {
       return of({ success: false });
     }
 
-    console.log(`🔥 Frontend: Ajout aux favoris avec l'ID: ${wordId}`);
+    this.logger.debug(`🔥 Frontend: Ajout aux favoris avec l'ID: ${wordId}`);
 
     // Mise à jour optimiste de l'état local
     this._setFavoriteStatus(wordId, true);
@@ -300,15 +302,15 @@ export class DictionaryService {
       )
       .pipe(
         tap((response) => {
-          console.log('🔥 Frontend: Réponse addToFavorites:', response);
+          this.logger.debug('🔥 Frontend: Réponse addToFavorites:', response);
           if (!response.success) {
             // Rollback en cas d'échec
-            console.log('🔥 Frontend: Échec API, rollback de l\'état');
+            this.logger.debug('🔥 Frontend: Échec API, rollback de l\'état');
             this._setFavoriteStatus(wordId, false);
           }
         }),
         catchError((error) => {
-          console.error(`Error adding word ${wordId} to favorites:`, error);
+          this.logger.error(`Error adding word ${wordId} to favorites:`, error);
           // Rollback en cas d'erreur
           this._setFavoriteStatus(wordId, false);
           return of({ success: false });
@@ -322,7 +324,7 @@ export class DictionaryService {
       return of({ success: false });
     }
 
-    console.log(`🔥 Frontend: Suppression des favoris avec l'ID: ${wordId}`);
+    this.logger.debug(`🔥 Frontend: Suppression des favoris avec l'ID: ${wordId}`);
 
     // Mise à jour optimiste de l'état local
     this._setFavoriteStatus(wordId, false);
@@ -333,15 +335,15 @@ export class DictionaryService {
       )
       .pipe(
         tap((response) => {
-          console.log(`🔥 Frontend: Réponse removeFromFavorites pour ${wordId}:`, response);
+          this.logger.debug(`🔥 Frontend: Réponse removeFromFavorites pour ${wordId}:`, response);
           if (!response.success) {
             // Rollback en cas d'échec
-            console.log('🔥 Frontend: Échec API, rollback de l\'état');
+            this.logger.debug('🔥 Frontend: Échec API, rollback de l\'état');
             this._setFavoriteStatus(wordId, true);
           }
         }),
         catchError((error) => {
-          console.error(`Error removing word ${wordId} from favorites:`, error);
+          this.logger.error(`Error removing word ${wordId} from favorites:`, error);
           // Rollback en cas d'erreur
           this._setFavoriteStatus(wordId, true);
           return of({ success: false });
@@ -371,11 +373,11 @@ export class DictionaryService {
 
   getFavoriteWords(page: number = 1, limit: number = 10): Observable<Word[]> {
     if (!this._authService.isAuthenticated()) {
-      console.log('Utilisateur non authentifié');
+      this.logger.debug('Utilisateur non authentifié');
       return of([]);
     }
 
-    console.log(`🔥 Frontend: Appel API getFavoriteWords (page=${page}, limit=${limit})`);
+    this.logger.debug(`🔥 Frontend: Appel API getFavoriteWords (page=${page}, limit=${limit})`);
 
     // return this._http.get<any>(`${this._WORDS_API_URL}/favorites/user?page=${page}&limit=${limit}`)
     return this._http
@@ -383,11 +385,11 @@ export class DictionaryService {
         `${environment.apiUrl}/favorite-words?page=${page}&limit=${limit}`
       )
       .pipe(
-        tap((response) => console.log('Réponse API:', response)),
+        tap((response) => this.logger.debug('Réponse API:', response)),
         map((response) => response.words || []),
         map((words) => this._normalizeIds(words)),
         tap((words) => {
-          console.log('🔥 Frontend: Mots favoris récupérés:', words.length);
+          this.logger.debug('🔥 Frontend: Mots favoris récupérés:', words.length);
           const favoritesWithFlag = words.map((word) => ({
             ...word,
             isFavorite: true,
@@ -400,10 +402,10 @@ export class DictionaryService {
           const favoriteIds = new Set(words.map(word => word.id));
           this._favoriteWordIds.next(favoriteIds);
           
-          console.log(`🔥 Frontend: Cache favoris mis à jour - ${favoriteIds.size} IDs`);
+          this.logger.debug(`🔥 Frontend: Cache favoris mis à jour - ${favoriteIds.size} IDs`);
         }),
         catchError((error) => {
-          console.error('Error fetching favorite words:', error);
+          this.logger.error('Error fetching favorite words:', error);
           return of([]);
         })
       );
@@ -412,13 +414,13 @@ export class DictionaryService {
   // Vérifier si un mot est dans les favoris (utilise le cache local)
   checkIfFavorite(wordId: string): Observable<boolean> {
     if (!this._authService.isAuthenticated()) {
-      console.log('🔥 Frontend: Utilisateur non authentifié, mot pas en favoris');
+      this.logger.debug('🔥 Frontend: Utilisateur non authentifié, mot pas en favoris');
       return of(false);
     }
 
     // Utiliser le cache local pour une réponse immédiate
     const result = this.isFavorite(wordId);
-    console.log(`🔥 Frontend: Vérification cache local pour ${wordId}:`, result);
+    this.logger.debug(`🔥 Frontend: Vérification cache local pour ${wordId}:`, result);
     return of(result);
   }
 
@@ -428,20 +430,20 @@ export class DictionaryService {
       return of(false);
     }
 
-    console.log(`🔥 Frontend: Vérification API pour ${wordId}`);
+    this.logger.debug(`🔥 Frontend: Vérification API pour ${wordId}`);
     return this._http
       .get<boolean>(`${environment.apiUrl}/favorite-words/check/${wordId}`)
       .pipe(
         tap(result => {
-          console.log(`🔥 Frontend: Résultat API checkIfFavorite pour ${wordId}:`, result);
+          this.logger.debug(`🔥 Frontend: Résultat API checkIfFavorite pour ${wordId}:`, result);
           // Synchroniser avec l'état local si différent
           if (result !== this.isFavorite(wordId)) {
-            console.log(`🔥 Frontend: Désynchronisation détectée, mise à jour cache`);
+            this.logger.debug(`🔥 Frontend: Désynchronisation détectée, mise à jour cache`);
             this._setFavoriteStatus(wordId, result);
           }
         }),
         catchError((error) => {
-          console.error(`🔥 Frontend: Erreur checkIfFavorite pour ${wordId}:`, error);
+          this.logger.error(`🔥 Frontend: Erreur checkIfFavorite pour ${wordId}:`, error);
           return of(false);
         })
       );
@@ -466,7 +468,7 @@ export class DictionaryService {
       )
       .pipe(
         catchError((error) => {
-          console.error('Error sharing word:', error);
+          this.logger.error('Error sharing word:', error);
           return of({
             success: false,
             message:
@@ -491,7 +493,7 @@ export class DictionaryService {
     return this._http.post<any>(url, wordData).pipe(
       map((response) => (response ? this._normalizeId(response) : null)),
       catchError((error) => {
-        console.error('Error submitting new word:', error);
+        this.logger.error('Error submitting new word:', error);
         return of(null);
       })
     );
@@ -507,7 +509,7 @@ export class DictionaryService {
       .get<EditPermissionsResponse>(`${this._WORDS_API_URL}/${wordId}/can-edit`)
       .pipe(
         catchError((error) => {
-          console.error('Error checking edit permissions:', error);
+          this.logger.error('Error checking edit permissions:', error);
           return of({
             canEdit: false,
             message: 'Erreur lors de la vérification des permissions',
@@ -560,7 +562,7 @@ export class DictionaryService {
       .pipe(
         map((response) => (response ? this._normalizeId(response) : null)),
         catchError((error) => {
-          console.error('Error updating word:', error);
+          this.logger.error('Error updating word:', error);
           throw error;
         })
       );
@@ -584,7 +586,7 @@ export class DictionaryService {
       .pipe(
         map((response) => (response ? this._normalizeId(response) : null)),
         catchError((error) => {
-          console.error('Error uploading audio file:', error);
+          this.logger.error('Error uploading audio file:', error);
           throw error;
         })
       );
@@ -632,7 +634,7 @@ export class DictionaryService {
       .pipe(
         map((response) => (response ? this._normalizeId(response) : null)),
         catchError((error) => {
-          console.error('Error updating word with audio:', error);
+          this.logger.error('Error updating word with audio:', error);
           throw error;
         })
       );
@@ -647,7 +649,7 @@ export class DictionaryService {
       .get<RevisionHistory[]>(`${this._WORDS_API_URL}/${wordId}/revisions`)
       .pipe(
         catchError((error) => {
-          console.error('Error fetching revision history:', error);
+          this.logger.error('Error fetching revision history:', error);
           return of([]);
         })
       );
@@ -676,7 +678,7 @@ export class DictionaryService {
       .get<any>(`${this._WORDS_API_URL}/revisions/pending`, { params })
       .pipe(
         catchError((error) => {
-          console.error('Error fetching pending revisions:', error);
+          this.logger.error('Error fetching pending revisions:', error);
           return of({ revisions: [], total: 0, page, limit, totalPages: 0 });
         })
       );
@@ -700,7 +702,7 @@ export class DictionaryService {
       .pipe(
         map((response) => (response ? this._normalizeId(response) : null)),
         catchError((error) => {
-          console.error('Error approving revision:', error);
+          this.logger.error('Error approving revision:', error);
           throw error;
         })
       );
@@ -722,7 +724,7 @@ export class DictionaryService {
       )
       .pipe(
         catchError((error) => {
-          console.error('Error rejecting revision:', error);
+          this.logger.error('Error rejecting revision:', error);
           throw error;
         })
       );
@@ -736,7 +738,7 @@ export class DictionaryService {
         this._recentSearches.next(JSON.parse(storedSearches));
       }
     } catch (error) {
-      console.error('Error loading recent searches from localStorage:', error);
+      this.logger.error('Error loading recent searches from localStorage:', error);
     }
   }
 
@@ -750,7 +752,7 @@ export class DictionaryService {
       this._recentSearches.next(updatedSearches);
       localStorage.setItem('recentSearches', JSON.stringify(updatedSearches));
     } catch (error) {
-      console.error('Error adding to recent searches:', error);
+      this.logger.error('Error adding to recent searches:', error);
     }
   }
 
@@ -769,7 +771,7 @@ export class DictionaryService {
         // Utilisateur déconnecté - nettoyer le cache
         this._favoriteWords.next([]);
         this._favoriteWordIds.next(new Set());
-        console.log('🔥 Frontend: Cache favoris nettoyé - utilisateur déconnecté');
+        this.logger.debug('🔥 Frontend: Cache favoris nettoyé - utilisateur déconnecté');
       }
     });
   }
@@ -779,7 +781,7 @@ export class DictionaryService {
    * Gère la synchronisation entre tous les états locaux
    */
   private _setFavoriteStatus(wordId: string, isFavorite: boolean): void {
-    console.log(`🔥 Frontend: _setFavoriteStatus - wordId: ${wordId}, isFavorite: ${isFavorite}`);
+    this.logger.debug(`🔥 Frontend: _setFavoriteStatus - wordId: ${wordId}, isFavorite: ${isFavorite}`);
     
     // 1. Mettre à jour le Set des IDs favoris pour les vérifications rapides
     const currentIds = this._favoriteWordIds.value;
@@ -811,7 +813,7 @@ export class DictionaryService {
     // 3. Notifier tous les composants du changement
     this._favoriteStatusChanged.next({wordId, isFavorite});
     
-    console.log(`🔥 Frontend: État favoris mis à jour - Total IDs: ${newIds.size}`);
+    this.logger.debug(`🔥 Frontend: État favoris mis à jour - Total IDs: ${newIds.size}`);
   }
 
   /**
@@ -849,10 +851,10 @@ export class DictionaryService {
   getAvailableLanguages(): Observable<any[]> {
     return this._http.get<any[]>(`${this._WORDS_API_URL}/available-languages`).pipe(
       tap(languages => {
-        console.log('🌍 Langues disponibles récupérées:', languages);
+        this.logger.debug('🌍 Langues disponibles récupérées:', languages);
       }),
       catchError(error => {
-        console.error('❌ Erreur lors de la récupération des langues:', error);
+        this.logger.error('❌ Erreur lors de la récupération des langues:', error);
         // Retourner une liste vide en cas d'erreur
         return of([]);
       })

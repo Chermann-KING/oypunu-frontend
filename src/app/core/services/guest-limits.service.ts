@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core'
+import { LoggerService } from './logger.service';;
 import { BehaviorSubject, Observable } from 'rxjs';
 
 export interface GuestLimits {
@@ -32,7 +33,9 @@ export class GuestLimitsService {
   private limitsSubject = new BehaviorSubject<GuestLimits>(this.getStoredLimits());
   public limits$ = this.limitsSubject.asObservable();
 
-  constructor() {
+  constructor(
+    private logger: LoggerService
+  ) {
     this.checkAndResetDaily();
   }
 
@@ -101,7 +104,7 @@ export class GuestLimitsService {
     limits.wordsViewed++;
     this.saveLimits(limits);
     
-    console.log(`🔍 Visiteur: Mot consulté (${limits.wordsViewed}/${limits.maxWordsPerDay})`);
+    this.logger.debug(`🔍 Visiteur: Mot consulté (${limits.wordsViewed}/${limits.maxWordsPerDay})`);
     return true;
   }
 
@@ -118,7 +121,7 @@ export class GuestLimitsService {
     limits.communitiesViewed++;
     this.saveLimits(limits);
     
-    console.log(`👥 Visiteur: Communauté consultée (${limits.communitiesViewed}/${limits.maxCommunitiesPerDay})`);
+    this.logger.debug(`👥 Visiteur: Communauté consultée (${limits.communitiesViewed}/${limits.maxCommunitiesPerDay})`);
     return true;
   }
 
@@ -158,7 +161,7 @@ export class GuestLimitsService {
       lastResetDate: new Date().toDateString()
     };
     this.saveLimits(resetLimits);
-    console.log('🔄 Limites visiteur réinitialisées');
+    this.logger.debug('🔄 Limites visiteur réinitialisées');
   }
 
   // ============= MÉTHODES PRIVÉES =============
@@ -178,7 +181,7 @@ export class GuestLimitsService {
         }
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des limites visiteur:', error);
+      this.logger.error('Erreur lors du chargement des limites visiteur:', error);
     }
     
     return { ...this.DEFAULT_LIMITS };
@@ -189,7 +192,7 @@ export class GuestLimitsService {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(limits));
       this.limitsSubject.next(limits);
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde des limites visiteur:', error);
+      this.logger.error('Erreur lors de la sauvegarde des limites visiteur:', error);
     }
   }
 
@@ -198,7 +201,7 @@ export class GuestLimitsService {
     const today = new Date().toDateString();
     
     if (limits.lastResetDate !== today) {
-      console.log('🌅 Nouveau jour - Réinitialisation des limites visiteur');
+      this.logger.debug('🌅 Nouveau jour - Réinitialisation des limites visiteur');
       const resetLimits = {
         ...this.DEFAULT_LIMITS,
         lastResetDate: today

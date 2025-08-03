@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Injectable } from '@angular/core'
+import { LoggerService } from '../services/logger.service';
 import { CanActivate, ActivatedRouteSnapshot, Router } from '@angular/router';
 import { Observable, map, of } from 'rxjs';
 import { AuthService } from '../services/auth.service';
@@ -16,14 +17,17 @@ export class RoleGuard implements CanActivate {
     [UserRole.SUPERADMIN]: 3,
   };
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(
+    private authService: AuthService, private router: Router,
+    private logger: LoggerService
+  ) {}
 
   canActivate(route: ActivatedRouteSnapshot): Observable<boolean> {
-    console.log('🔐 RoleGuard: Vérification des permissions');
+    this.logger.debug('🔐 RoleGuard: Vérification des permissions');
 
     // Vérifier d'abord si l'utilisateur est authentifié
     if (!this.authService.isAuthenticated()) {
-      console.log('❌ RoleGuard: Utilisateur non authentifié');
+      this.logger.debug('❌ RoleGuard: Utilisateur non authentifié');
       this.router.navigate(['/auth/login']);
       return of(false);
     }
@@ -31,13 +35,13 @@ export class RoleGuard implements CanActivate {
     return this.authService.currentUser$.pipe(
       map((user) => {
         if (!user) {
-          console.log('❌ RoleGuard: Aucun utilisateur trouvé');
+          this.logger.debug('❌ RoleGuard: Aucun utilisateur trouvé');
           this.router.navigate(['/auth/login']);
           return false;
         }
 
         const userRole = (user.role as UserRole) || UserRole.USER;
-        console.log('👤 RoleGuard: Rôle utilisateur:', userRole);
+        this.logger.debug('👤 RoleGuard: Rôle utilisateur:', userRole);
 
         // Récupérer les rôles requis depuis les données de la route
         const requiredRoles = route.data['roles'] as UserRole[] | undefined;
@@ -45,7 +49,7 @@ export class RoleGuard implements CanActivate {
 
         // Si aucune restriction de rôle n'est définie, autoriser l'accès
         if (!requiredRoles && !minRole) {
-          console.log(
+          this.logger.debug(
             '✅ RoleGuard: Aucune restriction de rôle, accès autorisé'
           );
           return true;
@@ -54,8 +58,8 @@ export class RoleGuard implements CanActivate {
         // Vérification par rôles spécifiques
         if (requiredRoles && requiredRoles.length > 0) {
           const hasRequiredRole = requiredRoles.includes(userRole);
-          console.log('🎯 RoleGuard: Rôles requis:', requiredRoles);
-          console.log(
+          this.logger.debug('🎯 RoleGuard: Rôles requis:', requiredRoles);
+          this.logger.debug(
             '📋 RoleGuard: Utilisateur a un rôle requis:',
             hasRequiredRole
           );
@@ -72,17 +76,17 @@ export class RoleGuard implements CanActivate {
           const requiredLevel = this.roleHierarchy[minRole];
           const hasMinimumLevel = userLevel >= requiredLevel;
 
-          console.log(
+          this.logger.debug(
             '📊 RoleGuard: Niveau minimum requis:',
             minRole,
             `(${requiredLevel})`
           );
-          console.log(
+          this.logger.debug(
             '📊 RoleGuard: Niveau utilisateur:',
             userRole,
             `(${userLevel})`
           );
-          console.log('🎚️ RoleGuard: Niveau suffisant:', hasMinimumLevel);
+          this.logger.debug('🎚️ RoleGuard: Niveau suffisant:', hasMinimumLevel);
 
           if (!hasMinimumLevel) {
             this.handleUnauthorizedAccess(userRole);
@@ -90,7 +94,7 @@ export class RoleGuard implements CanActivate {
           }
         }
 
-        console.log('✅ RoleGuard: Accès autorisé');
+        this.logger.debug('✅ RoleGuard: Accès autorisé');
         return true;
       })
     );
@@ -100,7 +104,7 @@ export class RoleGuard implements CanActivate {
    * Gère les accès non autorisés avec redirection intelligente
    */
   private handleUnauthorizedAccess(userRole: UserRole): void {
-    console.log('🚫 RoleGuard: Accès refusé pour le rôle:', userRole);
+    this.logger.debug('🚫 RoleGuard: Accès refusé pour le rôle:', userRole);
 
     // Redirection intelligente selon le rôle de l'utilisateur
     switch (userRole) {

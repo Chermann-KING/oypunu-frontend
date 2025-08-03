@@ -127,7 +127,7 @@ export class TranslationService {
           this.showNotification({
             type: 'success',
             message: result.message,
-            action: result.action as any,
+            action: result.action as 'merge' | 'separate' | 'vote' | 'create',
             autoHide: true
           });
           
@@ -137,7 +137,7 @@ export class TranslationService {
           this.showNotification({
             type: 'warning',
             message: result.message,
-            action: 'uncertain' as any,
+            action: 'uncertain' as 'merge' | 'separate' | 'vote' | 'create',
             autoHide: false
           });
         }
@@ -188,7 +188,7 @@ export class TranslationService {
         this.showNotification({
           type: 'success',
           message: `Traduction ${request.action === 'merge' ? 'fusionnée' : 'séparée'} avec succès`,
-          action: request.action as any,
+          action: request.action as 'merge' | 'separate' | 'vote' | 'create',
           translationId,
           autoHide: true
         });
@@ -251,15 +251,25 @@ export class TranslationService {
     const params = limit ? new HttpParams().set('limit', limit.toString()) : undefined;
     
     return this.http.get<LearningInsights>(`${this.apiUrl}/admin/insights`, { params }).pipe(
-      catchError(this.handleError<LearningInsights>('getLearningInsights'))
+      catchError(this.handleError<LearningInsights>('getLearningInsights', {
+        categoryAccuracy: 0,
+        semanticAccuracy: 0,
+        overallAccuracy: 0,
+        recommendedThresholds: {
+          autoMerge: 0.8,
+          askUser: 0.6,
+          autoSeparate: 0.4
+        },
+        commonPatterns: []
+      }))
     );
   }
 
   /**
    * Met à jour les seuils d'auto-validation (admin)
    */
-  updateAutoValidationThresholds(): Observable<any> {
-    return this.http.put(`${this.apiUrl}/admin/thresholds`, {}).pipe(
+  updateAutoValidationThresholds(): Observable<{ success: boolean; message: string }> {
+    return this.http.put<{ success: boolean; message: string }>(`${this.apiUrl}/admin/thresholds`, {}).pipe(
       tap(() => {
         this.showNotification({
           type: 'success',
@@ -281,11 +291,26 @@ export class TranslationService {
   /**
    * Récupère les statistiques de performance (admin)
    */
-  getPerformanceStats(days?: number): Observable<any> {
+  getPerformanceStats(days?: number): Observable<{
+    totalTranslations: number;
+    averageProcessingTime: number;
+    successRate: number;
+    dailyStats: Array<{ date: string; translations: number; averageTime: number }>;
+  }> {
     const params = days ? new HttpParams().set('days', days.toString()) : undefined;
     
-    return this.http.get(`${this.apiUrl}/admin/performance`, { params }).pipe(
-      catchError(this.handleError('getPerformanceStats'))
+    return this.http.get<{
+      totalTranslations: number;
+      averageProcessingTime: number;
+      successRate: number;
+      dailyStats: Array<{ date: string; translations: number; averageTime: number }>;
+    }>(`${this.apiUrl}/admin/performance`, { params }).pipe(
+      catchError(this.handleError('getPerformanceStats', {
+        totalTranslations: 0,
+        averageProcessingTime: 0,
+        successRate: 0,
+        dailyStats: []
+      }))
     );
   }
 
@@ -392,19 +417,28 @@ export class TranslationService {
     return this.languageCache.has(cacheKey);
   }
 
-  private getErrorMessage(error: any): string {
-    if (error.error?.message) {
-      return error.error.message;
-    }
-    if (error.message) {
-      return error.message;
+  private getErrorMessage(error: unknown): string {
+    if (error && typeof error === 'object') {
+      const errorObj = error as any;
+      if (errorObj.error?.message) {
+        return errorObj.error.message;
+      }
+      if (errorObj.message) {
+        return errorObj.message;
+      }
     }
     return 'Une erreur inattendue s\'est produite';
   }
 
   private handleError<T>(operation = 'operation', result?: T) {
-    return (error: any): Observable<T> => {
-      console.error(`${operation} failed:`, error);
+    return (error: unknown): Observable<T> => {
+      // Log the error for debugging
+      if (error && typeof error === 'object') {
+        const errorObj = error as any;
+        console.error(`${operation} failed:`, errorObj.message || error);
+      } else {
+        console.error(`${operation} failed:`, error);
+      }
       return of(result as T);
     };
   }

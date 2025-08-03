@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, throwError, timer, of } from 'rxjs';
-import { switchMap, catchError, timeout, finalize, filter, take } from 'rxjs/operators';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Observable, throwError, timer, of, EMPTY } from 'rxjs';
+import { switchMap, catchError, timeout, finalize, filter, take, share } from 'rxjs/operators';
+import { LoggerService } from './logger.service';
 
 /**
  * Service pour gérer l'état du refresh des tokens de manière thread-safe
@@ -9,15 +10,16 @@ import { switchMap, catchError, timeout, finalize, filter, take } from 'rxjs/ope
 @Injectable({
   providedIn: 'root'
 })
-export class TokenRefreshManagerService {
+export class TokenRefreshManagerService implements OnDestroy {
   private isRefreshing = false;
   private refreshTokenSubject = new BehaviorSubject<string | null>(null);
+  private currentRefreshOperation: Observable<any> | null = null;
   
   // Configuration des timeouts
   private readonly REFRESH_TIMEOUT_MS = 10000; // 10 secondes
   private readonly CLEANUP_DELAY_MS = 1000; // 1 seconde pour cleanup
 
-  constructor() {}
+  constructor(private logger: LoggerService) {}
 
   /**
    * Vérifie si un refresh est actuellement en cours
@@ -27,56 +29,61 @@ export class TokenRefreshManagerService {
   }
 
   /**
-   * Démarre un processus de refresh des tokens
+   * Démarre un processus de refresh des tokens avec protection contre les race conditions
    */
   refreshTokens<T>(refreshOperation: () => Observable<T>): Observable<T> {
-    if (!this.isRefreshing) {
-      console.log('[TokenRefreshManager] 🔄 Démarrage du processus de refresh');
-      
-      this.isRefreshing = true;
-      this.refreshTokenSubject.next(null);
-
-      return refreshOperation().pipe(
-        timeout(this.REFRESH_TIMEOUT_MS),
-        switchMap((response: any) => {
-          const newToken = response.tokens?.access_token;
-          
-          if (!newToken) {
-            throw new Error('Token manquant dans la réponse de refresh');
-          }
-
-          console.log('[TokenRefreshManager] ✅ Tokens rafraîchis avec succès');
-          this.refreshTokenSubject.next(newToken);
-          
-          return of(response);
-        }),
-        catchError((error) => {
-          console.error('[TokenRefreshManager] ❌ Échec du refresh:', error);
-          this.refreshTokenSubject.next(null);
-          return throwError(() => error);
-        }),
-        finalize(() => {
-          // Cleanup avec délai pour permettre aux requêtes en attente de s'exécuter
-          timer(this.CLEANUP_DELAY_MS).subscribe(() => {
-            console.log('[TokenRefreshManager] 🧹 Cleanup état refresh');
-            this.resetRefreshState();
-          });
-        })
-      );
-    } else {
-      console.log('[TokenRefreshManager] ⏳ Refresh déjà en cours, mise en attente');
-      
-      // Retourner l'observable existant pour éviter les requêtes multiples
-      return this.waitForRefreshCompletion();
+    // Si un refresh est déjà en cours, retourner l'observable partagé
+    if (this.isRefreshing && this.currentRefreshOperation) {
+      this.logger.debug('Token refresh déjà en cours, réutilisation');
+      return this.currentRefreshOperation;
     }
+
+    this.logger.info('Démarrage du processus de refresh des tokens');
+    
+    this.isRefreshing = true;
+    this.refreshTokenSubject.next(null);
+
+    // Créer et stocker l'opération de refresh pour la partager
+    this.currentRefreshOperation = refreshOperation().pipe(
+      timeout(this.REFRESH_TIMEOUT_MS),
+      switchMap((response: any) => {
+        const newToken = response.tokens?.access_token;
+        
+        if (!newToken) {
+          throw new Error('Token manquant dans la réponse de refresh');
+        }
+
+        this.logger.info('Tokens rafraîchis avec succès');
+        this.refreshTokenSubject.next(newToken);
+        
+        return of(response);
+      }),
+      catchError((error) => {
+        this.logger.error('Échec du refresh des tokens:', error);
+        this.refreshTokenSubject.error(error);
+        return throwError(() => error);
+      }),
+      finalize(() => {
+        // Cleanup immédiat mais thread-safe
+        this.resetRefreshState();
+      }),
+      share() // Partager l'observable pour éviter les requêtes multiples
+    );
+
+    return this.currentRefreshOperation;
   }
 
   /**
    * Attend que le refresh en cours se termine et retourne le nouveau token
+   * DEPRECATED: Utiliser refreshTokens() qui gère automatiquement la réutilisation
    */
   private waitForRefreshCompletion<T>(): Observable<T> {
+    if (this.currentRefreshOperation) {
+      return this.currentRefreshOperation;
+    }
+
     return this.refreshTokenSubject.pipe(
-      timeout(this.REFRESH_TIMEOUT_MS + 1000), // Un peu plus que le timeout du refresh
+      timeout(this.REFRESH_TIMEOUT_MS + 1000),
       filter(token => token !== null),
       take(1),
       switchMap(token => {
@@ -84,13 +91,11 @@ export class TokenRefreshManagerService {
           throw new Error('Token null reçu après refresh');
         }
         
-        console.log('[TokenRefreshManager] 🔄 Refresh terminé, token disponible');
-        
-        // Retourner un objet simulant la réponse du refresh
+        this.logger.debug('Refresh terminé, token disponible');
         return of({ tokens: { access_token: token } } as T);
       }),
       catchError((error) => {
-        console.error('[TokenRefreshManager] ❌ Timeout ou erreur lors de l\'attente:', error);
+        this.logger.error('Timeout ou erreur lors de l\'attente du refresh:', error);
         this.resetRefreshState();
         return throwError(() => error);
       })
@@ -106,7 +111,7 @@ export class TokenRefreshManagerService {
       filter(token => token !== null),
       take(1),
       catchError((error) => {
-        console.error('[TokenRefreshManager] ❌ Timeout lors de l\'attente du token');
+        this.logger.error('Timeout lors de l\'attente du token:', error);
         this.resetRefreshState();
         return throwError(() => error);
       })
@@ -117,7 +122,7 @@ export class TokenRefreshManagerService {
    * Force le reset de l'état (en cas d'erreur critique)
    */
   forceReset(): void {
-    console.warn('[TokenRefreshManager] 🚨 Reset forcé de l\'état');
+    this.logger.warn('Reset forcé de l\'état de refresh');
     this.resetRefreshState();
   }
 
@@ -126,7 +131,8 @@ export class TokenRefreshManagerService {
    */
   private resetRefreshState(): void {
     this.isRefreshing = false;
-    this.refreshTokenSubject.next(null);
+    this.currentRefreshOperation = null;
+    this.refreshTokenSubject = new BehaviorSubject<string | null>(null);
   }
 
   /**

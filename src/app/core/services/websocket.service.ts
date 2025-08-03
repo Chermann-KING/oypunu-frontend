@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import io from 'socket.io-client';
-import type { Socket } from 'socket.io-client';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth.service';
+import { LoggerService } from './logger.service';
 import { Message } from '../models/message';
 
 export interface UserStatus {
@@ -32,11 +32,18 @@ export interface TranslationNotification {
   validationType?: string;
 }
 
+export interface MessageMetadata {
+  wordId?: string;
+  language?: string;
+  translationRequested?: boolean;
+  context?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class WebSocketService {
-  private socket: any | null = null;
+  private socket: ReturnType<typeof io> | null = null;
   private connectionStatus = new BehaviorSubject<boolean>(false);
 
   // Observables pour les événements en temps réel
@@ -54,7 +61,10 @@ export class WebSocketService {
   public translationNotification$ = this.translationNotificationSubject.asObservable();
   public error$ = this.errorSubject.asObservable();
 
-  constructor(private authService: AuthService) {
+  constructor(
+    private authService: AuthService,
+    private logger: LoggerService
+  ) {
     // Se connecter automatiquement si l'utilisateur est authentifié
     this.authService.currentUser$.subscribe((user) => {
       if (user) {
@@ -70,18 +80,18 @@ export class WebSocketService {
    */
   connect(): void {
     if (this.socket?.connected) {
-      console.log('🔗 WebSocket already connected');
+      this.logger.debug('WebSocket already connected');
       return; // Déjà connecté
     }
 
     const token = this.authService.getToken();
     if (!token) {
-      console.error("❌ Pas de token d'authentification disponible");
+      this.logger.error("Pas de token d'authentification disponible");
       return;
     }
 
-    console.log(
-      '🔌 Connecting to WebSocket...',
+    this.logger.info(
+      'Connecting to WebSocket',
       `${environment.apiUrl.replace('/api', '')}/messaging`
     );
 
@@ -114,12 +124,12 @@ export class WebSocketService {
 
     // Événements de connexion
     this.socket.on('connect', () => {
-      console.log('Connecté au serveur WebSocket');
+      this.logger.info('Connecté au serveur WebSocket');
       this.connectionStatus.next(true);
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Déconnecté du serveur WebSocket');
+      this.logger.info('Déconnecté du serveur WebSocket');
       this.connectionStatus.next(false);
     });
 
@@ -198,8 +208,26 @@ export class WebSocketService {
       this.errorSubject.next(data.message);
     });
 
-    this.socket.on('connect_error', (error: any) => {
-      console.error('Erreur de connexion WebSocket:', error);
+    // Nouvelles erreurs d'authentification structurées
+    this.socket.on('auth_error', (error: {
+      code: string;
+      message: string;
+      timestamp: string;
+      action: string;
+    }) => {
+      this.logger.error('Erreur d\'authentification WebSocket:', error);
+      
+      // Notifier l'erreur avec plus de contexte
+      this.errorSubject.next(`Authentification: ${error.message}`);
+      
+      // Si l'action est disconnect, ne pas essayer de reconnecter
+      if (error.action === 'disconnect') {
+        this.connectionStatus.next(false);
+      }
+    });
+
+    this.socket.on('connect_error', (error: Error) => {
+      this.logger.error('Erreur de connexion WebSocket:', error);
       this.errorSubject.next('Erreur de connexion WebSocket');
     });
   }
@@ -211,7 +239,7 @@ export class WebSocketService {
     receiverId: string;
     content: string;
     messageType?: string;
-    metadata?: any;
+    metadata?: MessageMetadata;
   }): void {
     if (this.socket?.connected) {
       this.socket.emit('send_message', data);
