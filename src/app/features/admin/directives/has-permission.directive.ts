@@ -1,110 +1,145 @@
-import {
-  Directive,
-  Input,
-  TemplateRef,
-  ViewContainerRef,
-  OnInit,
-  OnDestroy,
-} from '@angular/core';
-import { Subject, takeUntil } from 'rxjs';
-import { PermissionService } from '../services/permission.service';
-import { UserRole } from '../../../core/models/admin';
+import { Directive, Input, TemplateRef, ViewContainerRef, OnInit, OnDestroy } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { AuthService } from '../../../core/services/auth.service';
+import { ComprehensiveAdminService } from '../services/comprehensive-admin.service';
+import { UserRole, AdminPermissions } from '../models/comprehensive-admin.models';
 
+/**
+ * Directive structurelle pour contrôler l'affichage basé sur les permissions
+ * Usage: *appHasPermission="'canViewUsers'"
+ * Usage: *appHasPermission="['canViewUsers', 'canEditUsers']"
+ * Usage: *appHasRole="UserRole.ADMIN"
+ */
 @Directive({
   selector: '[appHasPermission]',
+  standalone: true
 })
 export class HasPermissionDirective implements OnInit, OnDestroy {
-  private destroy$ = new Subject<void>();
-  private hasView = false;
+  @Input() appHasPermission: string | string[] = '';
+  @Input() appHasRole: UserRole | undefined;
+  @Input() appRequireAll: boolean = false; // Si true, toutes les permissions sont requises
 
-  @Input('appHasPermission') permission!: string;
-  @Input('appHasPermissionRole') requiredRole?: UserRole;
-  @Input('appHasPermissionMinRole') minimumRole?: UserRole;
-  @Input('appHasPermissionRoles') allowedRoles?: UserRole[];
-  @Input('appHasPermissionElse') elseTemplate?: TemplateRef<any>;
+  private subscription = new Subscription();
+  private currentUser: any = null;
+  private userPermissions: AdminPermissions | null = null;
 
   constructor(
     private templateRef: TemplateRef<any>,
     private viewContainer: ViewContainerRef,
-    private permissionService: PermissionService
+    private authService: AuthService,
+    private adminService: ComprehensiveAdminService
   ) {}
 
   ngOnInit(): void {
-    this.checkPermissions();
+    // S'abonner aux changements d'utilisateur
+    this.subscription.add(
+      this.authService.currentUser$.subscribe(user => {
+        this.currentUser = user;
+        this.checkPermissions();
+      })
+    );
+
+    // S'abonner aux changements de permissions
+    this.subscription.add(
+      this.adminService.userPermissions$.subscribe(permissions => {
+        this.userPermissions = permissions;
+        this.checkPermissions();
+      })
+    );
   }
 
   ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+    this.subscription.unsubscribe();
   }
 
   private checkPermissions(): void {
-    // Si on a spécifié un rôle exact requis
-    if (this.requiredRole) {
-      this.permissionService
-        .hasExactRole(this.requiredRole)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe((hasPermission) => {
-          this.updateView(hasPermission);
-        });
+    if (!this.currentUser) {
+      this.viewContainer.clear();
       return;
     }
 
-    // Si on a spécifié un rôle minimum
-    if (this.minimumRole) {
-      this.permissionService
-        .hasMinimumRole(this.minimumRole)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe((hasPermission) => {
-          this.updateView(hasPermission);
-        });
-      return;
+    const userRole = this.currentUser.role as UserRole;
+    let hasAccess = true;
+
+    // Vérifier le rôle si spécifié
+    if (this.appHasRole) {
+      hasAccess = this.adminService.hasMinimumRole(this.appHasRole, userRole);
     }
 
-    // Si on a spécifié une liste de rôles autorisés
-    if (this.allowedRoles && this.allowedRoles.length > 0) {
-      this.permissionService
-        .hasAnyRole(this.allowedRoles)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe((hasPermission) => {
-          this.updateView(hasPermission);
-        });
-      return;
+    // Vérifier les permissions si spécifiées
+    if (hasAccess && this.appHasPermission) {
+      const permissions = Array.isArray(this.appHasPermission) 
+        ? this.appHasPermission 
+        : [this.appHasPermission];
+
+      if (this.appRequireAll) {
+        // Toutes les permissions doivent être présentes
+        hasAccess = permissions.every(permission => 
+          this.hasSpecificPermission(permission as keyof AdminPermissions)
+        );
+      } else {
+        // Au moins une permission doit être présente
+        hasAccess = permissions.some(permission => 
+          this.hasSpecificPermission(permission as keyof AdminPermissions)
+        );
+      }
     }
 
-    // Vérification par permission spécifique (pour l'extension future)
-    if (this.permission) {
-      this.permissionService
-        .getCurrentRole()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe((userRole) => {
-          const hasPermission = this.permissionService.roleHasPermission(
-            userRole,
-            this.permission
-          );
-          this.updateView(hasPermission);
-        });
-      return;
+    // Afficher ou masquer l'élément
+    if (hasAccess) {
+      this.viewContainer.createEmbeddedView(this.templateRef);
+    } else {
+      this.viewContainer.clear();
     }
-
-    // Si aucune condition n'est spécifiée, ne pas afficher
-    this.updateView(false);
   }
 
-  private updateView(hasPermission: boolean): void {
-    if (hasPermission && !this.hasView) {
-      this.viewContainer.createEmbeddedView(this.templateRef);
-      this.hasView = true;
-    } else if (!hasPermission && this.hasView) {
-      this.viewContainer.clear();
-      this.hasView = false;
-
-      // Afficher le template alternatif si disponible
-      if (this.elseTemplate) {
-        this.viewContainer.createEmbeddedView(this.elseTemplate);
-      }
-    } else if (!hasPermission && !this.hasView && this.elseTemplate) {
-      this.viewContainer.createEmbeddedView(this.elseTemplate);
+  private hasSpecificPermission(permission: keyof AdminPermissions): boolean {
+    if (this.userPermissions) {
+      return this.userPermissions[permission] || false;
     }
+
+    // Fallback: vérifier par rôle si les permissions ne sont pas encore chargées
+    if (this.currentUser) {
+      const userRole = this.currentUser.role as UserRole;
+      return this.hasPermissionByRole(userRole, permission as string);
+    }
+
+    return false;
+  }
+
+  private hasPermissionByRole(userRole: UserRole, permission: string): boolean {
+    const rolePermissions: Record<UserRole, string[]> = {
+      [UserRole.USER]: [],
+      [UserRole.CONTRIBUTOR]: [
+        'canModerateContent',
+        'canViewAnalytics'
+      ],
+      [UserRole.ADMIN]: [
+        'canViewUsers',
+        'canEditUsers',
+        'canSuspendUsers',
+        'canModerateContent',
+        'canManageCommunities',
+        'canViewAnalytics',
+        'canManageLanguages',
+        'canExportData'
+      ],
+      [UserRole.SUPERADMIN]: [
+        'canViewUsers',
+        'canEditUsers',
+        'canSuspendUsers',
+        'canChangeUserRoles',
+        'canModerateContent',
+        'canManageCommunities',
+        'canViewAnalytics',
+        'canViewSystemMetrics',
+        'canExportData',
+        'canManageLanguages',
+        'canViewLogs',
+        'canManageSystem'
+      ]
+    };
+
+    return rolePermissions[userRole]?.includes(permission) || false;
   }
 }

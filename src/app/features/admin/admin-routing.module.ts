@@ -1,9 +1,10 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AdminGuard } from './guards/admin.guard';
+import { AdminRoleGuard } from './guards/admin-role.guard';
 import { RoleGuard } from '../../core/guards/role.guard';
 import { AuthGuard } from '../../core/guards/auth.guard';
-import { UserRole } from '../../core/models/admin';
+import { UserRole } from './models/comprehensive-admin.models';
 
 // Import des composants
 import { AdminDashboardComponent } from './components/dashboard/admin-dashboard.component';
@@ -25,26 +26,29 @@ const routes: Routes = [
       {
         path: 'dashboard',
         component: AdminDashboardComponent,
+        canActivate: [AdminRoleGuard],
         data: {
-          minRole: UserRole.CONTRIBUTOR,
+          role: UserRole.CONTRIBUTOR,
           title: 'Tableau de bord administrateur',
         },
       },
       {
         path: 'users',
         component: UserManagementComponent,
-        canActivate: [RoleGuard],
+        canActivate: [AdminRoleGuard],
         data: {
-          roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
+          role: UserRole.ADMIN,
+          permission: 'canViewUsers',
           title: 'Gestion des utilisateurs',
         },
       },
       {
         path: 'contributor-requests',
         component: ContributorRequestsComponent,
-        canActivate: [RoleGuard],
+        canActivate: [AdminRoleGuard],
         data: {
-          roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
+          role: UserRole.ADMIN,
+          permission: 'canViewUsers',
           title: 'Demandes de contribution',
         },
       },
@@ -59,9 +63,10 @@ const routes: Routes = [
           {
             path: 'add',
             component: AddLanguageComponent,
-            canActivate: [RoleGuard],
+            canActivate: [AdminRoleGuard],
             data: {
-              roles: [UserRole.CONTRIBUTOR, UserRole.ADMIN, UserRole.SUPERADMIN],
+              role: UserRole.CONTRIBUTOR,
+              permission: 'canManageLanguages',
               title: 'Ajouter une langue',
             },
           },
@@ -73,9 +78,10 @@ const routes: Routes = [
           import('./components/moderation/moderation.module').then(
             (m) => m.ModerationModule
           ),
-        canActivate: [RoleGuard],
+        canActivate: [AdminRoleGuard],
         data: {
-          roles: [UserRole.CONTRIBUTOR, UserRole.ADMIN, UserRole.SUPERADMIN],
+          role: UserRole.CONTRIBUTOR,
+          permission: 'canModerateContent',
           title: 'Modération des contenus',
         },
       },

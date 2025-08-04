@@ -1,25 +1,20 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Subscription, Observable, forkJoin } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { ActivatedRoute } from '@angular/router';
-import { AdminService } from '../../../../core/services/admin.service';
 import { AuthService } from '../../../../core/services/auth.service';
-import { PermissionService } from '../../services/permission.service';
+import { ToastService } from '../../../../shared/services/toast.service';
+import { ComprehensiveAdminService } from '../../services/comprehensive-admin.service';
 import {
-  AnalyticsService,
-  UserAnalytics,
-  ContentAnalytics,
-  CommunityAnalytics,
-  SystemMetrics,
-  TimePeriod,
-} from '../../services/analytics.service';
+  AdminDashboardOverview,
+  UserAnalyticsDetailed,
+  ContentAnalyticsDetailed,
+  CommunityAnalyticsDetailed,
+  SystemMetricsDetailed,
+  ActivityFeed,
+  UserRole,
+  AdminPermissions
+} from '../../models/comprehensive-admin.models';
 import { User } from '../../../../core/models/user';
-import { AdminStats, UserRole } from '../../../../core/models/admin';
-
-// ===============================================
-// 🆕 NOUVEAUX IMPORTS POUR LES COMPOSANTS
-// ===============================================
-// 🆕 IMPORTS POUR LES COMPOSANTS
-// ===============================================
 import { ActionGroup } from '../action-button-group/action-button-group.component';
 import { MetricData } from '../metric-card/metric-card.component';
 import { SystemStatusData } from '../system-status/system-status.component';
@@ -34,33 +29,28 @@ import { QuickStat } from '../../models/dashboard.models';
 export class AdminDashboardComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   userRole: UserRole = UserRole.USER;
-  dashboardStats: AdminStats | null = null;
-  recentActivity: any = null;
-  systemMetrics: any = null;
+  
+  // Comprehensive dashboard data
+  dashboardOverview: AdminDashboardOverview | null = null;
+  userAnalytics: UserAnalyticsDetailed | null = null;
+  contentAnalytics: ContentAnalyticsDetailed | null = null;
+  communityAnalytics: CommunityAnalyticsDetailed | null = null;
+  systemMetrics: SystemMetricsDetailed | null = null;
+  activityFeed: ActivityFeed[] = [];
+  userPermissions: AdminPermissions | null = null;
+  
+  selectedPeriod: '7d' | '30d' | '90d' | '1y' = '30d';
   isLoading = true;
   errorMessage = '';
   successMessage = '';
 
-  // Nouvelles données analytics
-  userAnalytics: UserAnalytics | null = null;
-  contentAnalytics: ContentAnalytics | null = null;
-  communityAnalytics: CommunityAnalytics | null = null;
-  systemMetricsData: SystemMetrics | null = null;
-  selectedPeriod: TimePeriod = '30d';
-
   // États de chargement pour chaque section
+  loadingOverview = false;
   loadingUsers = false;
   loadingContent = false;
   loadingCommunities = false;
   loadingSystem = false;
-
-  // Permissions pour l'affichage conditionnel (initialisées dans ngOnInit)
-  canAccessUserManagement$!: Observable<boolean>;
-  canAccessModeration$!: Observable<boolean>;
-  canAccessCommunityManagement$!: Observable<boolean>;
-  canAccessReports$!: Observable<boolean>;
-  canAccessSystemSettings$!: Observable<boolean>;
-  canAccessActivityLogs$!: Observable<boolean>;
+  loadingActivity = false;
 
   private subscriptions = new Subscription();
 
@@ -68,46 +58,26 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   UserRole = UserRole;
 
   constructor(
-    private adminService: AdminService,
     private authService: AuthService,
-    private permissionService: PermissionService,
-    private analyticsService: AnalyticsService,
+    private comprehensiveAdminService: ComprehensiveAdminService,
+    private toastService: ToastService,
     private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
-    console.log('🚀 AdminDashboard: Initialisation du tableau de bord');
-
     // Vérifier les paramètres de succès
     this.route.queryParams.subscribe((params) => {
       if (params['success'] === 'language-proposed') {
-        this.successMessage =
-          '🎉 Langue proposée avec succès ! Elle sera examinée par un administrateur.';
-        // Effacer le message après 5 secondes
-        setTimeout(() => {
-          this.successMessage = '';
-        }, 5000);
+        this.toastService.success('Langue proposée avec succès ! Elle sera examinée par un administrateur.');
       }
     });
-
-    // Initialiser les observables de permissions
-    this.canAccessUserManagement$ =
-      this.permissionService.canAccessUserManagement();
-    this.canAccessModeration$ = this.permissionService.canAccessModeration();
-    this.canAccessCommunityManagement$ =
-      this.permissionService.canAccessCommunityManagement();
-    this.canAccessReports$ = this.permissionService.canAccessReports();
-    this.canAccessSystemSettings$ =
-      this.permissionService.canAccessSystemSettings();
-    this.canAccessActivityLogs$ =
-      this.permissionService.canAccessActivityLogs();
 
     this.loadUserData();
   }
 
   ngOnDestroy(): void {
-    console.log('🔄 AdminDashboard: Nettoyage des subscriptions');
     this.subscriptions.unsubscribe();
+    this.comprehensiveAdminService.clearCache();
   }
 
   private loadUserData(): void {
@@ -117,357 +87,186 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
           if (user) {
             this.currentUser = user;
             this.userRole = (user.role as UserRole) || UserRole.USER;
-            console.log(
-              '👤 AdminDashboard: Utilisateur chargé avec rôle:',
-              this.userRole
-            );
+            this.loadPermissions();
             this.loadDashboardData();
           }
         },
         error: (error) => {
-          console.error("Erreur lors du chargement de l'utilisateur:", error);
-          this.errorMessage =
-            'Erreur lors du chargement des données utilisateur';
+          this.toastService.error('Erreur lors du chargement des données utilisateur');
           this.isLoading = false;
         },
+      })
+    );
+  }
+
+  private loadPermissions(): void {
+    this.subscriptions.add(
+      this.comprehensiveAdminService.getUserPermissions().subscribe({
+        next: (permissions) => {
+          this.userPermissions = permissions;
+        },
+        error: (error) => {
+          this.toastService.error('Erreur lors du chargement des permissions');
+        }
       })
     );
   }
 
   private loadDashboardData(): void {
-    console.log(
-      '📊 AdminDashboard: Chargement des données selon le rôle:',
-      this.userRole
-    );
     this.isLoading = true;
     this.errorMessage = '';
 
-    // Charger les données selon le rôle de l'utilisateur
-    switch (this.userRole) {
-      case UserRole.CONTRIBUTOR:
-        this.loadContributorDashboard();
-        break;
-      case UserRole.ADMIN:
-        this.loadAdminDashboard();
-        break;
-      case UserRole.SUPERADMIN:
-        this.loadSuperAdminDashboard();
-        break;
-      default:
-        this.errorMessage =
-          'Rôle non autorisé pour le tableau de bord administrateur';
-        this.isLoading = false;
+    // Vérifier l'autorisation d'accès
+    if (!this.hasMinimumRole(UserRole.CONTRIBUTOR)) {
+      this.errorMessage = 'Accès non autorisé au tableau de bord administrateur';
+      this.isLoading = false;
+      return;
+    }
+
+    // Charger les données selon le rôle
+    this.loadOverviewData();
+    this.loadActivityFeed();
+    
+    if (this.hasMinimumRole(UserRole.ADMIN)) {
+      this.loadAnalyticsData();
+    }
+    
+    if (this.userRole === UserRole.SUPERADMIN) {
+      this.loadSystemMetrics();
     }
   }
 
-  private loadContributorDashboard(): void {
-    console.log('🔧 AdminDashboard: Chargement du dashboard contributeur');
+  private loadOverviewData(): void {
+    this.loadingOverview = true;
     this.subscriptions.add(
-      this.adminService.getContributorDashboard().subscribe({
-        next: (data) => {
-          this.dashboardStats = {
-            ...this.getEmptyStats(),
-            ...data,
-          };
-          console.log(
-            '✅ AdminDashboard: Dashboard contributeur chargé',
-            this.dashboardStats
-          );
+      this.comprehensiveAdminService.getDashboardOverview().subscribe({
+        next: (overview) => {
+          this.dashboardOverview = overview;
+          this.loadingOverview = false;
           this.isLoading = false;
         },
         error: (error) => {
-          console.error(
-            '❌ Erreur lors du chargement du dashboard contributeur:',
-            error
-          );
           this.handleError(error);
-        },
+          this.loadingOverview = false;
+        }
       })
     );
   }
 
-  private loadAdminDashboard(): void {
-    console.log('👔 AdminDashboard: Chargement du dashboard admin');
+  private loadActivityFeed(): void {
+    this.loadingActivity = true;
     this.subscriptions.add(
-      this.adminService.getAdminDashboard().subscribe({
-        next: (data) => {
-          this.dashboardStats = data.stats || this.getEmptyStats();
-          this.recentActivity = data.recentActivity || null;
-          this.isLoading = false;
-          console.log('✅ AdminDashboard: Dashboard admin chargé');
+      this.comprehensiveAdminService.getActivityFeed({ limit: 10 }).subscribe({
+        next: (activities) => {
+          this.activityFeed = activities;
+          this.loadingActivity = false;
         },
         error: (error) => {
-          console.error(
-            '❌ Erreur lors du chargement du dashboard admin:',
-            error
-          );
-          this.handleError(error);
-        },
+          this.toastService.error('Erreur lors du chargement des activités');
+          this.loadingActivity = false;
+        }
       })
     );
   }
 
-  private loadSuperAdminDashboard(): void {
-    console.log('👑 AdminDashboard: Chargement du dashboard superadmin');
+  private loadAnalyticsData(): void {
     this.subscriptions.add(
-      this.adminService.getSuperAdminDashboard().subscribe({
-        next: (data) => {
-          this.dashboardStats = data.stats || this.getEmptyStats();
-          this.recentActivity = data.recentActivity || null;
-          this.systemMetrics = data.systemHealth || null;
-          this.isLoading = false;
-          console.log('✅ AdminDashboard: Dashboard superadmin chargé');
+      this.comprehensiveAdminService.getAllAnalytics(this.selectedPeriod).subscribe({
+        next: (analytics) => {
+          this.userAnalytics = analytics.users;
+          this.contentAnalytics = analytics.content;
+          this.communityAnalytics = analytics.communities;
+          this.systemMetrics = analytics.system;
         },
         error: (error) => {
-          console.error(
-            '❌ Erreur lors du chargement du dashboard superadmin:',
-            error
-          );
-          this.handleError(error);
-        },
+          this.toastService.error('Erreur lors du chargement des analytics');
+        }
       })
     );
+  }
 
-    // Charger les analytics avancées pour les superadmins
-    this.loadAdvancedAnalytics();
+  private loadSystemMetrics(): void {
+    this.loadingSystem = true;
+    this.subscriptions.add(
+      this.comprehensiveAdminService.getSystemMetrics().subscribe({
+        next: (metrics) => {
+          this.systemMetrics = metrics;
+          this.loadingSystem = false;
+        },
+        error: (error) => {
+          this.toastService.error('Erreur lors du chargement des métriques système');
+          this.loadingSystem = false;
+        }
+      })
+    );
   }
 
   private handleError(error: any): void {
     if (error.status === 403) {
-      this.errorMessage =
-        "Vous n'avez pas les permissions nécessaires pour accéder à ces données.";
+      this.errorMessage = "Vous n'avez pas les permissions nécessaires pour accéder à ces données.";
     } else if (error.status === 401) {
       this.errorMessage = 'Votre session a expiré. Veuillez vous reconnecter.';
     } else {
-      this.errorMessage =
-        'Erreur lors du chargement des données du tableau de bord.';
+      this.errorMessage = 'Erreur lors du chargement des données du tableau de bord.';
     }
     this.isLoading = false;
   }
 
-  private getEmptyStats(): AdminStats {
-    return {
-      totalUsers: 0,
-      activeUsers: 0,
-      suspendedUsers: 0,
-      totalWords: 0,
-      pendingWords: 0,
-      approvedWords: 0,
-      rejectedWords: 0,
-      totalCommunities: 0,
-      activeCommunities: 0,
-      totalPosts: 0,
-      totalMessages: 0,
-      newUsersThisMonth: 0,
-      newWordsThisWeek: 0,
-    };
-  }
-
-  // === ANALYTICS AVANCÉES ===
-
-  private loadAdvancedAnalytics(): void {
-    console.log('📊 AdminDashboard: Chargement des analytics avancées');
-
-    // Charger tous les analytics en parallèle
-    this.loadUserAnalytics();
-    this.loadContentAnalytics();
-    this.loadCommunityAnalytics();
-    this.loadSystemMetrics();
-  }
-
-  loadUserAnalytics(): void {
-    this.loadingUsers = true;
-    this.subscriptions.add(
-      this.analyticsService.getUserAnalytics(this.selectedPeriod).subscribe({
-        next: (data) => {
-          this.userAnalytics = data;
-          this.loadingUsers = false;
-          console.log('✅ Analytics utilisateurs chargées');
-        },
-        error: (error) => {
-          console.error('❌ Erreur analytics utilisateurs:', error);
-          this.loadingUsers = false;
-        },
-      })
-    );
-  }
-
-  loadContentAnalytics(): void {
-    this.loadingContent = true;
-    this.subscriptions.add(
-      this.analyticsService.getContentAnalytics().subscribe({
-        next: (data) => {
-          this.contentAnalytics = data;
-          this.loadingContent = false;
-          console.log('✅ Analytics contenu chargées');
-        },
-        error: (error) => {
-          console.error('❌ Erreur analytics contenu:', error);
-          this.loadingContent = false;
-        },
-      })
-    );
-  }
-
-  loadCommunityAnalytics(): void {
-    this.loadingCommunities = true;
-    this.subscriptions.add(
-      this.analyticsService.getCommunityAnalytics().subscribe({
-        next: (data) => {
-          this.communityAnalytics = data;
-          this.loadingCommunities = false;
-          console.log('✅ Analytics communautés chargées');
-        },
-        error: (error) => {
-          console.error('❌ Erreur analytics communautés:', error);
-          this.loadingCommunities = false;
-        },
-      })
-    );
-  }
-
-  loadSystemMetrics(): void {
-    this.loadingSystem = true;
-    this.subscriptions.add(
-      this.analyticsService.getSystemMetrics().subscribe({
-        next: (data) => {
-          this.systemMetricsData = data;
-          this.loadingSystem = false;
-          console.log('✅ Métriques système chargées');
-        },
-        error: (error) => {
-          console.error('❌ Erreur métriques système:', error);
-          this.loadingSystem = false;
-        },
-      })
-    );
-  }
-
-  // === GETTERS POUR GRAPHIQUES ===
-
-  get userGrowthChartData() {
-    return this.userAnalytics
-      ? this.analyticsService.formatUserGrowthData(this.userAnalytics)
-      : null;
-  }
-
-  get contentGrowthChartData() {
-    return this.contentAnalytics
-      ? this.analyticsService.formatContentGrowthData(this.contentAnalytics)
-      : null;
-  }
-
-  get languageDistributionChartData() {
-    return this.contentAnalytics
-      ? this.analyticsService.formatLanguageDistributionData(
-          this.contentAnalytics
-        )
-      : null;
-  }
-
-  get languageDistributionData() {
-    return this.languageDistributionChartData?.series || [];
-  }
-
-  get languageDistributionLabels() {
-    return this.languageDistributionChartData?.labels || [];
-  }
-
-  get contentGrowthData() {
-    return this.contentGrowthChartData?.series || [];
-  }
-
-  get contentGrowthCategories() {
-    return this.contentGrowthChartData?.categories || [];
-  }
-
-  get engagementData() {
-    return this.engagementChartData?.series || [];
-  }
-
-  get engagementCategories() {
-    return this.engagementChartData?.categories || [];
-  }
-
-  get performanceData() {
-    return this.performanceChartData?.series || [];
-  }
-
-  get performanceCategories() {
-    return this.performanceChartData?.categories || [];
-  }
-
-  get userGrowthData() {
-    return this.userGrowthChartData?.series || [];
-  }
-
-  get userGrowthCategories() {
-    return this.userGrowthChartData?.categories || [];
-  }
-
-  get engagementChartData() {
-    return this.communityAnalytics
-      ? this.analyticsService.formatEngagementData(this.communityAnalytics)
-      : null;
-  }
-
-  get performanceChartData() {
-    return this.systemMetricsData
-      ? this.analyticsService.formatPerformanceData(this.systemMetricsData)
-      : null;
-  }
-
   // === ACTIONS ===
   refreshData(): void {
-    console.log('🔄 AdminDashboard: Rafraîchissement des données');
-    this.loadDashboardData();
+    this.comprehensiveAdminService.refreshDashboard().subscribe({
+      next: () => {
+        this.loadDashboardData();
+        this.toastService.success('Données rafraîchies avec succès');
+      },
+      error: (error) => {
+        this.toastService.error('Erreur lors du rafraîchissement');
+      }
+    });
   }
 
-  changePeriod(newPeriod: TimePeriod): void {
-    console.log('📅 AdminDashboard: Changement de période:', newPeriod);
+  changePeriod(newPeriod: '7d' | '30d' | '90d' | '1y'): void {
     this.selectedPeriod = newPeriod;
-    this.loadUserAnalytics();
+    this.loadAnalyticsData();
   }
 
   refreshAnalytics(): void {
-    console.log('🔄 AdminDashboard: Rafraîchissement des analytics');
-    this.analyticsService.refreshAllAnalytics(this.selectedPeriod);
-    this.loadAdvancedAnalytics();
+    this.loadAnalyticsData();
+    this.toastService.success('Analytics rafraîchis');
   }
 
   clearError(): void {
     this.errorMessage = '';
   }
 
-  // === NAVIGATION ===
-  navigateToUserManagement(): void {
-    // Cette navigation sera gérée par les routerLink dans le template
-    console.log(
-      '🔗 AdminDashboard: Navigation vers la gestion des utilisateurs'
-    );
+  // === UTILITY METHODS ===
+  hasPermission(permission: keyof AdminPermissions): boolean {
+    return this.userPermissions ? this.userPermissions[permission] : false;
   }
 
-  navigateToModeration(): void {
-    console.log('🔗 AdminDashboard: Navigation vers la modération');
+  hasMinimumRole(requiredRole: UserRole): boolean {
+    return this.comprehensiveAdminService.hasMinimumRole(requiredRole, this.userRole);
   }
 
   // === GETTERS POUR LE TEMPLATE ===
   get canAccessUserManagement(): boolean {
-    return (
-      this.userRole === UserRole.ADMIN || this.userRole === UserRole.SUPERADMIN
-    );
+    return this.hasPermission('canViewUsers');
   }
 
   get canAccessModeration(): boolean {
-    return (
-      this.userRole === UserRole.CONTRIBUTOR ||
-      this.userRole === UserRole.ADMIN ||
-      this.userRole === UserRole.SUPERADMIN
-    );
+    return this.hasPermission('canModerateContent');
   }
 
   get canAccessSystemMetrics(): boolean {
-    return this.userRole === UserRole.SUPERADMIN;
+    return this.hasPermission('canViewSystemMetrics');
+  }
+
+  get canAccessCommunities(): boolean {
+    return this.hasPermission('canManageCommunities');
+  }
+
+  get canAccessReports(): boolean {
+    return this.hasPermission('canExportData');
   }
 
   get getUserInitials(): string {
@@ -476,22 +275,32 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   get getRoleDisplayName(): string {
-    return this.permissionService.getRoleDisplayName(this.userRole);
+    const roleNames = {
+      [UserRole.USER]: 'Utilisateur',
+      [UserRole.CONTRIBUTOR]: 'Contributeur',
+      [UserRole.ADMIN]: 'Administrateur',
+      [UserRole.SUPERADMIN]: 'Super Administrateur'
+    };
+    return roleNames[this.userRole] || 'Inconnu';
   }
 
   get getRoleDescription(): string {
-    return this.permissionService.getRoleDescription(this.userRole);
+    const descriptions = {
+      [UserRole.USER]: 'Accès basique à la plateforme',
+      [UserRole.CONTRIBUTOR]: 'Peut modérer le contenu',
+      [UserRole.ADMIN]: 'Gestion complète des utilisateurs et contenus',
+      [UserRole.SUPERADMIN]: 'Accès total au système'
+    };
+    return descriptions[this.userRole] || 'Rôle inconnu';
   }
 
-  // ===============================================
-  // 🎯 MÉTHODES POUR LES NOUVEAUX COMPOSANTS
-  // ===============================================
+  // === MÉTHODES POUR LES NOUVEAUX COMPOSANTS ===
 
   // Méthodes pour les métriques avec calculs de croissance
   getUserGrowthRate(): number {
-    if (!this.dashboardStats) return 0;
-    const baseValue = this.dashboardStats.totalUsers || 1;
-    const growth = this.dashboardStats.newUsersThisMonth || 0;
+    if (!this.dashboardOverview) return 0;
+    const baseValue = this.dashboardOverview.totalUsers || 1;
+    const growth = this.dashboardOverview.newUsersToday || 0;
     return Math.round((growth / baseValue) * 100);
   }
 
@@ -503,9 +312,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   getWordsGrowthRate(): number {
-    if (!this.dashboardStats) return 0;
-    const baseValue = this.dashboardStats.totalWords || 1;
-    const growth = this.dashboardStats.newWordsThisWeek || 0;
+    if (!this.dashboardOverview) return 0;
+    const baseValue = this.dashboardOverview.totalWords || 1;
+    const growth = this.dashboardOverview.pendingWords || 0;
     return Math.round((growth / baseValue) * 100);
   }
 
@@ -517,23 +326,30 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   getCommunitiesGrowthRate(): number {
-    if (!this.dashboardStats) return 0;
-    // Simulation - dans un vrai cas, on aurait ces données du backend
-    return Math.floor(Math.random() * 20) + 5;
+    if (!this.dashboardOverview) return 0;
+    const baseValue = this.dashboardOverview.totalCommunities || 1;
+    const growth = this.dashboardOverview.activeCommunities || 0;
+    return Math.round((growth / baseValue) * 100);
   }
 
   getCommunitiesGrowthType(): 'increase' | 'decrease' | 'neutral' {
-    return 'increase'; // Simulé positivement
+    const rate = this.getCommunitiesGrowthRate();
+    if (rate > 0) return 'increase';
+    if (rate < 0) return 'decrease';
+    return 'neutral';
   }
 
   getMessagesGrowthRate(): number {
-    if (!this.dashboardStats) return 0;
-    // Simulation basée sur l'activité
-    return Math.floor(Math.random() * 15) + 2;
+    if (!this.dashboardOverview) return 0;
+    // For messages, we'll use a simple growth indicator
+    return 5; // Placeholder growth rate
   }
 
   getMessagesGrowthType(): 'increase' | 'decrease' | 'neutral' {
-    return 'increase'; // Simulé positivement
+    const rate = this.getMessagesGrowthRate();
+    if (rate > 0) return 'increase';
+    if (rate < 0) return 'decrease';
+    return 'neutral';
   }
 
   // Méthodes pour les actions groupées
@@ -550,9 +366,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
             icon: 'moderation',
             route: '/admin/moderation',
             variant: 'primary',
-            badge: this.dashboardStats?.pendingWords
+            badge: this.dashboardOverview?.pendingWords
               ? {
-                  value: this.dashboardStats.pendingWords,
+                  value: this.dashboardOverview.pendingWords,
                   color: 'warning',
                 }
               : undefined,
@@ -585,9 +401,9 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
             icon: 'moderation',
             route: '/admin/moderation',
             variant: 'secondary',
-            badge: this.dashboardStats?.pendingWords
+            badge: this.dashboardOverview?.pendingWords
               ? {
-                  value: this.dashboardStats.pendingWords,
+                  value: this.dashboardOverview.pendingWords,
                   color: 'warning',
                 }
               : undefined,
@@ -667,16 +483,19 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   getMemoryUsage(): number {
-    if (!this.systemMetricsData?.memoryUsage) return 0;
-    return Math.round(this.systemMetricsData.memoryUsage);
+    if (!this.systemMetrics?.memoryUsage) return 0;
+    return Math.round(this.systemMetrics.memoryUsage.percentage);
   }
 
   getSystemStatus(): 'healthy' | 'warning' | 'error' {
-    const memoryUsage = this.getMemoryUsage();
-    const errorRate = this.systemMetricsData?.errorRate || 0;
+    if (!this.systemMetrics) return 'healthy';
+    
+    const memoryUsage = this.systemMetrics.memoryUsage.percentage;
+    const errorRate = this.systemMetrics.apiMetrics.errorRate;
+    const diskUsage = this.systemMetrics.diskUsage.percentage;
 
-    if (memoryUsage > 500 || errorRate > 0.1) return 'warning';
-    if (memoryUsage > 1000 || errorRate > 0.2) return 'error';
+    if (memoryUsage > 90 || errorRate > 5 || diskUsage > 90) return 'error';
+    if (memoryUsage > 70 || errorRate > 2 || diskUsage > 70) return 'warning';
     return 'healthy';
   }
 
@@ -688,111 +507,113 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return 'rank-other';
   }
 
-  // ===============================================
-  // 🆕 GETTERS POUR LES NOUVEAUX COMPOSANTS
-  // ===============================================
+  // === GETTERS POUR LES NOUVEAUX COMPOSANTS ===
 
   getUsersMetricData(): MetricData | null {
-    if (!this.dashboardStats) return null;
+    if (!this.dashboardOverview) return null;
 
+    const overview = this.dashboardOverview;
     return {
-      value: this.dashboardStats.totalUsers || 0,
+      value: overview.totalUsers || 0,
       label: 'Utilisateurs',
-      sublabel: `${this.dashboardStats.activeUsers || 0} actifs`,
+      sublabel: `${overview.activeUsers || 0} actifs`,
       icon: 'users',
       color: 'primary',
       change: {
-        value: this.dashboardStats.newUsersThisMonth || 0,
-        period: 'ce mois',
+        value: overview.newUsersToday || 0,
+        period: 'aujourd\'hui',
         type: 'increase',
       },
     };
   }
 
   getWordsMetricData(): MetricData | null {
-    if (!this.dashboardStats) return null;
+    if (!this.dashboardOverview) return null;
 
+    const overview = this.dashboardOverview;
     return {
-      value: this.dashboardStats.totalWords || 0,
+      value: overview.totalWords || 0,
       label: 'Mots',
-      sublabel: `${this.dashboardStats.pendingWords || 0} en attente`,
+      sublabel: `${overview.pendingWords || 0} en attente`,
       icon: 'words',
       color: 'secondary',
       change: {
-        value: this.dashboardStats.newWordsThisWeek || 0,
-        period: 'cette semaine',
+        value: overview.approvedWords || 0,
+        period: 'approuvés',
         type: 'increase',
       },
     };
   }
 
   getCommunitiesMetricData(): MetricData | null {
-    if (!this.dashboardStats) return null;
+    if (!this.dashboardOverview) return null;
 
+    const overview = this.dashboardOverview;
     return {
-      value: this.dashboardStats.totalCommunities || 0,
+      value: overview.totalCommunities || 0,
       label: 'Communautés',
-      sublabel: `${this.dashboardStats.activeCommunities || 0} actives`,
+      sublabel: `${overview.activeCommunities || 0} actives`,
       icon: 'communities',
       color: 'info',
       change: {
-        value: 0,
-        period: 'ce mois',
-        type: 'neutral',
+        value: overview.totalLanguages || 0,
+        period: 'langues',
+        type: 'increase',
       },
     };
   }
 
   getMessagesMetricData(): MetricData | null {
-    if (!this.dashboardStats) return null;
+    if (!this.dashboardOverview) return null;
 
+    const overview = this.dashboardOverview;
     return {
-      value: this.dashboardStats.totalMessages || 0,
-      label: 'Messages',
-      sublabel: `${this.dashboardStats.totalPosts || 0} posts`,
+      value: overview.totalContributorRequests || 0,
+      label: 'Demandes',
+      sublabel: `${overview.pendingContributorRequests || 0} en attente`,
       icon: 'messages',
       color: 'warning',
       change: {
-        value: 0,
-        period: "aujourd'hui",
-        type: 'neutral',
+        value: overview.pendingLanguages || 0,
+        period: 'langues proposées',
+        type: 'increase',
       },
     };
   }
 
-  // === MÉTHODES MANQUANTES POUR LES QUICK STATS ===
-
   getSystemStatusData(): SystemStatusData | null {
-    if (!this.systemMetricsData) return null;
+    if (!this.systemMetrics) return null;
 
     return {
       status: this.getSystemStatus(),
-      uptime: this.systemMetricsData.serverUptime || 'N/A',
-      nodeVersion: 'v18.x.x', // Valeur par défaut, à récupérer du backend
+      uptime: this.formatUptime(this.systemMetrics.uptime),
+      nodeVersion: 'v18.x.x',
       memoryUsage: this.getMemoryUsage(),
       lastCheck: new Date(),
     };
   }
+
+  // === MÉTHODES POUR LES QUICK STATS ===
 
   getUserGrowthQuickStats(): QuickStat[] {
     if (!this.userAnalytics) return [];
 
     return [
       {
-        label: 'Nouveaux utilisateurs',
-        value: this.userAnalytics.newUsersThisMonth || 0,
-        period: 'ce mois',
+        label: 'Utilisateurs totaux',
+        value: this.userAnalytics.totalUsers || 0,
+        period: 'total',
         trend: 'up',
       },
       {
         label: 'Utilisateurs actifs',
-        value: this.userAnalytics.activeUsers || 0,
+        value: this.userAnalytics.activeUsers.weekly || 0,
         period: 'cette semaine',
         trend: 'up',
       },
       {
-        label: 'Taux de croissance',
-        value: Math.round((this.userAnalytics.userGrowthRate || 0) * 100),
+        label: 'Taux de rétention J7',
+        value: Math.round((this.userAnalytics.userRetention.day7 || 0) * 100),
         period: '%',
         trend: 'neutral',
       },
@@ -800,27 +621,27 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   }
 
   getLanguageDistributionQuickStats(): QuickStat[] {
-    if (!this.contentAnalytics) return [];
+    if (!this.contentAnalytics || !this.contentAnalytics.wordsByLanguage.length) return [];
 
-    const topLanguage = this.contentAnalytics.wordsByLanguage?.[0];
+    const topLanguage = this.contentAnalytics.wordsByLanguage[0];
     
     return [
       {
         label: 'Langues actives',
-        value: this.contentAnalytics.wordsByLanguage?.length || 0,
+        value: this.contentAnalytics.wordsByLanguage.length || 0,
         period: 'total',
         trend: 'up',
       },
       {
         label: 'Langue principale',
-        value: topLanguage?.language || 'N/A',
+        value: topLanguage.language.name || 'N/A',
         period: '',
         trend: 'neutral',
       },
       {
-        label: 'Couverture',
-        value: Math.round(topLanguage?.percentage || 0),
-        period: '%',
+        label: 'Mots dans cette langue',
+        value: topLanguage.count || 0,
+        period: 'mots',
         trend: 'up',
       },
     ];
@@ -829,17 +650,11 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
   getContentGrowthQuickStats(): QuickStat[] {
     if (!this.contentAnalytics) return [];
 
-    const totalWords = this.contentAnalytics.wordsByStatus.approved + 
-                      this.contentAnalytics.wordsByStatus.pending + 
-                      this.contentAnalytics.wordsByStatus.rejected;
-    const approvalRate = totalWords > 0 ? 
-                        (this.contentAnalytics.wordsByStatus.approved / totalWords) * 100 : 0;
-
     return [
       {
-        label: 'Nouveaux mots',
-        value: this.contentAnalytics.wordsThisWeek || 0,
-        period: 'cette semaine',
+        label: 'Mots approuvés',
+        value: this.contentAnalytics.wordsByStatus.approved || 0,
+        period: 'approuvés',
         trend: 'up',
       },
       {
@@ -850,7 +665,7 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
       },
       {
         label: 'Taux d\'approbation',
-        value: Math.round(approvalRate),
+        value: Math.round((this.contentAnalytics.moderationMetrics.approvalRate || 0) * 100),
         period: '%',
         trend: 'neutral',
       },
@@ -862,48 +677,70 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
 
     return [
       {
-        label: 'Posts actifs',
-        value: this.communityAnalytics.postsThisWeek || 0,
-        period: 'cette semaine',
+        label: 'Membres totaux',
+        value: this.communityAnalytics.membershipStats.totalMembers || 0,
+        period: 'membres',
         trend: 'up',
       },
       {
         label: 'Communautés actives',
         value: this.communityAnalytics.activeCommunities || 0,
-        period: 'total',
+        period: 'actives',
         trend: 'up',
       },
       {
-        label: 'Posts aujourd\'hui',
-        value: this.communityAnalytics.postsToday || 0,
-        period: 'aujourd\'hui',
-        trend: 'neutral',
+        label: 'Membres/communauté',
+        value: Math.round(this.communityAnalytics.membershipStats.avgMembersPerCommunity || 0),
+        period: 'moyenne',
+        trend: 'up',
       },
     ];
   }
 
   getPerformanceQuickStats(): QuickStat[] {
-    if (!this.systemMetricsData) return [];
+    if (!this.systemMetrics) return [];
 
     return [
       {
         label: 'Temps de réponse',
-        value: Math.round(this.systemMetricsData.averageResponseTime || 0),
+        value: Math.round(this.systemMetrics.apiMetrics.avgResponseTime),
         period: 'ms',
         trend: 'down',
       },
       {
-        label: 'Requêtes totales',
-        value: this.systemMetricsData.totalRequests || 0,
-        period: 'total',
+        label: 'Requêtes/min',
+        value: this.systemMetrics.apiMetrics.requestsPerMinute || 0,
+        period: 'req/min',
         trend: 'up',
       },
       {
         label: 'Taux d\'erreur',
-        value: Math.round((this.systemMetricsData.errorRate || 0) * 100),
+        value: Math.round(this.systemMetrics.apiMetrics.errorRate * 100),
         period: '%',
         trend: 'neutral',
       },
     ];
+  }
+
+  // === GETTERS POUR GRAPHIQUES ===
+  
+  get userGrowthData() {
+    return this.userAnalytics?.registrationTrends || [];
+  }
+
+  get contentGrowthData() {
+    return this.contentAnalytics?.contentTrends || [];
+  }
+
+  get languageDistributionData() {
+    return this.contentAnalytics?.wordsByLanguage || [];
+  }
+
+  get engagementData() {
+    return this.communityAnalytics?.communityGrowth || [];
+  }
+
+  get performanceData() {
+    return this.systemMetrics?.apiMetrics || null;
   }
 }

@@ -19,9 +19,18 @@ import { ActionButtonGroupComponent } from './components/action-button-group/act
 // Services
 import { PermissionService } from './services/permission.service';
 import { AnalyticsService } from './services/analytics.service';
+import { ComprehensiveAdminService } from './services/comprehensive-admin.service';
+import { RolePermissionService } from './services/role-permission.service';
 
 // Guards
 import { AdminGuard } from './guards/admin.guard';
+import { AdminRoleGuard } from './guards/admin-role.guard';
+
+// Directives
+import { HasPermissionDirective } from './directives/has-permission.directive';
+
+// Composants standalone
+import { UserPermissionsComponent } from './components/user-permissions/user-permissions.component';
 
 // Modules
 import { AdminRoutingModule } from './admin-routing.module';
@@ -47,14 +56,21 @@ import { SharedModule } from '../../shared/shared.module';
     AdminRoutingModule,
     SharedModule,
     NgApexchartsModule,
+    // Directives standalone
+    HasPermissionDirective,
+    // Composants standalone
+    UserPermissionsComponent,
   ],
   providers: [
     // Services
     PermissionService,
     AnalyticsService,
+    ComprehensiveAdminService,
+    RolePermissionService,
 
     // Guards
     AdminGuard,
+    AdminRoleGuard,
   ],
 })
 export class AdminModule {}
