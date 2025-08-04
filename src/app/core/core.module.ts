@@ -1,8 +1,9 @@
 import { NgModule, Optional, SkipSelf } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { authInterceptor } from './interceptors/auth.interceptor';
+import { PerformanceInterceptor } from './interceptors/performance.interceptor';
 import { AuthGuard } from './guards/auth.guard';
 import { NonAuthGuard } from './guards/non-auth.guard';
 
@@ -13,6 +14,11 @@ import { NonAuthGuard } from './guards/non-auth.guard';
     AuthGuard,
     NonAuthGuard,
     provideHttpClient(withInterceptors([authInterceptor])),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: PerformanceInterceptor,
+      multi: true
+    }
   ],
   exports: [],
 })
