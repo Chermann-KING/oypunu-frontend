@@ -294,6 +294,18 @@ export class AdminDashboardComponent implements OnInit, OnDestroy {
     return descriptions[this.userRole] || 'Rôle inconnu';
   }
 
+  getActivityIcon(activityType: string): string {
+    const iconMap: Record<string, string> = {
+      'user_registered': 'user-plus',
+      'word_created': 'plus-circle',
+      'word_approved': 'check-circle',
+      'community_created': 'globe',
+      'contributor_request': 'user-edit',
+      'system_event': 'cog'
+    };
+    return iconMap[activityType] || 'info-circle';
+  }
+
   // === MÉTHODES POUR LES NOUVEAUX COMPOSANTS ===
 
   // Méthodes pour les métriques avec calculs de croissance
