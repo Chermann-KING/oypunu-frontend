@@ -6,6 +6,7 @@ import { DictionaryService } from '../../../../core/services/dictionary.service'
 import { HomeDataService } from '../../services/home-data.service';
 import { ActivityService, Activity } from '../../../../core/services/activity.service';
 import { ToastService } from '../../../../shared/services/toast.service';
+import { ApiHealthService } from '../../../../shared/services/api-health.service';
 
 interface LiveDemoResult {
   word: string;
@@ -60,11 +61,13 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     private dictionaryService: DictionaryService,
     private homeDataService: HomeDataService,
     private activityService: ActivityService,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private apiHealthService: ApiHealthService
   ) {}
 
   ngOnInit(): void {
     this.initAnimations();
+    this.checkApiHealth();
     this.loadRealTimeStats();
     this.initRealTimeActivities();
     this.startRealTimeUpdates();
@@ -83,6 +86,23 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     setTimeout(() => this.showHero = true, 100);
     setTimeout(() => this.showStats = true, 300);
     setTimeout(() => this.showFeatures = true, 500);
+  }
+
+  // Vérifier la santé de l'API au chargement
+  private checkApiHealth(): void {
+    this.apiHealthService.getDiagnosticReport().subscribe(report => {
+      if (!report.api.isOnline) {
+        this.toastService.warning(
+          'Problème de connexion', 
+          `${report.api.error} - Utilisation des données de démonstration`
+        );
+      } else if (!report.activities) {
+        this.toastService.info(
+          'API connectée', 
+          'Serveur accessible mais les activités pourraient être limitées'
+        );
+      }
+    });
   }
 
   // Rotation des suggestions de démo
@@ -107,32 +127,50 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     // Demander les activités récentes au chargement
     this.activityService.requestRecentActivities(5, true); // Priorité aux langues africaines
 
-    // Fallback: utiliser l'API REST si WebSocket n'est pas disponible
+    // Essayer immédiatement l'API REST en parallèle (pour avoir des données rapidement)
+    this.loadActivitiesFromAPI();
+
+    // Fallback WebSocket après un délai plus court
     setTimeout(() => {
-      if (!this.activityService.isConnected()) {
-        this.loadActivitiesFromAPI();
+      if (!this.activityService.isConnected() && this.realTimeActivities.length === 0) {
+        this.activityService.requestRecentActivities(5, true);
       }
-    }, 2000);
+    }, 1000);
   }
 
-  // Charger les activités via API REST (fallback)
+  // Charger les activités via API REST
   private loadActivitiesFromAPI(): void {
     this.activityService.getRecentActivities(5, true)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.realTimeActivities = response.activities;
+          if (response && response.activities && response.activities.length > 0) {
+            this.realTimeActivities = response.activities;
+          } else {
+            // Pas d'activités dans la base, mais l'API fonctionne
+            this.toastService.info('Aucune activité', 'Aucune activité récente trouvée dans la base de données');
+            this.loadFallbackActivities(); // Utiliser les données démo pour l'affichage
+          }
         },
         error: (error) => {
-          // Utiliser des activités de démonstration comme fallback
+          // Erreur API - vérifier le type d'erreur
+          if (error.status === 0) {
+            this.toastService.warning('Connexion impossible', 'Impossible de se connecter au serveur O\'Ypunu');
+          } else if (error.status >= 500) {
+            this.toastService.error('Erreur serveur', 'Le serveur O\'Ypunu rencontre des difficultés');
+          } else {
+            this.toastService.warning('Données indisponibles', 'Les activités récentes ne peuvent pas être chargées');
+          }
+          
+          // Utiliser des activités de démonstration comme fallback ultime
           this.loadFallbackActivities();
-          this.toastService.info('Mode démo', 'Affichage d\'activités d\'exemple');
         }
       });
   }
 
-  // Activités de démonstration comme fallback ultime
+  // Activités de démonstration comme fallback ultime (uniquement si aucune donnée réelle disponible)
   private loadFallbackActivities(): void {
+    this.toastService.info('Mode démonstration', 'Affichage d\'exemples d\'activités en attendant les vraies données');
     this.realTimeActivities = [
       {
         id: 'demo-1',
