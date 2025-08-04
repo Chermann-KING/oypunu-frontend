@@ -1,9 +1,20 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { User, UserStats } from '../../../core/models/user';
-import { environment } from '../../../../environments/environment';
+import { UsersService } from '../../users/services/users.service';
+import { 
+  UpdateProfileDto, 
+  UserProfileResponse, 
+  AvatarUploadResponse 
+} from '../../users/models/user-extended';
 
+/**
+ * @deprecated Utiliser UsersService à la place
+ * Service de profil maintenu pour la compatibilité ascendante
+ * 
+ * Ce service délègue maintenant toutes les opérations vers UsersService
+ * pour éviter la duplication de code et centraliser la logique utilisateur.
+ */
 export interface UpdateProfileData {
   username?: string;
   nativeLanguage?: string;
@@ -19,32 +30,40 @@ export interface UpdateProfileData {
   providedIn: 'root',
 })
 export class ProfileService {
-  private apiUrl = `${environment.apiUrl}/users`;
+  constructor(private usersService: UsersService) {}
 
-  constructor(private http: HttpClient) {}
-
+  /**
+   * @deprecated Utiliser usersService.getProfile() à la place
+   */
   getProfile(): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/profile`);
+    return this.usersService.getProfile();
   }
 
+  /**
+   * @deprecated Utiliser usersService.updateProfile() à la place
+   */
   updateProfile(profileData: UpdateProfileData): Observable<User> {
-    return this.http.patch<User>(`${this.apiUrl}/profile`, profileData);
+    return this.usersService.updateProfile(profileData as UpdateProfileDto);
   }
 
+  /**
+   * @deprecated Utiliser usersService.getUserStats() à la place
+   */
   getUserStats(): Observable<UserStats> {
-    return this.http.get<UserStats>(`${this.apiUrl}/profile/stats`);
+    return this.usersService.getUserStats();
   }
 
+  /**
+   * @deprecated Utiliser usersService.getUserByUsername() à la place
+   */
   getUserByUsername(username: string): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/${username}`);
+    return this.usersService.getUserByUsername(username);
   }
 
+  /**
+   * @deprecated Utiliser usersService.uploadAvatar() à la place
+   */
   uploadProfilePicture(file: File): Observable<{ url: string }> {
-    const formData = new FormData();
-    formData.append('file', file);
-    return this.http.post<{ url: string }>(
-      `${this.apiUrl}/upload-avatar`,
-      formData
-    );
+    return this.usersService.uploadAvatar(file);
   }
 }

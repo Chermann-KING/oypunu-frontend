@@ -1,4 +1,13 @@
 {
+  "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps --verbose --network-timeout=300000",
+  "framework": "angular",
+  "outputDirectory": "dist/oypunu-frontend",
+  "functions": {
+    "app/**/*.ts": {
+      "maxDuration": 300
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",

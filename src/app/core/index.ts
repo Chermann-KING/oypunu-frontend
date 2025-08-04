@@ -7,7 +7,6 @@ export * from './models/recommendation';
 // Services
 export * from './services/auth.service';
 export * from './services/toast.service';
-export * from './services/user.service';
 export * from './services/dictionary.service';
 export * from './services/recommendation.service';
 
