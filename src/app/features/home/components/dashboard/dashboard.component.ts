@@ -8,6 +8,7 @@ import { HomeDataService } from '../../services/home-data.service';
 import { RecommendationService } from '../../../../core/services/recommendation.service';
 import { RecommendedWord, RecommendationFeedback } from '../../../../core/models/recommendation';
 import { UserRole } from '../../../../core/models/admin';
+import { ToastService } from '../../../../shared/services/toast.service';
 
 interface QuickAction {
   id: string;
@@ -82,7 +83,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private authService: AuthService,
     private dictionaryService: DictionaryService,
     private homeDataService: HomeDataService,
-    private recommendationService: RecommendationService
+    private recommendationService: RecommendationService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -236,8 +238,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isLoading = false;
         },
         error: (error) => {
-          console.error('Erreur lors du chargement des données:', error);
           this.isLoading = false;
+          this.toastService.error('Erreur de chargement', 'Impossible de charger vos données personnelles');
         }
       });
   }
@@ -257,7 +259,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         streak: stats.streak || 0
       };
     }).catch(error => {
-      console.error('Erreur lors du chargement des stats:', error);
       // Fallback en cas d'erreur
       return {
         wordsAdded: 0,
@@ -285,23 +286,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
         isFavorite: false // À implémenter avec le système de favoris
       }));
     }).catch(error => {
-      console.error('Erreur lors du chargement des contributions:', error);
       return [];
     });
   }
 
   private loadRecentConsultations(): Promise<RecentWord[]> {
-    console.log('🔍 Frontend: Chargement des consultations récentes...');
-    
     return this.authService.getUserRecentConsultations(3).toPromise().then(response => {
-      console.log('📥 Frontend: Réponse reçue:', response);
-      
       if (!response || !response.consultations) {
-        console.log('⚠️ Frontend: Pas de consultations dans la réponse');
         return [];
       }
-      
-      console.log('✅ Frontend: Consultations trouvées:', response.consultations.length);
       
       const consultations = response.consultations.map((consult: any) => ({
         id: consult.id,
@@ -314,10 +307,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         isFavorite: false // À implémenter avec le système de favoris
       }));
       
-      console.log('📋 Frontend: Consultations mappées:', consultations);
       return consultations;
     }).catch(error => {
-      console.error('❌ Frontend: Erreur lors du chargement des consultations:', error);
       return [];
     });
   }
@@ -350,6 +341,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         .subscribe(() => {
           word.isFavorite = false;
           this.personalStats.favoritesCount--;
+          this.toastService.success('Supprimé', 'Mot retiré de vos favoris');
         });
     } else {
       this.dictionaryService.addToFavorites(word.id)
@@ -357,6 +349,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         .subscribe(() => {
           word.isFavorite = true;
           this.personalStats.favoritesCount++;
+          this.toastService.success('Ajouté', 'Mot ajouté à vos favoris');
         });
     }
   }
@@ -468,8 +461,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Gestionnaire pour la sélection d'une recommandation
    */
   onRecommendationSelected(recommendation: RecommendedWord): void {
-    console.log('🎯 Dashboard: Recommandation sélectionnée', recommendation);
-    
     // La navigation est déjà gérée par le composant de recommandations
     // On peut ici ajouter des analytics ou d'autres traitements
   }
@@ -478,8 +469,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
    * Gestionnaire pour le feedback sur une recommandation
    */
   onRecommendationFeedback(feedback: RecommendationFeedback): void {
-    console.log('📝 Dashboard: Feedback reçu', feedback);
-    
     // Ici on peut mettre à jour l'interface utilisateur
     // ou effectuer d'autres actions basées sur le feedback
     

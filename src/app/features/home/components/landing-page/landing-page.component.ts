@@ -5,6 +5,7 @@ import { takeUntil, take } from 'rxjs/operators';
 import { DictionaryService } from '../../../../core/services/dictionary.service';
 import { HomeDataService } from '../../services/home-data.service';
 import { ActivityService, Activity } from '../../../../core/services/activity.service';
+import { ToastService } from '../../../../shared/services/toast.service';
 
 interface LiveDemoResult {
   word: string;
@@ -58,7 +59,8 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     private router: Router,
     private dictionaryService: DictionaryService,
     private homeDataService: HomeDataService,
-    private activityService: ActivityService
+    private activityService: ActivityService,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -100,7 +102,6 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe(activities => {
         this.realTimeActivities = activities.slice(0, 5); // Garder les 5 plus récentes
-        console.log('🔴 Activités mises à jour:', this.realTimeActivities.length);
       });
 
     // Demander les activités récentes au chargement
@@ -109,7 +110,6 @@ export class LandingPageComponent implements OnInit, OnDestroy {
     // Fallback: utiliser l'API REST si WebSocket n'est pas disponible
     setTimeout(() => {
       if (!this.activityService.isConnected()) {
-        console.log('⚠️ WebSocket non connecté, utilisation de l\'API REST');
         this.loadActivitiesFromAPI();
       }
     }, 2000);
@@ -122,12 +122,11 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (response) => {
           this.realTimeActivities = response.activities;
-          console.log('📋 Activités chargées via API:', this.realTimeActivities.length);
         },
         error: (error) => {
-          console.error('❌ Erreur lors du chargement des activités:', error);
           // Utiliser des activités de démonstration comme fallback
           this.loadFallbackActivities();
+          this.toastService.info('Mode démo', 'Affichage d\'activités d\'exemple');
         }
       });
   }
@@ -183,11 +182,10 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (stats) => {
           this.statistics.onlineUsers = stats.onlineContributors;
-          console.log('Contributeurs en ligne:', stats.onlineContributors);
         },
         error: (error) => {
-          console.error('Erreur lors du chargement des statistiques contributeurs:', error);
           this.statistics.onlineUsers = Math.floor(Math.random() * 20) + 10;
+          this.toastService.warning('Données partielles', 'Certaines statistiques ne sont pas disponibles');
         }
       });
 
@@ -198,16 +196,12 @@ export class LandingPageComponent implements OnInit, OnDestroy {
         next: (stats) => {
           this.statistics.wordsAdded = stats.totalApprovedWords;
           this.statistics.todayContributions = stats.wordsAddedToday;
-          console.log('Statistiques mots:', {
-            total: stats.totalApprovedWords,
-            aujourd_hui: stats.wordsAddedToday
-          });
         },
         error: (error) => {
-          console.error('Erreur lors du chargement des statistiques mots:', error);
           // Valeurs par défaut si l'API échoue
           this.statistics.wordsAdded = Math.floor(Math.random() * 1000) + 500;
           this.statistics.todayContributions = Math.floor(Math.random() * 50) + 20;
+          this.toastService.error('Erreur de chargement', 'Impossible de charger les statistiques des mots');
         }
       });
 
@@ -217,14 +211,11 @@ export class LandingPageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (stats) => {
           this.statistics.totalLanguages = stats.languages;
-          console.log('Statistiques générales:', {
-            langues_actives: stats.languages
-          });
         },
         error: (error) => {
-          console.error('Erreur lors du chargement des statistiques générales:', error);
           // Valeur par défaut si l'API échoue
           this.statistics.totalLanguages = Math.floor(Math.random() * 50) + 30;
+          this.toastService.info('Mode démo', 'Utilisation de données d\'exemple');
         }
       });
   }

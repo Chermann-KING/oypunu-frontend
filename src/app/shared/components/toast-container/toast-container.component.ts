@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { ToastService, Toast } from '../../../core/services/toast.service';
+import { ToastService, Toast } from '../../services/toast.service';
 
 @Component({
   selector: 'app-toast-container',
@@ -101,7 +101,7 @@ export class ToastContainerComponent implements OnInit, OnDestroy {
     if (toast) {
       toast.removing = true;
       setTimeout(() => {
-        this.toastService.removeToast(id);
+        this.toastService.dismiss(id);
       }, 500);
     }
   }
