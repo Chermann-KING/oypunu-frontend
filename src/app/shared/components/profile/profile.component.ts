@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../core/models/user';
-import { UserRole } from '../../../core/models/admin';
+import { UserRole } from '../../../features/admin/models/comprehensive-admin.models';
 import { Subscription } from 'rxjs';
 
 @Component({
