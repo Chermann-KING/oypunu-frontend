@@ -49,7 +49,7 @@
   </div>
 
   <!-- Dashboard content selon le rôle -->
-  <div *ngIf="!isLoading && !errorMessage && dashboardStats" class="dashboard-content">
+  <div *ngIf="!isLoading && !errorMessage && dashboardOverview" class="dashboard-content">
 
     <!-- Dashboard CONTRIBUTEUR -->
     <div *ngIf="userRole === UserRole.CONTRIBUTOR">
@@ -64,7 +64,7 @@
             <i class="fas fa-clock"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.pendingWords }}</div>
+            <div class="stat-number">{{ dashboardOverview.pendingWords }}</div>
             <div class="stat-label">Mots en attente</div>
           </div>
         </div>
@@ -74,7 +74,7 @@
             <i class="fas fa-check"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.approvedWords }}</div>
+            <div class="stat-number">{{ dashboardOverview.approvedWords }}</div>
             <div class="stat-label">Mots approuvés</div>
           </div>
         </div>
@@ -84,7 +84,7 @@
             <i class="fas fa-times"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.rejectedWords }}</div>
+            <div class="stat-number">{{ dashboardOverview.rejectedWords }}</div>
             <div class="stat-label">Mots rejetés</div>
           </div>
         </div>
@@ -94,8 +94,8 @@
             <i class="fas fa-plus"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.newWordsThisWeek }}</div>
-            <div class="stat-label">Nouveaux cette semaine</div>
+            <div class="stat-number">{{ dashboardOverview.pendingWords }}</div>
+            <div class="stat-label">Mots en attente</div>
           </div>
         </div>
       </div>
@@ -126,9 +126,9 @@
             <i class="fas fa-users"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.totalUsers }}</div>
+            <div class="stat-number">{{ dashboardOverview.totalUsers }}</div>
             <div class="stat-label">Utilisateurs totaux</div>
-            <div class="stat-detail">{{ dashboardStats.activeUsers }} actifs</div>
+            <div class="stat-detail">{{ dashboardOverview.activeUsers }} actifs</div>
           </div>
         </div>
 
@@ -137,9 +137,9 @@
             <i class="fas fa-book"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.totalWords }}</div>
+            <div class="stat-number">{{ dashboardOverview.totalWords }}</div>
             <div class="stat-label">Mots au total</div>
-            <div class="stat-detail">{{ dashboardStats.pendingWords }} en attente</div>
+            <div class="stat-detail">{{ dashboardOverview.pendingWords }} en attente</div>
           </div>
         </div>
 
@@ -148,20 +148,20 @@
             <i class="fas fa-globe"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.totalCommunities }}</div>
+            <div class="stat-number">{{ dashboardOverview.totalCommunities }}</div>
             <div class="stat-label">Communautés</div>
-            <div class="stat-detail">{{ dashboardStats.activeCommunities }} actives</div>
+            <div class="stat-detail">{{ dashboardOverview.activeCommunities }} actives</div>
           </div>
         </div>
 
-        <div class="stat-card messages">
+        <div class="stat-card languages">
           <div class="stat-icon">
-            <i class="fas fa-comments"></i>
+            <i class="fas fa-language"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.totalMessages }}</div>
-            <div class="stat-label">Messages totaux</div>
-            <div class="stat-detail">{{ dashboardStats.totalPosts }} posts</div>
+            <div class="stat-number">{{ dashboardOverview.totalLanguages }}</div>
+            <div class="stat-label">Langues totales</div>
+            <div class="stat-detail">{{ dashboardOverview.pendingLanguages }} en attente</div>
           </div>
         </div>
 
@@ -170,19 +170,19 @@
             <i class="fas fa-chart-line"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.newUsersThisMonth }}</div>
+            <div class="stat-number">{{ dashboardOverview.newUsersToday }}</div>
             <div class="stat-label">Nouveaux utilisateurs</div>
-            <div class="stat-detail">Ce mois</div>
+            <div class="stat-detail">Aujourd'hui</div>
           </div>
         </div>
 
-        <div class="stat-card suspensions">
+        <div class="stat-card requests">
           <div class="stat-icon">
-            <i class="fas fa-ban"></i>
+            <i class="fas fa-user-clock"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.suspendedUsers }}</div>
-            <div class="stat-label">Utilisateurs suspendus</div>
+            <div class="stat-number">{{ dashboardOverview.pendingContributorRequests }}</div>
+            <div class="stat-label">Demandes contributeurs</div>
           </div>
         </div>
       </div>
@@ -220,16 +220,16 @@
       </div>
 
       <!-- Activité récente (aperçu) -->
-      <div class="recent-activity-preview mt-16" *ngIf="recentActivity">
+      <div class="recent-activity-preview mt-16" *ngIf="activityFeed && activityFeed.length > 0">
         <h4>
           <i class="fas fa-clock"></i>
           Activité récente
         </h4>
         <div class="activity-summary">
-          <div class="activity-item" *ngFor="let user of recentActivity.recentUsers?.slice(0, 3)">
-            <i class="fas fa-user-plus"></i>
-            <span>{{ user.username }} s'est inscrit</span>
-            <small>{{ user.createdAt | date:'short' }}</small>
+          <div class="activity-item" *ngFor="let activity of activityFeed.slice(0, 3)">
+            <i class="fas fa-{{ getActivityIcon(activity.type) }}"></i>
+            <span>{{ activity.title }}</span>
+            <small>{{ activity.createdAt | date:'short' }}</small>
           </div>
         </div>
       </div>
@@ -249,11 +249,11 @@
             <i class="fas fa-users"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.totalUsers }}</div>
+            <div class="stat-number">{{ dashboardOverview.totalUsers }}</div>
             <div class="stat-label">Utilisateurs totaux</div>
             <div class="stat-breakdown">
-              <span>{{ dashboardStats.activeUsers }} actifs</span>
-              <span>{{ dashboardStats.suspendedUsers }} suspendus</span>
+              <span>{{ dashboardOverview.activeUsers }} actifs</span>
+              <span>{{ dashboardOverview.newUsersToday }} nouveaux</span>
             </div>
           </div>
         </div>
@@ -263,12 +263,12 @@
             <i class="fas fa-book"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.totalWords }}</div>
+            <div class="stat-number">{{ dashboardOverview.totalWords }}</div>
             <div class="stat-label">Mots au total</div>
             <div class="stat-breakdown">
-              <span>{{ dashboardStats.approvedWords }} approuvés</span>
-              <span>{{ dashboardStats.pendingWords }} en attente</span>
-              <span>{{ dashboardStats.rejectedWords }} rejetés</span>
+              <span>{{ dashboardOverview.approvedWords }} approuvés</span>
+              <span>{{ dashboardOverview.pendingWords }} en attente</span>
+              <span>{{ dashboardOverview.rejectedWords }} rejetés</span>
             </div>
           </div>
         </div>
@@ -278,20 +278,20 @@
             <i class="fas fa-globe"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.totalCommunities }}</div>
+            <div class="stat-number">{{ dashboardOverview.totalCommunities }}</div>
             <div class="stat-label">Communautés</div>
-            <div class="stat-detail">{{ dashboardStats.activeCommunities }} actives</div>
+            <div class="stat-detail">{{ dashboardOverview.activeCommunities }} actives</div>
           </div>
         </div>
 
-        <div class="stat-card messages">
+        <div class="stat-card languages">
           <div class="stat-icon">
-            <i class="fas fa-comments"></i>
+            <i class="fas fa-language"></i>
           </div>
           <div class="stat-info">
-            <div class="stat-number">{{ dashboardStats.totalMessages }}</div>
-            <div class="stat-label">Messages totaux</div>
-            <div class="stat-detail">{{ dashboardStats.totalPosts }} posts</div>
+            <div class="stat-number">{{ dashboardOverview.totalLanguages }}</div>
+            <div class="stat-label">Langues totales</div>
+            <div class="stat-detail">{{ dashboardOverview.pendingLanguages }} en attente</div>
           </div>
         </div>
       </div>
@@ -344,13 +344,12 @@
             <span class="metric-value">{{ systemMetrics.uptime | number:'1.0-0' }}s</span>
           </div>
           <div class="metric-item">
-            <span class="metric-label">Version Node.js</span>
-            <span class="metric-value">{{ systemMetrics.nodeVersion }}</span>
+            <span class="metric-label">Mémoire utilisée</span>
+            <span class="metric-value">{{ systemMetrics.memoryUsage.percentage | number:'1.0-0' }}%</span>
           </div>
           <div class="metric-item">
-            <span class="metric-label">Mémoire utilisée</span>
-            <span class="metric-value">{{ (systemMetrics.memory.heapUsed / 1024 / 1024) | number:'1.0-0' }}
-              MB</span>
+            <span class="metric-label">Base de données</span>
+            <span class="metric-value">{{ systemMetrics.databaseStats.totalDocuments | number }}</span>
           </div>
         </div>
       </div>
