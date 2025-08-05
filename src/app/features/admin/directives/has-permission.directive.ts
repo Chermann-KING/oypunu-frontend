@@ -2,7 +2,8 @@ import { Directive, Input, TemplateRef, ViewContainerRef, OnInit, OnDestroy } fr
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { ComprehensiveAdminService } from '../services/comprehensive-admin.service';
-import { UserRole, AdminPermissions } from '../models/comprehensive-admin.models';
+import { AdminPermissions } from '../models/comprehensive-admin.models';
+import { UserRole } from '../../../core/models/admin';
 
 /**
  * Directive structurelle pour contrôler l'affichage basé sur les permissions

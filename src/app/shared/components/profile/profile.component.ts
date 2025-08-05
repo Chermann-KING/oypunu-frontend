@@ -7,7 +7,7 @@ import {
 } from '@angular/core';
 import { AuthService } from '../../../core/services/auth.service';
 import { User } from '../../../core/models/user';
-import { UserRole } from '../../../features/admin/models/comprehensive-admin.models';
+import { UserRole } from '../../../core/models/admin';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -36,6 +36,23 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this._authService.currentUser$.subscribe((user) => {
         this.currentUser = user;
         this.userRole = (user?.role as UserRole) || UserRole.USER;
+
+        // 🔍 DEBUG: Afficher les informations d'accès admin
+        console.log('🔍 ProfileComponent - Utilisateur actuel:', user);
+        console.log('🔍 ProfileComponent - Rôle détecté:', this.userRole);
+        console.log(
+          '🔍 ProfileComponent - Peut accéder admin:',
+          this.canAccessAdmin
+        );
+        console.log(
+          '🔍 ProfileComponent - UserRole.CONTRIBUTOR:',
+          UserRole.CONTRIBUTOR
+        );
+        console.log('🔍 ProfileComponent - UserRole.ADMIN:', UserRole.ADMIN);
+        console.log(
+          '🔍 ProfileComponent - UserRole.SUPERADMIN:',
+          UserRole.SUPERADMIN
+        );
       })
     );
   }

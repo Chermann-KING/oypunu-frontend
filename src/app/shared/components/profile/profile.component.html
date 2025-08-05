@@ -33,6 +33,11 @@
         Paramètres
       </a>
 
+      <!-- 🔍 DEBUG: Informations de rôle (TEMPORAIRE) -->
+      <div class="block px-4 py-2 text-xs text-gray-400 border-b border-gray-600">
+        🔍 DEBUG - Rôle: {{userRole}} | Accès admin: {{canAccessAdmin}}
+      </div>
+
       <!-- Lien Administration (visible uniquement pour les administrateurs) -->
       <a *ngIf="canAccessAdmin" [routerLink]="['/admin']" routerLinkActive="bg-blue-900 text-blue-300"
         class="dropdown-link admin-link block px-4 py-2 text-sm text-blue-400 hover:bg-gray-700">
@@ -43,6 +48,12 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
         Administration
+      </a>
+
+      <!-- 🔍 DEBUG: Lien admin forcé (TEMPORAIRE) -->
+      <a [routerLink]="['/admin']" routerLinkActive="bg-blue-900 text-blue-300"
+        class="dropdown-link block px-4 py-2 text-sm text-orange-400 hover:bg-gray-700">
+        🔧 DEBUG - Admin (forcé)
       </a>
 
       <button (click)="logout()"

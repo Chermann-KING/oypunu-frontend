@@ -4,7 +4,8 @@ import { Subscription } from 'rxjs';
 import { RolePermissionService } from '../../services/role-permission.service';
 import { ComprehensiveAdminService } from '../../services/comprehensive-admin.service';
 import { ToastService } from '../../../../shared/services/toast.service';
-import { UserRole, AdminPermissions, User } from '../../models/comprehensive-admin.models';
+import { AdminPermissions, User } from '../../models/comprehensive-admin.models';
+import { UserRole } from '../../../../core/models/admin';
 import { HasPermissionDirective } from '../../directives/has-permission.directive';
 
 /**

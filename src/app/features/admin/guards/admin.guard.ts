@@ -8,7 +8,7 @@ import {
 } from '@angular/router';
 import { Observable, map } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
-import { UserRole } from '../models/comprehensive-admin.models';
+import { UserRole } from '../../../core/models/admin';
 
 @Injectable({
   providedIn: 'root',
