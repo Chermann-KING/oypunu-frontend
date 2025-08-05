@@ -11,9 +11,9 @@ import {
   CommunityAnalyticsDetailed,
   SystemMetricsDetailed,
   ActivityFeed,
-  UserRole,
   AdminPermissions
 } from '../../models/comprehensive-admin.models';
+import { UserRole } from '../../../../core/models/admin';
 import { User } from '../../../../core/models/user';
 import { ActionGroup } from '../action-button-group/action-button-group.component';
 import { MetricData } from '../metric-card/metric-card.component';

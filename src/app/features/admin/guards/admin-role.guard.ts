@@ -3,7 +3,7 @@ import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from
 import { Observable, map, take } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { ComprehensiveAdminService } from '../services/comprehensive-admin.service';
-import { UserRole } from '../models/comprehensive-admin.models';
+import { UserRole } from '../../../core/models/admin';
 
 /**
  * Guard pour contrôler l'accès aux routes admin basé sur les rôles

@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { Observable, combineLatest, map } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
 import { ComprehensiveAdminService } from './comprehensive-admin.service';
-import { UserRole, AdminPermissions } from '../models/comprehensive-admin.models';
+import { AdminPermissions } from '../models/comprehensive-admin.models';
+import { UserRole } from '../../../core/models/admin';
 
 /**
  * Service centralisé pour la gestion des rôles et permissions

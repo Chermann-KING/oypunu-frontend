@@ -3,6 +3,9 @@
  * Couvre toutes les données exposées par l'API backend
  */
 
+// Import UserRole from central location
+import { UserRole } from '../../../core/models/admin';
+
 export interface User {
   _id: string;
   username: string;
@@ -263,7 +266,13 @@ export interface SystemMetricsDetailed {
 
 export interface ActivityFeed {
   id: string;
-  type: 'user_registered' | 'word_created' | 'word_approved' | 'community_created' | 'contributor_request' | 'system_event';
+  type:
+    | 'user_registered'
+    | 'word_created'
+    | 'word_approved'
+    | 'community_created'
+    | 'contributor_request'
+    | 'system_event';
   title: string;
   description: string;
   userId?: string;
@@ -345,13 +354,6 @@ export interface ReportsAndExports {
     nextRun: Date;
     recipients: string[];
   }[];
-}
-
-export enum UserRole {
-  USER = 'USER',
-  CONTRIBUTOR = 'CONTRIBUTOR', 
-  ADMIN = 'ADMIN',
-  SUPERADMIN = 'SUPERADMIN'
 }
 
 export interface AdminPermissions {

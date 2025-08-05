@@ -4,7 +4,7 @@ import { AdminGuard } from './guards/admin.guard';
 import { AdminRoleGuard } from './guards/admin-role.guard';
 import { RoleGuard } from '../../core/guards/role.guard';
 import { AuthGuard } from '../../core/guards/auth.guard';
-import { UserRole } from './models/comprehensive-admin.models';
+import { UserRole } from '../../core/models/admin';
 
 // Import des composants
 import { AdminDashboardComponent } from './components/dashboard/admin-dashboard.component';

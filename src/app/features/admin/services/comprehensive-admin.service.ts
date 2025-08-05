@@ -19,11 +19,12 @@ import {
   Language,
   Community,
   ContributorRequest,
-  UserRole,
+
   AdminPermissions,
   DashboardSection,
   DashboardWidget
 } from '../models/comprehensive-admin.models';
+import { UserRole } from '../../../core/models/admin';
 
 @Injectable({
   providedIn: 'root'
