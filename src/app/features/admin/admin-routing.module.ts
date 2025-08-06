@@ -1,152 +1,171 @@
+/**
+ * @fileoverview Module de routing pour l'administration
+ * 
+ * Définit toutes les routes du module admin avec leurs guards d'autorisation.
+ * Respecte les principes de sécurité avec permissions granulaires.
+ * 
+ * @author Équipe O'Ypunu Frontend
+ * @version 1.0.0
+ * @since 2025-01-01
+ */
+
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { AdminGuard } from './guards/admin.guard';
-import { AdminRoleGuard } from './guards/admin-role.guard';
-import { RoleGuard } from '../../core/guards/role.guard';
+
 import { AuthGuard } from '../../core/guards/auth.guard';
-import { UserRole } from '../../core/models/admin';
+import { PermissionGuard } from './guards/permission.guard';
+import { Permission } from './models/permissions.models';
+import { UserRole } from './models/admin.models';
 
-// Import des composants
-import { AdminDashboardComponent } from './components/dashboard/admin-dashboard.component';
-import { UserManagementComponent } from './components/users/user-management.component';
-import { AddLanguageComponent } from './components/languages/add-language.component';
-import { ContributorRequestsComponent } from './components/contributor-requests/contributor-requests.component';
+// Containers
+import { AdminDashboardContainer } from './containers/admin-dashboard/admin-dashboard.container';
+import { UserAdminContainer } from './containers/user-admin/user-admin.container';
+import { ContentModerationContainer } from './containers/content-moderation/content-moderation.container';
+import { AnalyticsOverviewContainer } from './containers/analytics-overview/analytics-overview.container';
+import { SystemAdminContainer } from './containers/system-admin/system-admin.container';
 
+/**
+ * Routes du module admin avec système d'autorisation granulaire
+ * 
+ * Chaque route définit:
+ * - Les guards d'authentification et d'autorisation
+ * - Les permissions ou rôles requis
+ * - Les données de contexte pour la navigation
+ */
 const routes: Routes = [
   {
     path: '',
-    canActivate: [AuthGuard, AdminGuard],
-    canActivateChild: [AdminGuard],
+    canActivate: [AuthGuard, PermissionGuard],
+    canActivateChild: [PermissionGuard],
+    data: {
+      role: [UserRole.CONTRIBUTOR, UserRole.ADMIN, UserRole.SUPERADMIN]
+    },
     children: [
+      // Route par défaut - Dashboard adaptatif selon le rôle
       {
         path: '',
         redirectTo: 'dashboard',
-        pathMatch: 'full',
+        pathMatch: 'full'
       },
+
+      // === TABLEAU DE BORD ===
       {
         path: 'dashboard',
-        component: AdminDashboardComponent,
-        canActivate: [AdminRoleGuard],
+        component: AdminDashboardContainer,
+        canActivate: [PermissionGuard],
         data: {
-          role: UserRole.CONTRIBUTOR,
           title: 'Tableau de bord administrateur',
-        },
+          breadcrumb: 'Dashboard',
+          role: [UserRole.CONTRIBUTOR, UserRole.ADMIN, UserRole.SUPERADMIN],
+          description: 'Vue d\'ensemble selon les permissions de l\'utilisateur'
+        }
       },
+
+      // === GESTION DES UTILISATEURS ===
       {
         path: 'users',
-        component: UserManagementComponent,
-        canActivate: [AdminRoleGuard],
+        component: UserAdminContainer,
+        canActivate: [PermissionGuard],
         data: {
-          role: UserRole.ADMIN,
-          permission: 'canViewUsers',
           title: 'Gestion des utilisateurs',
-        },
+          breadcrumb: 'Utilisateurs',
+          permission: Permission.VIEW_USERS,
+          description: 'Administration des comptes utilisateurs'
+        }
       },
-      {
-        path: 'contributor-requests',
-        component: ContributorRequestsComponent,
-        canActivate: [AdminRoleGuard],
-        data: {
-          role: UserRole.ADMIN,
-          permission: 'canViewUsers',
-          title: 'Demandes de contribution',
-        },
-      },
-      {
-        path: 'languages',
-        children: [
-          {
-            path: '',
-            redirectTo: 'add',
-            pathMatch: 'full',
-          },
-          {
-            path: 'add',
-            component: AddLanguageComponent,
-            canActivate: [AdminRoleGuard],
-            data: {
-              role: UserRole.CONTRIBUTOR,
-              permission: 'canManageLanguages',
-              title: 'Ajouter une langue',
-            },
-          },
-        ],
-      },
+
+      // === MODÉRATION DE CONTENU ===
       {
         path: 'moderation',
-        loadChildren: () =>
-          import('./components/moderation/moderation.module').then(
-            (m) => m.ModerationModule
-          ),
-        canActivate: [AdminRoleGuard],
+        component: ContentModerationContainer,
+        canActivate: [PermissionGuard],
         data: {
-          role: UserRole.CONTRIBUTOR,
-          permission: 'canModerateContent',
-          title: 'Modération des contenus',
-        },
+          title: 'Modération de contenu',
+          breadcrumb: 'Modération',
+          permission: Permission.MODERATE_CONTENT,
+          description: 'Validation et modération des mots soumis'
+        }
       },
-      // Routes futures pour l'Étape 3 (commentées en attendant l'implémentation)
-      /*
+
+      // === ANALYTICS ET RAPPORTS ===
       {
-        path: 'communities',
-        loadChildren: () =>
-          import(
-            './components/community-management/community-management.module'
-          ).then((m) => m.CommunityManagementModule),
-        canActivate: [RoleGuard],
+        path: 'analytics',
+        component: AnalyticsOverviewContainer,
+        canActivate: [PermissionGuard],
         data: {
-          roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
-          title: 'Gestion des communautés',
-        },
+          title: 'Analytics et rapports',
+          breadcrumb: 'Analytics',
+          permission: Permission.VIEW_ANALYTICS,
+          description: 'Analyses et métriques détaillées'
+        }
       },
-      {
-        path: 'reports',
-        loadChildren: () =>
-          import('./components/reports/reports.module').then(
-            (m) => m.ReportsModule
-          ),
-        canActivate: [RoleGuard],
-        data: {
-          roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
-          title: 'Rapports et statistiques',
-        },
-      },
+
+      // === ADMINISTRATION SYSTÈME ===
       {
         path: 'system',
-        loadChildren: () =>
-          import('./components/system/system.module').then(
-            (m) => m.SystemModule
-          ),
-        canActivate: [RoleGuard],
+        component: SystemAdminContainer,
+        canActivate: [PermissionGuard],
         data: {
-          roles: [UserRole.SUPERADMIN],
           title: 'Administration système',
-        },
+          breadcrumb: 'Système',
+          permission: Permission.MANAGE_SYSTEM,
+          description: 'Configuration système, logs et maintenance'
+        }
       },
-      {
-        path: 'activity',
-        loadChildren: () =>
-          import('./components/activity/activity.module').then(
-            (m) => m.ActivityModule
-          ),
-        canActivate: [RoleGuard],
-        data: {
-          roles: [UserRole.ADMIN, UserRole.SUPERADMIN],
-          title: 'Activité et logs',
-        },
-      },
-      */
-      // Route catch-all pour les erreurs 404 dans l'admin
+
+      // === GESTION DES ERREURS ===
       {
         path: '**',
-        redirectTo: 'dashboard',
-      },
-    ],
-  },
+        redirectTo: 'dashboard'
+      }
+    ]
+  }
 ];
 
+/**
+ * Module de routing admin - Single Responsibility Principle
+ * 
+ * Centralise toute la configuration de navigation pour le module admin.
+ * Respecte les principes de sécurité avec guards et permissions granulaires.
+ */
 @NgModule({
   imports: [RouterModule.forChild(routes)],
-  exports: [RouterModule],
+  exports: [RouterModule]
 })
-export class AdminRoutingModule {}
+export class AdminRoutingModule {
+  
+  /**
+   * Configuration statique du routing
+   */
+  static readonly CONFIG = {
+    name: 'AdminRoutingModule',
+    version: '1.0.0',
+    description: 'Routing pour le module admin avec containers et permissions',
+    routes: [
+      'dashboard - Tableau de bord multi-rôles',
+      'users - Gestion des utilisateurs', 
+      'moderation - Modération de contenu',
+      'analytics - Analytics et rapports',
+      'system - Administration système'
+    ],
+    guards: [
+      'AuthGuard - Authentification requise',
+      'PermissionGuard - Protection par permissions granulaires'
+    ],
+    security: {
+      minRole: 'CONTRIBUTOR',
+      permissionBased: true,
+      contextualPermissions: true
+    }
+  } as const;
+
+  constructor() {
+    if ((window as any).adminDebug) {
+      console.group('[AdminRoutingModule] Configuration active');
+      console.log('Routes disponibles:', AdminRoutingModule.CONFIG.routes);
+      console.log('Guards de sécurité:', AdminRoutingModule.CONFIG.guards);
+      console.log('Sécurité:', AdminRoutingModule.CONFIG.security);
+      console.groupEnd();
+    }
+  }
+}
