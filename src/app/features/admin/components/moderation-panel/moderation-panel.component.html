@@ -1,0 +1,291 @@
+<div class="moderation-panel">
+
+  <!-- Header avec statistiques -->
+  <div class="panel-header">
+    <div class="header-content">
+      <h2 class="panel-title">Modération de contenu</h2>
+      <div class="moderation-stats" *ngIf="stats">
+        <div class="stat-item">
+          <span class="stat-value">{{ stats!.pending }}</span>
+          <span class="stat-label">En attente</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ stats!.flagged }}</span>
+          <span class="stat-label">Signalés</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-value">{{ formatTime(stats!.averageProcessingTime || 0) }}</span>
+          <span class="stat-label">Temps moy.</span>
+        </div>
+        <div class="stat-item" [class.warning]="stats && stats.backlogDays > 2">
+          <span class="stat-value">{{ stats!.backlogDays }}j</span>
+          <span class="stat-label">Retard</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" (click)="onAction('refresh', [])" [disabled]="isLoading"
+        title="Actualiser">
+        <i class="icon-refresh" [class.spinning]="isLoading"></i>
+      </button>
+      <button class="btn btn-outline btn-sm" (click)="onAction('export', [])" [disabled]="isLoading || !hasItems()"
+        title="Exporter la liste">
+        <i class="icon-download"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <div class="moderation-filters">
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Type:</label>
+        <select [value]="filters?.type || ''" (change)="onFilterChange('type', $event)" class="filter-select">
+          <option value="">Tous</option>
+          <option value="word">Mots</option>
+          <option value="definition">Définitions</option>
+          <option value="comment">Commentaires</option>
+          <option value="report">Signalements</option>
+          <option value="user_profile">Profils</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Statut:</label>
+        <select [value]="filters?.status || ''" (change)="onFilterChange('status', $event)" class="filter-select">
+          <option value="">Tous</option>
+          <option value="pending">En attente</option>
+          <option value="flagged">Signalés</option>
+          <option value="escalated">Escaladés</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Priorité:</label>
+        <select [value]="filters?.priority || ''" (change)="onFilterChange('priority', $event)" class="filter-select">
+          <option value="">Toutes</option>
+          <option value="critical">Critique</option>
+          <option value="high">Haute</option>
+          <option value="medium">Moyenne</option>
+          <option value="low">Basse</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <label>Recherche:</label>
+        <input type="text" placeholder="Contenu ou auteur..." [value]="filters?.search || ''"
+          (input)="onFilterChange('search', $event)" class="filter-input">
+      </div>
+
+      <div class="filter-group">
+        <label class="checkbox-label">
+          <input type="checkbox" [checked]="filters?.flagsOnly || false" (change)="onFilterChange('flagsOnly', $event)">
+          <span>Signalés uniquement</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions en lot -->
+  <div class="bulk-actions" *ngIf="selectedItems.length > 0">
+    <div class="selection-info">
+      <span class="selection-count">{{ selectedItems.length }} élément(s) sélectionné(s)</span>
+    </div>
+    <div class="bulk-buttons">
+      <button class="btn btn-success btn-sm" (click)="onBulkAction('approve')" [disabled]="isLoading">
+        <i class="icon-check"></i>
+        Approuver
+      </button>
+      <button class="btn btn-danger btn-sm" (click)="onBulkAction('reject')" [disabled]="isLoading">
+        <i class="icon-x"></i>
+        Rejeter
+      </button>
+      <button class="btn btn-warning btn-sm" (click)="onBulkAction('flag')" [disabled]="isLoading">
+        <i class="icon-flag"></i>
+        Signaler
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="panel-loading" *ngIf="isLoading && !hasItems()">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Chargement des éléments à modérer...</p>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="panel-error" *ngIf="errorMessage" role="alert">
+    <i class="icon-alert-circle"></i>
+    <span>{{ errorMessage }}</span>
+    <button class="btn btn-sm" (click)="onAction('refresh', [])">Réessayer</button>
+  </div>
+
+  <!-- Liste des éléments à modérer -->
+  <div class="moderation-items" *ngIf="!isLoading && !errorMessage">
+
+    <!-- État vide -->
+    <div class="empty-state" *ngIf="!hasItems()">
+      <i class="icon-check-circle"></i>
+      <h3>Aucun élément à modérer</h3>
+      <p *ngIf="hasActiveFilters()">
+        Aucun élément ne correspond aux filtres actuels.
+      </p>
+      <p *ngIf="!hasActiveFilters()">
+        Tous les éléments ont été traités. Excellent travail !
+      </p>
+      <button *ngIf="hasActiveFilters()" class="btn btn-primary" (click)="clearFilters()">
+        Effacer les filtres
+      </button>
+    </div>
+
+    <!-- Liste des items -->
+    <div class="items-list" *ngIf="hasItems()">
+      <div *ngFor="let item of items; trackBy: trackByItemId" class="moderation-item" [class]="'item-' + item.priority"
+        [class.selected]="isItemSelected(item.id)" [class.flagged]="item.flags.length > 0">
+
+        <!-- Checkbox de sélection -->
+        <div class="item-checkbox">
+          <input type="checkbox" [checked]="isItemSelected(item.id)" (change)="onItemSelectionChange(item.id, $event)">
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="item-content">
+
+          <!-- Header avec métadonnées -->
+          <div class="item-header">
+            <div class="item-meta">
+              <span class="item-type">{{ getContentTypeLabel(item.type) }}</span>
+              <span class="item-priority" [class]="'priority-' + item.priority">
+                {{ getPriorityLabel(item.priority) }}
+              </span>
+              <span class="item-date" [title]="item.submittedAt.toLocaleString()">
+                {{ formatRelativeDate(item.submittedAt) }}
+              </span>
+              <span class="item-language" *ngIf="item.language">
+                {{ item.language.toUpperCase() }}
+              </span>
+            </div>
+
+            <div class="item-flags" *ngIf="item.flags.length > 0">
+              <span *ngFor="let flag of item.flags; trackBy: trackByFlag" class="flag-badge" [title]="flag">
+                {{ flag }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Auteur -->
+          <div class="item-author">
+            <div class="author-avatar">
+              <img *ngIf="item.author.profilePicture; else avatarPlaceholder" [src]="item.author.profilePicture"
+                [alt]="item.author.username">
+              <ng-template #avatarPlaceholder>
+                <div class="avatar-initials">
+                  {{ getAuthorInitials(item.author) }}
+                </div>
+              </ng-template>
+            </div>
+            <div class="author-info">
+              <span class="author-name">{{ item.author.username }}</span>
+              <span class="author-email">{{ item.author.email }}</span>
+            </div>
+            <div class="report-count" *ngIf="item.reportCount > 0" [title]="item.reportCount + ' signalement(s)'">
+              <i class="icon-flag"></i>
+              {{ item.reportCount }}
+            </div>
+          </div>
+
+          <!-- Contenu à modérer -->
+          <div class="item-text">
+            <div class="content-preview">
+              <strong>Contenu:</strong>
+              <p class="content-text">{{ item.content }}</p>
+              <div class="content-original" *ngIf="item.originalContent && item.originalContent !== item.content">
+                <strong>Version originale:</strong>
+                <p class="original-text">{{ item.originalContent }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Contexte -->
+          <div class="item-context" *ngIf="item.context">
+            <span *ngIf="item.context.communityName" class="context-info">
+              <i class="icon-users"></i>
+              {{ item.context.communityName }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="item-actions">
+          <div class="action-buttons">
+            <button class="btn btn-success btn-sm" (click)="onItemAction('approve', item)" [disabled]="isLoading"
+              title="Approuver">
+              <i class="icon-check"></i>
+            </button>
+            <button class="btn btn-danger btn-sm" (click)="onItemAction('reject', item)" [disabled]="isLoading"
+              title="Rejeter">
+              <i class="icon-x"></i>
+            </button>
+            <button class="btn btn-warning btn-sm" (click)="onItemAction('flag', item)" [disabled]="isLoading"
+              title="Signaler">
+              <i class="icon-flag"></i>
+            </button>
+            <button class="btn btn-outline btn-sm" (click)="onItemAction('escalate', item)" [disabled]="isLoading"
+              title="Escalader">
+              <i class="icon-arrow-up"></i>
+            </button>
+          </div>
+
+          <!-- Menu déroulant -->
+          <div class="dropdown">
+            <button class="btn btn-ghost btn-sm dropdown-toggle" (click)="toggleDropdown(item.id)">
+              <i class="icon-more-horizontal"></i>
+            </button>
+            <div class="dropdown-menu" [class.show]="isDropdownOpen(item.id)">
+              <button class="dropdown-item" (click)="onItemAction('assign', item)">
+                <i class="icon-user-plus"></i>
+                Assigner
+              </button>
+              <div class="dropdown-divider"></div>
+              <button class="dropdown-item" (click)="viewItemDetails(item)">
+                <i class="icon-eye"></i>
+                Voir les détails
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="panel-pagination" *ngIf="pagination && hasItems()">
+    <div class="pagination-info">
+      Affichage {{ getDisplayRange() }} sur {{ pagination!.total }} éléments
+    </div>
+
+    <div class="pagination-controls">
+      <button class="btn btn-outline btn-sm" [disabled]="!pagination || pagination.page <= 1 || isLoading"
+        (click)="onPageChange(pagination!.page - 1)">
+        <i class="icon-chevron-left"></i>
+        Précédent
+      </button>
+
+      <div class="page-numbers">
+        <button *ngFor="let page of getVisiblePages()" class="btn btn-ghost btn-sm"
+          [class.active]="page === pagination!.page" (click)="onPageChange(page)">
+          {{ page }}
+        </button>
+      </div>
+
+      <button class="btn btn-outline btn-sm" [disabled]="!pagination || pagination.page >= getTotalPages() || isLoading"
+        (click)="onPageChange(pagination!.page  + 1)">
+        Suivant
+        <i class="icon-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>

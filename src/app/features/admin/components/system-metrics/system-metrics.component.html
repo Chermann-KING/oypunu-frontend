@@ -1,0 +1,211 @@
+<div class="system-metrics">
+
+  <!-- Header avec résumé global -->
+  <div class="metrics-header">
+    <div class="header-content">
+      <h2 class="metrics-title">Métriques Système</h2>
+      <div class="system-overview" *ngIf="getSystemOverview() as overview">
+        <div class="overview-item" [class]="'status-' + overview.overallStatus">
+          <div class="overview-status">
+            <i [class]="getStatusIcon(overview.overallStatus)"></i>
+            <span class="status-text">{{ getStatusLabel(overview.overallStatus) }}</span>
+          </div>
+          <div class="overview-stats">
+            <span class="healthy-count">{{ overview.healthyCount }} OK</span>
+            <span class="warning-count" *ngIf="overview.warningCount > 0">{{ overview.warningCount }} Attention</span>
+            <span class="critical-count" *ngIf="overview.criticalCount > 0">{{ overview.criticalCount }} Critique</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" (click)="onAction('refresh')" [disabled]="isLoading"
+        title="Actualiser toutes les métriques">
+        <i class="icon-refresh" [class.spinning]="isLoading"></i>
+        Actualiser
+      </button>
+      <button class="btn btn-outline btn-sm" (click)="onAction('alert_config')" [disabled]="isLoading"
+        title="Configurer les alertes">
+        <i class="icon-bell"></i>
+        Alertes
+      </button>
+      <button class="btn btn-outline btn-sm" (click)="onAction('export')" [disabled]="isLoading"
+        title="Exporter les métriques">
+        <i class="icon-download"></i>
+        Exporter
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement global -->
+  <div class="metrics-loading" *ngIf="isLoading && !hasMetrics()">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Collecte des métriques système...</p>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="metrics-error" *ngIf="errorMessage" role="alert">
+    <i class="icon-alert-circle"></i>
+    <span>{{ errorMessage }}</span>
+    <button class="btn btn-sm" (click)="onAction('refresh')">Réessayer</button>
+  </div>
+
+  <!-- Groupes de métriques -->
+  <div class="metrics-groups" *ngIf="!isLoading && !errorMessage">
+
+    <!-- État vide -->
+    <div class="empty-state" *ngIf="!hasMetrics()">
+      <i class="icon-activity"></i>
+      <h3>Aucune métrique disponible</h3>
+      <p>Les métriques système ne sont pas encore disponibles.</p>
+      <button class="btn btn-primary" (click)="onAction('refresh')">
+        Charger les métriques
+      </button>
+    </div>
+
+    <!-- Liste des groupes -->
+    <div class="groups-list" *ngIf="hasMetrics()">
+      <div *ngFor="let group of metricGroups; trackBy: trackByGroupId" class="metric-group"
+        [class]="'group-' + group.overallStatus">
+
+        <!-- Header du groupe -->
+        <div class="group-header" (click)="toggleGroup(group.id)">
+          <div class="group-info">
+            <h3 class="group-name">
+              <i [class]="getGroupIcon(group.id)"></i>
+              {{ group.name }}
+            </h3>
+            <p class="group-description">{{ group.description }}</p>
+          </div>
+          <div class="group-status">
+            <div class="status-indicator" [class]="'status-' + group.overallStatus">
+              <i [class]="getStatusIcon(group.overallStatus)"></i>
+              <span>{{ getStatusLabel(group.overallStatus) }}</span>
+            </div>
+            <div class="group-toggle">
+              <i [class]="isGroupExpanded(group.id) ? 'icon-chevron-up' : 'icon-chevron-down'"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Métriques du groupe -->
+        <div class="group-metrics" [class.expanded]="isGroupExpanded(group.id)">
+          <div class="metrics-grid">
+            <div *ngFor="let metric of group.metrics; trackBy: trackByMetricId" class="metric-card"
+              [class]="'metric-' + metric.status" (click)="onMetricClick(metric)">
+
+              <!-- Header de la métrique -->
+              <div class="metric-header">
+                <div class="metric-info">
+                  <h4 class="metric-name">{{ metric.name }}</h4>
+                  <span class="metric-description" *ngIf="metric.description">
+                    {{ metric.description }}
+                  </span>
+                </div>
+                <div class="metric-status-badge" [class]="'status-' + metric.status">
+                  <i [class]="getStatusIcon(metric.status)"></i>
+                </div>
+              </div>
+
+              <!-- Valeur principale -->
+              <div class="metric-value">
+                <span class="value-number">{{ formatMetricValue(metric.value) }}</span>
+                <span class="value-unit">{{ metric.unit }}</span>
+              </div>
+
+              <!-- Barre de progression (pour les pourcentages) -->
+              <div class="metric-progress" *ngIf="isPercentageMetric(metric)">
+                <div class="progress-bar">
+                  <div class="progress-fill" [class]="'progress-' + metric.status" [style.width.%]="metric.value">
+                  </div>
+                </div>
+                <div class="progress-thresholds">
+                  <div class="threshold warning" [style.left.%]="metric.threshold.warning">
+                  </div>
+                  <div class="threshold critical" [style.left.%]="metric.threshold.critical">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tendance -->
+              <div class="metric-trend">
+                <div class="trend-indicator" [class]="'trend-' + metric.trend.direction">
+                  <i [class]="getTrendIcon(metric.trend.direction)"></i>
+                  <span class="trend-value">{{ formatTrendValue(metric.trend.percentage) }}</span>
+                </div>
+                <div class="last-updated">
+                  Mis à jour {{ formatRelativeTime(metric.lastUpdated) }}
+                </div>
+              </div>
+
+              <!-- Graphique miniature (si historique disponible) -->
+              <div class="metric-chart" *ngIf="getMetricHistory(metric.id) as history">
+                <svg class="mini-chart" viewBox="0 0 100 20" preserveAspectRatio="none">
+                  <polyline [attr.points]="getMiniChartPoints(history)" [class]="'chart-line-' + metric.status">
+                  </polyline>
+                </svg>
+              </div>
+
+              <!-- Actions rapides -->
+              <div class="metric-actions" *ngIf="hasQuickActions(metric)">
+                <button *ngIf="canRestartService(metric)" class="btn btn-ghost btn-xs"
+                  (click)="onMetricAction('restart_service', metric, $event)" [disabled]="isLoading"
+                  title="Redémarrer le service">
+                  <i class="icon-rotate-cw"></i>
+                </button>
+                <button class="btn btn-ghost btn-xs" (click)="onMetricAction('view_details', metric, $event)"
+                  [disabled]="isLoading" title="Voir les détails">
+                  <i class="icon-eye"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Légendes des statuts -->
+  <div class="status-legend" *ngIf="hasMetrics()">
+    <h4 class="legend-title">Légende des statuts</h4>
+    <div class="legend-items">
+      <div class="legend-item">
+        <div class="legend-color status-healthy"></div>
+        <span>Optimal - Fonctionnement normal</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color status-warning"></div>
+        <span>Attention - Surveillance recommandée</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color status-critical"></div>
+        <span>Critique - Action immédiate requise</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color status-unknown"></div>
+        <span>Inconnu - Données indisponibles</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer avec informations système -->
+  <div class="metrics-footer" *ngIf="systemInfo">
+    <div class="system-info">
+      <span class="info-item">
+        <strong>Serveur:</strong> {{ systemInfo!.hostname }}
+      </span>
+      <span class="info-item">
+        <strong>Version:</strong> {{ systemInfo!.version }}
+      </span>
+      <span class="info-item">
+        <strong>Uptime:</strong> {{ formatUptime(systemInfo!.uptime) }}
+      </span>
+      <span class="info-item">
+        <strong>Dernière collecte:</strong> {{ formatDateTime(systemInfo!.lastCollectionTime) }}
+      </span>
+    </div>
+  </div>
+</div>
