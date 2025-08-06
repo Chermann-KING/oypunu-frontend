@@ -1,0 +1,101 @@
+<div class="content-moderation" *ngIf="moderationState$ | async as state">
+  <!-- Header avec statistiques -->
+  <div class="moderation-header">
+    <div class="header-title">
+      <h1>Modération de contenu</h1>
+      <p class="subtitle">{{ state.totalWords }} mot(s) en attente de validation</p>
+    </div>
+
+    <div class="moderation-stats">
+      <div class="stat-card pending">
+        <span class="stat-number">{{ getPendingCount(state.pendingWords) }}</span>
+        <span class="stat-label">En attente</span>
+      </div>
+      <div class="stat-card today">
+        <span class="stat-number">{{ getTodayModerationCount() }}</span>
+        <span class="stat-label">Modérés aujourd'hui</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtres et recherche -->
+  <div class="filters-section">
+    <div class="search-bar">
+      <input type="text" placeholder="Rechercher par mot, définition ou auteur..." [value]="searchTerm"
+        (input)="onSearchChange($event)" class="search-input">
+    </div>
+
+    <div class="filter-controls">
+      <select [value]="state.filters.language || ''" (change)="onLanguageFilterChange($event)" class="filter-select">
+        <option value="">Toutes les langues</option>
+        <option value="fr">Français</option>
+        <option value="en">Anglais</option>
+        <option value="es">Espagnol</option>
+      </select>
+
+      <select [value]="state.filters.status || ''" (change)="onStatusFilterChange($event)" class="filter-select">
+        <option value="">Tous les statuts</option>
+        <option value="pending">En attente</option>
+        <option value="approved">Approuvé</option>
+        <option value="rejected">Rejeté</option>
+      </select>
+
+      <button (click)="clearFilters()" class="btn btn-outline" [disabled]="!hasActiveFilters(state.filters)">
+        Effacer les filtres
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="state.isLoading">
+    <p>Chargement des mots en attente...</p>
+  </div>
+
+  <!-- Gestion des erreurs -->
+  <div class="error-message" *ngIf="state.error" role="alert">
+    <h3>Erreur de chargement</h3>
+    <p>{{ state.error }}</p>
+    <button (click)="retryLoad()" class="retry-button">
+      Réessayer
+    </button>
+  </div>
+
+  <!-- Moderation Panel Component -->
+  <app-moderation-panel *ngIf="!state.isLoading && !state.error" [items]="convertToModerationItems(state.pendingWords)" [filters]="state.filters"
+    [selectedItems]="state.selectedWords" [pagination]="{
+      page: state.currentPage,
+      pageSize: state.pageSize,
+      total: state.totalWords
+    }" [isLoading]="state.isLoading" [errorMessage]="state.error" (actionClicked)="handleModerationAction($event)"
+    (bulkActionClicked)="handleBulkModerationAction($event)" (pageChanged)="goToPage($event)">
+  </app-moderation-panel>
+
+  <!-- Pagination -->
+  <div class="pagination-container" *ngIf="!state.isLoading && !state.error && state.pendingWords.length > 0">
+    <button (click)="goToPage(state.currentPage - 1)" [disabled]="state.currentPage <= 1" class="btn btn-outline">
+      Précédent
+    </button>
+
+    <span class="page-info">
+      Page {{ state.currentPage }} sur {{ getTotalPages(state) }}
+    </span>
+
+    <button (click)="goToPage(state.currentPage + 1)" [disabled]="!hasNextPage(state)" class="btn btn-outline">
+      Suivant
+    </button>
+  </div>
+
+  <!-- État vide -->
+  <div class="empty-state" *ngIf="!state.isLoading && !state.error && state.pendingWords.length === 0">
+    <h3>Aucun mot en attente</h3>
+    <p *ngIf="hasActiveFilters(state.filters); else noWordsAtAll">
+      Aucun mot ne correspond aux critères de recherche.
+      <button (click)="clearFilters()" class="btn btn-link">
+        Effacer les filtres
+      </button>
+    </p>
+    <ng-template #noWordsAtAll>
+      <p>Tous les mots ont été traités. Excellent travail !</p>
+    </ng-template>
+  </div>
+</div>

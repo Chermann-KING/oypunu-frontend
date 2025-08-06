@@ -1,0 +1,125 @@
+<div class="admin-dashboard" *ngIf="dashboardState$ | async as state">
+  <!-- Header avec informations utilisateur -->
+  <div class="dashboard-header">
+    <h1 class="dashboard-title">
+      {{ getDashboardTitle(state.dashboardType) }}
+    </h1>
+    <div class="user-info" *ngIf="currentUser$ | async as user">
+      <span class="user-role" *ngIf="user.role">{{ user.role | roleDisplay }}</span>
+      <span class="user-name">{{ user.firstName }} {{ user.lastName }}</span>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="state.isLoading">
+    <p>Chargement du dashboard...</p>
+  </div>
+
+  <!-- Gestion des erreurs -->
+  <div class="error-message" *ngIf="state.error" role="alert">
+    <h3>Erreur de chargement</h3>
+    <p>{{ state.error }}</p>
+    <button (click)="retryLoad()" class="retry-button">
+      Réessayer
+    </button>
+  </div>
+
+  <!-- Contenu principal selon le type de dashboard -->
+  <div class="dashboard-content" *ngIf="!state.isLoading && !state.error && state.data">
+
+    <!-- Dashboard Contributeur -->
+    <div *ngIf="state.dashboardType === 'contributor'" class="contributor-dashboard">
+      <div class="stats-grid" *ngIf="getContributorData(state.data) as contributorData">
+        <div class="stat-card">
+          <h3>Mots en attente</h3>
+          <span class="stat-number">{{ contributorData.pendingWords }}</span>
+        </div>
+        <div class="stat-card">
+          <h3>Mots approuvés</h3>
+          <span class="stat-number">{{ contributorData.approvedWords }}</span>
+        </div>
+        <div class="stat-card">
+          <h3>Mots rejetés</h3>
+          <span class="stat-number">{{ contributorData.rejectedWords }}</span>
+        </div>
+        <div class="stat-card">
+          <h3>Nouveaux cette semaine</h3>
+          <span class="stat-number">{{ contributorData.newWordsThisWeek }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Admin -->
+    <div *ngIf="state.dashboardType === 'admin'" class="admin-dashboard-content">
+      <div class="stats-overview" *ngIf="getAdminData(state.data) as adminData">
+        <div class="stat-card">
+          <h3>Utilisateurs actifs</h3>
+          <span class="stat-number">{{ adminData.activeUsers }}</span>
+        </div>
+        <div class="stat-card">
+          <h3>Nouveaux utilisateurs</h3>
+          <span class="stat-number">{{ adminData.newUsersToday }}</span>
+        </div>
+        <div class="stat-card">
+          <h3>Alertes</h3>
+          <span class="stat-number alert">{{ adminData.alertsCount }}</span>
+        </div>
+        <div class="stat-card">
+          <h3>Rapports en attente</h3>
+          <span class="stat-number">{{ adminData.pendingReports }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Super Admin -->
+    <div *ngIf="state.dashboardType === 'superadmin'" class="superadmin-dashboard">
+      <div class="system-health" *ngIf="getSuperAdminData(state.data) as superAdminData">
+        <h3>État du système</h3>
+        <div class="health-metrics" *ngIf="superAdminData.systemHealth">
+          <div class="metric">
+            <label>Uptime:</label>
+            <span>{{ formatUptime(superAdminData.systemHealth.uptime) }}</span>
+          </div>
+          <div class="metric">
+            <label>Mémoire:</label>
+            <span>{{ superAdminData.systemHealth.memory.used }}MB / {{ superAdminData.systemHealth.memory.total }}MB</span>
+          </div>
+          <div class="metric">
+            <label>Version Node:</label>
+            <span>{{ superAdminData.systemHealth.nodeVersion }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard par défaut avec composant présentationnel -->
+    <div *ngIf="state.dashboardType === 'default'" class="default-dashboard">
+      <app-dashboard-stats
+        [stats]="getDashboardStatsData(state.data)"
+        [userRole]="(currentUser$ | async)?.role"
+        [isLoading]="state.isLoading"
+        [errorMessage]="state.error"
+        (actionClicked)="handleDashboardAction($event)">
+      </app-dashboard-stats>
+    </div>
+  </div>
+
+  <!-- Actions rapides -->
+  <div class="quick-actions" *ngIf="!state.isLoading && !state.error">
+    <h3>Actions rapides</h3>
+    <div class="action-buttons">
+      <button *appHasPermission="'canViewUsers'" routerLink="/admin/users" class="action-button">
+        Gérer les utilisateurs
+      </button>
+      <button *appHasPermission="'canModerateContent'" routerLink="/admin/moderation" class="action-button">
+        Modération
+      </button>
+      <button *appHasPermission="'canViewAnalytics'" routerLink="/admin/analytics" class="action-button">
+        Analytics
+      </button>
+      <button *appHasPermission="'canManageSystem'" routerLink="/admin/system" class="action-button">
+        Administration système
+      </button>
+    </div>
+  </div>
+</div>

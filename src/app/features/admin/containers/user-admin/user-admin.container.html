@@ -1,0 +1,84 @@
+<div class="user-admin" *ngIf="userAdminState$ | async as state">
+  <!-- Header avec filtres et actions -->
+  <div class="admin-header">
+    <div class="header-title">
+      <h1>Gestion des utilisateurs</h1>
+      <p class="subtitle">{{ state.totalUsers }} utilisateur(s) au total</p>
+    </div>
+
+    <div class="header-actions">
+      <button *appHasPermission="'canExportUserData'" (click)="exportUsers()" class="btn btn-secondary">
+        Exporter
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres et recherche -->
+  <div class="filters-section">
+    <div class="search-bar">
+      <input type="text" placeholder="Rechercher par nom, email ou ID..." [value]="searchTerm"
+        (input)="onSearchChange($event)" class="search-input">
+    </div>
+
+    <div class="filter-controls">
+      <select [value]="state.filters.role || ''" (change)="onRoleFilterChange($event)" class="filter-select">
+        <option value="">Tous les rôles</option>
+        <option value="user">Utilisateur</option>
+        <option value="contributor">Contributeur</option>
+        <option value="admin">Administrateur</option>
+        <option value="superadmin">Super-Administrateur</option>
+      </select>
+
+      <select [value]="state.filters.status || ''" (change)="onStatusFilterChange($event)" class="filter-select">
+        <option value="">Tous les statuts</option>
+        <option value="active">Actif</option>
+        <option value="suspended">Suspendu</option>
+        <option value="banned">Banni</option>
+      </select>
+
+      <button (click)="clearFilters()" class="btn btn-outline" [disabled]="!hasActiveFilters(state.filters)">
+        Effacer les filtres
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="state.isLoading">
+    <p>Chargement des utilisateurs...</p>
+  </div>
+
+  <!-- Gestion des erreurs -->
+  <div class="error-message" *ngIf="state.error" role="alert">
+    <h3>Erreur de chargement</h3>
+    <p>{{ state.error }}</p>
+    <button (click)="retryLoad()" class="retry-button">
+      Réessayer
+    </button>
+  </div>
+
+  <!-- User Management Table -->
+  <app-user-management-table *ngIf="!state.isLoading && !state.error" [users]="state.users"
+    [selectedUsers]="state.selectedUsers" [pagination]="{
+      page: state.currentPage,
+      pageSize: state.pageSize,
+      total: state.totalUsers
+    }" [filters]="state.filters" [sort]="null" [isLoading]="state.isLoading" [errorMessage]="state.error"
+    (actionClicked)="handleUserAction($event)" (bulkActionClicked)="handleBulkAction($event)"
+    (selectionChanged)="handleSelectionChange($event)" (sortChanged)="handleSortChange($event)"
+    (filterChanged)="handleFilterChange($event)" (pageChanged)="goToPage($event)">
+  </app-user-management-table>
+
+  <!-- État vide -->
+  <div class="empty-state" *ngIf="!state.isLoading && !state.error && state.users.length === 0">
+    <h3>Aucun utilisateur trouvé</h3>
+    <p *ngIf="hasActiveFilters(state.filters); else noUsersAtAll">
+      Aucun utilisateur ne correspond aux critères de recherche.
+      <button (click)="clearFilters()" class="btn btn-link">
+        Effacer les filtres
+      </button>
+    </p>
+    <ng-template #noUsersAtAll>
+      <p>Il n'y a aucun utilisateur dans le système.</p>
+    </ng-template>
+  </div>
+</div>

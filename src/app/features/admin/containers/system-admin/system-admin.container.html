@@ -1,0 +1,237 @@
+<div class="system-admin" *ngIf="systemState$ | async as state">
+  <!-- Header -->
+  <div class="admin-header">
+    <div class="header-title">
+      <h1>Administration système</h1>
+      <p class="subtitle">Gestion des paramètres, logs et maintenance</p>
+    </div>
+
+    <div class="header-actions">
+      <button *appHasPermission="'canToggleMaintenanceMode'" (click)="toggleMaintenanceMode()"
+        [class]="'btn ' + (state.maintenanceMode ? 'btn-warning' : 'btn-outline')">
+        <i [class]="state.maintenanceMode ? 'icon-pause' : 'icon-play'"></i>
+        {{ state.maintenanceMode ? 'Désactiver maintenance' : 'Mode maintenance' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="state.isLoading">
+    <p>Chargement des données système...</p>
+  </div>
+
+  <!-- Gestion des erreurs -->
+  <div class="error-message" *ngIf="state.error" role="alert">
+    <h3>Erreur de chargement</h3>
+    <p>{{ state.error }}</p>
+    <button (click)="retryLoad()" class="retry-button">
+      Réessayer
+    </button>
+  </div>
+
+  <!-- Contenu principal -->
+  <div class="admin-content" *ngIf="!state.isLoading && !state.error">
+
+    <!-- System Metrics Component -->
+    <app-system-metrics *appHasPermission="'canViewSystemHealth'" [metricGroups]="getMetricGroups(state)"
+      [metricHistory]="state.metricHistory || {}" [systemInfo]="getSystemInfo(state)" [isLoading]="state.isLoading"
+      [errorMessage]="state.error" (actionClicked)="handleSystemMetricsAction($event)">
+    </app-system-metrics>
+
+    <!-- Configuration système -->
+    <div class="system-config-section" *appHasPermission="'canManageSystemSettings'">
+      <div class="section-header">
+        <h2>Configuration système</h2>
+        <button (click)="saveConfiguration()" class="btn btn-primary">
+          Sauvegarder les modifications
+        </button>
+      </div>
+
+      <div class="config-grid" *ngIf="state.systemConfig">
+        <div class="config-group">
+          <h3>Paramètres généraux</h3>
+          <div class="config-item">
+            <label>Limite de débit API (req/min)</label>
+            <input type="number" [value]="state.systemConfig.apiRateLimit"
+              (change)="updateConfig('apiRateLimit', $event)" class="config-input">
+          </div>
+          <div class="config-item">
+            <label>Taille max upload (MB)</label>
+            <input type="number" [value]="state.systemConfig.maxFileUploadSize"
+              (change)="updateConfig('maxFileUploadSize', $event)" class="config-input">
+          </div>
+          <div class="config-item">
+            <label>Timeout session (min)</label>
+            <input type="number" [value]="state.systemConfig.sessionTimeout"
+              (change)="updateConfig('sessionTimeout', $event)" class="config-input">
+          </div>
+          <div class="config-item">
+            <label>
+              <input type="checkbox" [checked]="state.systemConfig.enableRegistration"
+                (change)="updateConfig('enableRegistration', $event)">
+              Autoriser les nouvelles inscriptions
+            </label>
+          </div>
+        </div>
+
+        <div class="config-group">
+          <h3>Cache</h3>
+          <div class="config-item">
+            <label>
+              <input type="checkbox" [checked]="state.systemConfig.cacheSettings.enabled"
+                (change)="updateCacheConfig('enabled', $event)">
+              Activer le cache
+            </label>
+          </div>
+          <div class="config-item">
+            <label>TTL cache (secondes)</label>
+            <input type="number" [value]="state.systemConfig.cacheSettings.ttl"
+              (change)="updateCacheConfig('ttl', $event)" class="config-input">
+          </div>
+        </div>
+
+        <div class="config-group">
+          <h3>Email</h3>
+          <div class="config-item">
+            <label>
+              <input type="checkbox" [checked]="state.systemConfig.emailSettings.smtpEnabled"
+                (change)="updateEmailConfig('smtpEnabled', $event)">
+              Activer SMTP
+            </label>
+          </div>
+          <div class="config-item">
+            <label>Hôte SMTP</label>
+            <input type="text" [value]="state.systemConfig.emailSettings.smtpHost"
+              (change)="updateEmailConfig('smtpHost', $event)" class="config-input">
+          </div>
+          <div class="config-item">
+            <label>Port SMTP</label>
+            <input type="number" [value]="state.systemConfig.emailSettings.smtpPort"
+              (change)="updateEmailConfig('smtpPort', $event)" class="config-input">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sauvegardes -->
+    <div class="backup-section" *appHasPermission="'canManageBackups'">
+      <div class="section-header">
+        <h2>Sauvegardes</h2>
+        <button (click)="createBackup()" class="btn btn-primary">
+          Créer une sauvegarde
+        </button>
+      </div>
+
+      <div class="backup-info" *ngIf="state.backupStatus">
+        <div class="backup-card">
+          <div class="backup-item">
+            <span class="backup-label">Dernière sauvegarde</span>
+            <span class="backup-value">{{ formatDate(state.backupStatus.lastBackup) }}</span>
+          </div>
+          <div class="backup-item">
+            <span class="backup-label">Prochaine sauvegarde</span>
+            <span class="backup-value">{{ formatDate(state.backupStatus.nextScheduledBackup) }}</span>
+          </div>
+          <div class="backup-item">
+            <span class="backup-label">Taille</span>
+            <span class="backup-value">{{ formatSize(state.backupStatus.backupSize) }}</span>
+          </div>
+          <div class="backup-item">
+            <span class="backup-label">Sauvegarde auto</span>
+            <span class="backup-value">
+              {{ state.backupStatus.autoBackupEnabled ? 'Activée' : 'Désactivée' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs système -->
+    <div class="logs-section" *appHasPermission="'canViewSystemLogs'">
+      <div class="section-header">
+        <h2>Logs système</h2>
+        <div class="logs-filters">
+          <select (change)="onLogLevelFilter($event)" class="filter-select">
+            <option value="">Tous les niveaux</option>
+            <option value="info">Info</option>
+            <option value="warn">Warning</option>
+            <option value="error">Erreur</option>
+            <option value="critical">Critique</option>
+          </select>
+          <input type="text" placeholder="Rechercher dans les logs..." (input)="onLogSearch($event)"
+            class="search-input">
+          <button (click)="exportLogs()" class="btn btn-outline btn-sm">
+            Exporter
+          </button>
+        </div>
+      </div>
+
+      <div class="logs-container">
+        <div *ngFor="let log of getFilteredLogs(state.systemLogs); trackBy: trackByLogId" class="log-entry"
+          [class]="'log-' + log.level">
+          <div class="log-header">
+            <span class="log-timestamp">{{ formatLogTime(log.timestamp) }}</span>
+            <span class="log-level">{{ log.level.toUpperCase() }}</span>
+            <span class="log-source">{{ log.source }}</span>
+          </div>
+          <div class="log-message">{{ log.message }}</div>
+          <div class="log-metadata" *ngIf="log.metadata">
+            <pre>{{ formatMetadata(log.metadata) }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tâches en cours -->
+    <div class="tasks-section" *appHasPermission="'canViewSystemTasks'">
+      <div class="section-header">
+        <h2>Tâches en cours</h2>
+        <button (click)="refreshTasks()" class="btn btn-outline btn-sm">
+          Actualiser
+        </button>
+      </div>
+
+      <div class="tasks-list">
+        <div *ngFor="let task of state.runningTasks; trackBy: trackByTaskId" class="task-item"
+          [class]="'task-' + task.status">
+          <div class="task-header">
+            <span class="task-type">{{ task.type }}</span>
+            <span class="task-status">{{ getTaskStatusLabel(task.status) }}</span>
+          </div>
+          <div class="task-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="task.progress">
+              </div>
+            </div>
+            <span class="progress-text">{{ task.progress }}%</span>
+          </div>
+          <div class="task-time">
+            Créée: {{ formatDate(task.createdAt) }}
+          </div>
+          <div class="task-error" *ngIf="task.error">
+            <strong>Erreur:</strong> {{ task.error }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="quick-actions" *appHasPermission="'canPerformSystemMaintenance'">
+      <h3>Actions de maintenance</h3>
+      <div class="action-buttons">
+        <button (click)="clearCache()" class="btn btn-warning">
+          Vider le cache
+        </button>
+        <button (click)="restartServices()" class="btn btn-danger">
+          Redémarrer les services
+        </button>
+        <button (click)="optimizeDatabase()" class="btn btn-primary">
+          Optimiser la base de données
+        </button>
+        <button (click)="cleanupLogs()" class="btn btn-outline">
+          Nettoyer les logs anciens
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
