@@ -1,0 +1,263 @@
+<div class="user-management-table">
+
+  <!-- Header avec filtres et actions -->
+  <div class="table-header">
+    <div class="table-info">
+      <h3>Utilisateurs ({{ pagination?.total || 0 }})</h3>
+      <p class="table-subtitle">Gestion et administration des comptes</p>
+    </div>
+
+    <div class="table-actions">
+      <div class="bulk-actions" *ngIf="selectedUsers.length > 0">
+        <span class="selection-count">{{ selectedUsers.length }} sélectionné(s)</span>
+        <button class="btn btn-outline btn-sm" (click)="onBulkAction('suspend')" [disabled]="isLoading">
+          <i class="icon-pause"></i>
+          Suspendre
+        </button>
+        <button class="btn btn-outline btn-sm" (click)="onBulkAction('activate')" [disabled]="isLoading">
+          <i class="icon-play"></i>
+          Activer
+        </button>
+      </div>
+
+      <button class="btn btn-primary btn-sm" (click)="onAction('export', null)" [disabled]="isLoading">
+        <i class="icon-download"></i>
+        Exporter
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtres rapides -->
+  <div class="table-filters" *ngIf="showFilters">
+    <div class="filter-group">
+      <label>Rôle:</label>
+      <select [value]="filters?.role || ''" (change)="onFilterChange('role', $event)" class="filter-select">
+        <option value="">Tous les rôles</option>
+        <option value="user">Utilisateur</option>
+        <option value="contributor">Contributeur</option>
+        <option value="admin">Administrateur</option>
+        <option value="superadmin">Super Admin</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Statut:</label>
+      <select [value]="filters?.status || ''" (change)="onFilterChange('status', $event)" class="filter-select">
+        <option value="">Tous</option>
+        <option value="active">Actifs</option>
+        <option value="suspended">Suspendus</option>
+        <option value="banned">Bannis</option>
+      </select>
+    </div>
+
+    <div class="filter-group">
+      <label>Recherche:</label>
+      <input type="text" placeholder="Nom ou email..." [value]="filters?.search || ''"
+        (input)="onFilterChange('search', $event)" class="filter-input">
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="loading-spinner"></div>
+    <p>Chargement des utilisateurs...</p>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="error-message" *ngIf="errorMessage" role="alert">
+    <i class="icon-alert-circle"></i>
+    <span>{{ errorMessage }}</span>
+    <button class="btn btn-sm" (click)="onRefresh()">Réessayer</button>
+  </div>
+
+  <!-- Table des utilisateurs -->
+  <div class="table-container" *ngIf="!isLoading && !errorMessage">
+    <table class="users-table" *ngIf="users && users.length > 0">
+      <thead>
+        <tr>
+          <th class="checkbox-col">
+            <input type="checkbox" [checked]="isAllSelected()" [indeterminate]="isPartiallySelected()"
+              (change)="onSelectAll($event)">
+          </th>
+          <th class="sortable-header" (click)="onSort('username')">
+            Utilisateur
+            <i [class]="getSortIcon('username')"></i>
+          </th>
+          <th class="sortable-header" (click)="onSort('email')">
+            Email
+            <i [class]="getSortIcon('email')"></i>
+          </th>
+          <th class="sortable-header" (click)="onSort('role')">
+            Rôle
+            <i [class]="getSortIcon('role')"></i>
+          </th>
+          <th>Statut</th>
+          <th class="sortable-header" (click)="onSort('lastLogin')">
+            Dernière connexion
+            <i [class]="getSortIcon('lastLogin')"></i>
+          </th>
+          <th class="sortable-header" (click)="onSort('createdAt')">
+            Inscrit le
+            <i [class]="getSortIcon('createdAt')"></i>
+          </th>
+          <th class="actions-col">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users; trackBy: trackByUserId" class="user-row"
+          [class.selected]="isUserSelected(user.id)">
+
+          <!-- Checkbox de sélection -->
+          <td class="checkbox-col">
+            <input type="checkbox" [checked]="isUserSelected(user.id)" (change)="onSelectUser(user.id, $event)">
+          </td>
+
+          <!-- Utilisateur -->
+          <td class="user-cell">
+            <div class="user-info">
+              <div class="user-avatar">
+                <img *ngIf="user.profilePicture; else avatarPlaceholder" [src]="user.profilePicture"
+                  [alt]="user.username">
+                <ng-template #avatarPlaceholder>
+                  <div class="avatar-initials">
+                    {{ getUserInitials(user) }}
+                  </div>
+                </ng-template>
+              </div>
+              <div class="user-details">
+                <span class="username">{{ user.username }}</span>
+                <span class="user-id">ID: {{ user.id }}</span>
+              </div>
+            </div>
+          </td>
+
+          <!-- Email -->
+          <td class="email-cell">
+            <a [href]="'mailto:' + user.email" class="email-link">
+              {{ user.email }}
+            </a>
+          </td>
+
+          <!-- Rôle -->
+          <td class="role-cell">
+            <span class="role-badge" [class]="'role-' + user.role">
+              {{ getRoleLabel(user.role) }}
+            </span>
+          </td>
+
+          <!-- Statut -->
+          <td class="status-cell">
+            <span class="status-badge" [class]="'status-' + user.status">
+              <i [class]="getStatusIcon(user.status)"></i>
+              {{ getStatusLabel(user.status) }}
+            </span>
+          </td>
+
+          <!-- Dernière connexion -->
+          <td class="date-cell">
+            <span *ngIf="user.lastLogin; else neverLoggedIn">
+              {{ formatDate(user.lastLogin) }}
+            </span>
+            <ng-template #neverLoggedIn>
+              <span class="text-muted">Jamais</span>
+            </ng-template>
+          </td>
+
+          <!-- Date d'inscription -->
+          <td class="date-cell">
+            {{ formatDate(user.createdAt) }}
+          </td>
+
+          <!-- Actions -->
+          <td class="actions-cell">
+            <div class="action-buttons">
+              <button class="btn btn-ghost btn-sm" (click)="onAction('view', user)" title="Voir le profil">
+                <i class="icon-eye"></i>
+              </button>
+              <button class="btn btn-ghost btn-sm" (click)="onAction('edit', user)" title="Modifier">
+                <i class="icon-edit"></i>
+              </button>
+              <button class="btn btn-ghost btn-sm" (click)="onAction('permissions', user)" title="Permissions">
+                <i class="icon-shield"></i>
+              </button>
+
+              <!-- Menu déroulant pour plus d'actions -->
+              <div class="dropdown">
+                <button class="btn btn-ghost btn-sm dropdown-toggle" (click)="toggleDropdown(user.id)">
+                  <i class="icon-more-horizontal"></i>
+                </button>
+                <div class="dropdown-menu" [class.show]="isDropdownOpen(user.id)">
+
+                  <button *ngIf="user.status === 'active'" class="dropdown-item" (click)="onAction('suspend', user)">
+                    <i class="icon-pause"></i>
+                    Suspendre
+                  </button>
+
+                  <button *ngIf="user.status !== 'active'" class="dropdown-item" (click)="onAction('activate', user)">
+                    <i class="icon-play"></i>
+                    Activer
+                  </button>
+
+                  <button class="dropdown-item" (click)="onAction('change_role', user)">
+                    <i class="icon-user-check"></i>
+                    Changer le rôle
+                  </button>
+
+                  <div class="dropdown-divider"></div>
+
+                  <button class="dropdown-item danger" (click)="onAction('delete', user)">
+                    <i class="icon-trash-2"></i>
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- État vide -->
+    <div class="empty-state" *ngIf="!users || users.length === 0">
+      <i class="icon-users"></i>
+      <h3>Aucun utilisateur trouvé</h3>
+      <p *ngIf="hasActiveFilters()">
+        Aucun utilisateur ne correspond aux filtres actuels.
+      </p>
+      <p *ngIf="!hasActiveFilters()">
+        Il n'y a pas encore d'utilisateurs dans le système.
+      </p>
+      <button *ngIf="hasActiveFilters()" class="btn btn-primary" (click)="onClearFilters()">
+        Effacer les filtres
+      </button>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="table-pagination" *ngIf="pagination && users && users.length > 0">
+    <div class="pagination-info">
+      Affichage {{ getDisplayRange() }} sur {{ pagination.total }} utilisateurs
+    </div>
+
+    <div class="pagination-controls">
+      <button class="btn btn-outline btn-sm" [disabled]="(pagination.page || 1) <= 1"
+        (click)="onPageChange((pagination.page || 1) - 1)">
+        <i class="icon-chevron-left"></i>
+        Précédent
+      </button>
+
+      <div class="page-numbers">
+        <button *ngFor="let page of getVisiblePages()" class="btn btn-ghost btn-sm"
+          [class.active]="page === pagination.page" (click)="onPageChange(page)">
+          {{ page }}
+        </button>
+      </div>
+
+      <button class="btn btn-outline btn-sm" [disabled]="(pagination.page || 1) >= getTotalPages()"
+        (click)="onPageChange((pagination.page || 1) + 1)">
+        Suivant
+        <i class="icon-chevron-right"></i>
+      </button>
+    </div>
+  </div>
+</div>

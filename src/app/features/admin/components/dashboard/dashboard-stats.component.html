@@ -1,0 +1,119 @@
+<div class="dashboard-stats">
+  <!-- Header avec actions -->
+  <div class="stats-header">
+    <div class="header-content">
+      <h2 class="stats-title">Statistiques générales</h2>
+      <p class="stats-subtitle">Vue d'ensemble des métriques clés</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline btn-sm" (click)="onAction('refresh')" [disabled]="isLoading">
+        <i class="icon-refresh" [class.spinning]="isLoading"></i>
+        Actualiser
+      </button>
+      <button class="btn btn-primary btn-sm" (click)="onAction('export')" [disabled]="isLoading">
+        <i class="icon-download"></i>
+        Exporter
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="isLoading">
+    <div class="loading-spinner"></div>
+    <p>Chargement des statistiques...</p>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="error-message" *ngIf="errorMessage" role="alert">
+    <i class="icon-alert-circle"></i>
+    <span>{{ errorMessage }}</span>
+    <button class="btn btn-sm" (click)="onAction('refresh')">Réessayer</button>
+  </div>
+
+  <!-- Grille des statistiques -->
+  <div class="stats-grid" *ngIf="!isLoading && !errorMessage && stats">
+    <div *ngFor="let card of getStatCards(); trackBy: trackByCardId" class="stat-card"
+      [class]="'stat-card-' + card.color" [attr.role]="card.actionType ? 'button' : null"
+      [attr.tabindex]="card.actionType ? '0' : null" (click)="card.actionType && onAction(card.actionType)"
+      (keydown.enter)="card.actionType && onAction(card.actionType)"
+      (keydown.space)="card.actionType && onAction(card.actionType, $event)">
+
+      <!-- Icône et titre -->
+      <div class="stat-card-header">
+        <div class="stat-icon">
+          <i [class]="card.icon"></i>
+        </div>
+        <div class="stat-trend" *ngIf="card.trend">
+          <span class="trend-value" [class]="'trend-' + card.trend.direction">
+            {{ formatTrendValue(card.trend.value) }}
+          </span>
+          <i [class]="getTrendIcon(card.trend.direction)"></i>
+        </div>
+      </div>
+
+      <!-- Contenu principal -->
+      <div class="stat-card-content">
+        <h3 class="stat-title">{{ card.title }}</h3>
+        <div class="stat-value">{{ formatStatValue(card.value) }}</div>
+
+        <!-- Détails selon le rôle utilisateur -->
+        <div class="stat-details" *ngIf="shouldShowDetails(card.id)">
+          <ng-container [ngSwitch]="card.id">
+
+            <!-- Détails utilisateurs -->
+            <div *ngSwitchCase="'users'" class="detail-list">
+              <div class="detail-item">
+                <span class="detail-label">Actifs:</span>
+                <span class="detail-value">{{ stats!.activeUsers }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Nouveaux (semaine):</span>
+                <span class="detail-value">{{ stats!.newUsersThisWeek }}</span>
+              </div>
+            </div>
+
+            <!-- Détails mots -->
+            <div *ngSwitchCase="'words'" class="detail-list">
+              <div class="detail-item">
+                <span class="detail-label">Approuvés:</span>
+                <span class="detail-value">{{ stats!.approvedWords }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">En attente:</span>
+                <span class="detail-value highlight-pending">{{ stats!.pendingWords }}</span>
+              </div>
+            </div>
+
+            <!-- Détails communautés -->
+            <div *ngSwitchCase="'communities'" class="detail-list">
+              <div class="detail-item">
+                <span class="detail-label">Actives:</span>
+                <span class="detail-value">{{ stats!.activeCommunities }}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Nouvelles (mois):</span>
+                <span class="detail-value">{{ stats!.newCommunitiesThisMonth }}</span>
+              </div>
+            </div>
+
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Indicateur d'action cliquable -->
+      <div class="stat-card-action" *ngIf="card.actionType">
+        <i class="icon-arrow-right"></i>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message état vide -->
+  <div class="empty-state" *ngIf="!isLoading && !errorMessage && !stats">
+    <i class="icon-bar-chart"></i>
+    <h3>Aucune donnée disponible</h3>
+    <p>Les statistiques ne sont pas encore disponibles.</p>
+    <button class="btn btn-primary" (click)="onAction('refresh')">
+      Charger les données
+    </button>
+  </div>
+</div>

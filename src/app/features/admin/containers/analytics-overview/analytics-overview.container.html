@@ -1,0 +1,189 @@
+<div class="analytics-overview" *ngIf="analyticsState$ | async as state">
+  <!-- Header avec sélecteur de période -->
+  <div class="analytics-header">
+    <div class="header-title">
+      <h1>Analytics et rapports</h1>
+      <p class="subtitle">Vue d'ensemble des métriques de la plateforme</p>
+    </div>
+
+    <div class="period-selector">
+      <select [value]="state.selectedPeriod" (change)="onPeriodChange($event)" class="period-select">
+        <option value="day">Aujourd'hui</option>
+        <option value="week">Cette semaine</option>
+        <option value="month">Ce mois</option>
+        <option value="year">Cette année</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="loading-indicator" *ngIf="state.isLoading">
+    <p>Chargement des analytics...</p>
+  </div>
+
+  <!-- Gestion des erreurs -->
+  <div class="error-message" *ngIf="state.error" role="alert">
+    <h3>Erreur de chargement</h3>
+    <p>{{ state.error }}</p>
+    <button (click)="retryLoad()" class="retry-button">
+      Réessayer
+    </button>
+  </div>
+
+  <!-- Métriques principales -->
+  <div class="metrics-grid" *ngIf="!state.isLoading && !state.error">
+    <div *ngFor="let metric of getMainMetrics(state)" class="metric-card"
+      [class]="'metric-' + metric.color">
+      <div class="metric-header">
+        <div class="metric-icon">
+          <i [class]="metric.icon"></i>
+        </div>
+        <div class="metric-change" [class]="'change-' + metric.changeType">
+          <span class="change-value">{{ formatChange(metric.change) }}%</span>
+          <i [class]="getChangeIcon(metric.changeType)"></i>
+        </div>
+      </div>
+
+      <div class="metric-content">
+        <h3 class="metric-title">{{ metric.title }}</h3>
+        <div class="metric-value">{{ formatValue(metric.value) }}</div>
+        <p class="metric-description">{{ metric.description }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graphiques et détails -->
+  <div class="analytics-details" *ngIf="!state.isLoading && !state.error">
+
+    <!-- Analytics utilisateurs -->
+    <div class="analytics-section">
+      <div class="section-header">
+        <h2>Activité des utilisateurs</h2>
+        <button class="btn btn-outline btn-sm" (click)="exportUserAnalytics()">
+          Exporter
+        </button>
+      </div>
+
+      <app-analytics-chart
+        [chartData]="getUserChartData(state)"
+        [title]="'Évolution des utilisateurs'"
+        [isLoading]="state.isLoading"
+        [errorMessage]="state.error"
+        (actionClicked)="handleChartAction($event)">
+      </app-analytics-chart>
+    </div>
+
+    <!-- Analytics contenu -->
+    <div class="analytics-section">
+      <div class="section-header">
+        <h2>Performance du contenu</h2>
+        <button class="btn btn-outline btn-sm" (click)="exportContentAnalytics()">
+          Exporter
+        </button>
+      </div>
+
+      <div class="content-analytics" *ngIf="state.contentStats">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">Mots ajoutés</span>
+            <span class="stat-value">{{ state.contentStats.wordsAdded }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Mots approuvés</span>
+            <span class="stat-value">{{ state.contentStats.wordsApproved }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics communautés -->
+    <div class="analytics-section" *appHasPermission="'canViewCommunityAnalytics'">
+      <div class="section-header">
+        <h2>Activité des communautés</h2>
+        <button class="btn btn-outline btn-sm" (click)="exportCommunityAnalytics()">
+          Exporter
+        </button>
+      </div>
+
+      <div class="community-analytics" *ngIf="state.communityStats">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">Communautés actives</span>
+            <span class="stat-value">{{ state.communityStats.activeCommunities }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Nouvelles communautés</span>
+            <span class="stat-value">{{ state.communityStats.newCommunities }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Engagement moyen</span>
+            <span class="stat-value">{{ state.communityStats.averageEngagement }}%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Posts par jour</span>
+            <span class="stat-value">{{ state.communityStats.postsPerDay }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Métriques système -->
+    <div class="analytics-section" *appHasPermission="'canViewSystemMetrics'">
+      <div class="section-header">
+        <h2>Métriques système</h2>
+        <button class="btn btn-outline btn-sm" (click)="exportSystemMetrics()">
+          Exporter
+        </button>
+      </div>
+
+      <div class="system-metrics" *ngIf="state.systemMetrics">
+        <div class="system-health">
+          <div class="health-indicator" [class]="'health-' + getSystemHealthStatus(state.systemMetrics)">
+            <div class="health-icon">
+              <i [class]="getSystemHealthIcon(state.systemMetrics)"></i>
+            </div>
+            <div class="health-info">
+              <span class="health-status">{{ getSystemHealthLabel(state.systemMetrics) }}</span>
+              <span class="health-description">Système opérationnel</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">Uptime</span>
+            <span class="stat-value">{{ formatUptime(state.systemMetrics.uptime) }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Requêtes/min</span>
+            <span class="stat-value">{{ state.systemMetrics.requestsPerMinute }}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Temps de réponse</span>
+            <span class="stat-value">{{ state.systemMetrics.averageResponseTime }}ms</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Utilisateurs connectés</span>
+            <span class="stat-value">{{ state.systemMetrics.activeConnections }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions rapides -->
+  <div class="quick-actions" *ngIf="!state.isLoading && !state.error">
+    <h3>Actions rapides</h3>
+    <div class="action-buttons">
+      <button *appHasPermission="'canGenerateReports'" (click)="generateReport()" class="btn btn-primary">
+        Générer un rapport
+      </button>
+      <button *appHasPermission="'canExportAnalytics'" (click)="exportAllAnalytics()" class="btn btn-secondary">
+        Exporter toutes les données
+      </button>
+      <button *appHasPermission="'canScheduleReports'" (click)="scheduleReport()" class="btn btn-outline">
+        Programmer un rapport
+      </button>
+    </div>
+  </div>
+</div>

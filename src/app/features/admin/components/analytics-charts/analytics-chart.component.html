@@ -1,0 +1,212 @@
+<div class="analytics-chart" [class]="'chart-' + config.type">
+
+  <!-- Header avec titre et actions -->
+  <div class="chart-header" *ngIf="config.title || hasActions()">
+    <div class="chart-title-section">
+      <h3 class="chart-title" *ngIf="config.title">{{ config.title }}</h3>
+      <p class="chart-subtitle" *ngIf="config.subtitle">{{ config.subtitle }}</p>
+    </div>
+    <div class="chart-actions" *ngIf="hasActions()">
+      <div class="chart-controls">
+        <button *ngIf="showTypeSelector" class="btn btn-ghost btn-sm dropdown-toggle"
+          (click)="toggleChartTypeSelector()" title="Changer le type de graphique">
+          <i class="icon-bar-chart-2"></i>
+          {{ getChartTypeLabel(config.type) }}
+        </button>
+        <div class="chart-type-dropdown" *ngIf="chartTypeSelectorOpen" [class.show]="chartTypeSelectorOpen">
+          <button *ngFor="let type of availableChartTypes; trackBy: trackByChartType" class="dropdown-item"
+            [class.active]="type === config.type" (click)="onChartTypeChange(type)">
+            <i [class]="getChartTypeIcon(type)"></i>
+            {{ getChartTypeLabel(type) }}
+          </button>
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" (click)="onAction('refresh')" [disabled]="isLoading"
+        title="Actualiser les données">
+        <i class="icon-refresh" [class.spinning]="isLoading"></i>
+      </button>
+      <button class="btn btn-ghost btn-sm" (click)="onAction('export')" [disabled]="isLoading || !hasData()"
+        title="Exporter le graphique">
+        <i class="icon-download"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Indicateur de chargement -->
+  <div class="chart-loading" *ngIf="isLoading">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Chargement des données...</p>
+    </div>
+  </div>
+
+  <!-- Message d'erreur -->
+  <div class="chart-error" *ngIf="errorMessage" role="alert">
+    <i class="icon-alert-circle"></i>
+    <span>{{ errorMessage }}</span>
+    <button class="btn btn-sm" (click)="onAction('refresh')">Réessayer</button>
+  </div>
+
+  <!-- Conteneur du graphique -->
+  <div class="chart-container" *ngIf="!isLoading && !errorMessage" [style.height.px]="config.height || 400"
+    [style.width]="config.width || '100%'">
+
+    <!-- État vide -->
+    <div class="chart-empty" *ngIf="!hasData()">
+      <i class="icon-bar-chart"></i>
+      <h4>Aucune donnée disponible</h4>
+      <p>Il n'y a pas encore de données à afficher pour cette période.</p>
+      <button class="btn btn-primary" (click)="onAction('refresh')">
+        Charger les données
+      </button>
+    </div>
+
+    <!-- Canvas du graphique -->
+    <div class="chart-canvas" *ngIf="hasData()">
+
+      <!-- Graphique linéaire ou en aires -->
+      <div *ngIf="config.type === 'line' || config.type === 'area'" class="line-chart">
+        <svg class="chart-svg" [attr.viewBox]="'0 0 ' + svgWidth + ' ' + svgHeight" preserveAspectRatio="xMidYMid meet">
+
+          <!-- Grille -->
+          <g class="grid" *ngIf="config.showGrid">
+            <line *ngFor="let line of getGridLines(); trackBy: trackByGridLine" [attr.x1]="line.x1" [attr.y1]="line.y1"
+              [attr.x2]="line.x2" [attr.y2]="line.y2" class="grid-line">
+            </line>
+          </g>
+
+          <!-- Axes -->
+          <g class="axes">
+            <!-- Axe X -->
+            <line [attr.x1]="chartMargin.left" [attr.y1]="svgHeight - chartMargin.bottom"
+              [attr.x2]="svgWidth - chartMargin.right" [attr.y2]="svgHeight - chartMargin.bottom" class="axis-line">
+            </line>
+            <!-- Axe Y -->
+            <line [attr.x1]="chartMargin.left" [attr.y1]="chartMargin.top" [attr.x2]="chartMargin.left"
+              [attr.y2]="svgHeight - chartMargin.bottom" class="axis-line">
+            </line>
+          </g>
+
+          <!-- Labels des axes -->
+          <g class="axis-labels">
+            <text *ngFor="let label of getXAxisLabels(); trackBy: trackByAxisLabel" [attr.x]="label.x"
+              [attr.y]="label.y" class="axis-label x-label">
+              {{ label.text }}
+            </text>
+            <text *ngFor="let label of getYAxisLabels(); trackBy: trackByAxisLabel" [attr.x]="label.x"
+              [attr.y]="label.y" class="axis-label y-label">
+              {{ label.text }}
+            </text>
+          </g>
+
+          <!-- Séries de données -->
+          <g class="data-series" *ngFor="let series of dataSeries; let seriesIndex = index; trackBy: trackByDataSeries">
+
+            <!-- Ligne/Aire -->
+            <path [attr.d]="getLinePath(series, seriesIndex)"
+              [attr.stroke]="series.color || getSeriesColor(seriesIndex)"
+              [attr.fill]="config.type === 'area' ? (series.color || getSeriesColor(seriesIndex)) : 'none'"
+              [attr.fill-opacity]="config.type === 'area' ? 0.3 : 0" class="data-line"
+              [class.area]="config.type === 'area'">
+            </path>
+
+            <!-- Points de données -->
+            <circle *ngFor="let point of series.data; let pointIndex = index; trackBy: trackByDataPoint"
+              [attr.cx]="getPointX(point, pointIndex)" [attr.cy]="getPointY(point, seriesIndex)" [attr.r]="4"
+              [attr.fill]="series.color || getSeriesColor(seriesIndex)" class="data-point"
+              (click)="onDataPointClick(point, seriesIndex, pointIndex)" (mouseenter)="showTooltip(point, $event)"
+              (mouseleave)="hideTooltip()">
+            </circle>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Graphique en barres -->
+      <div *ngIf="config.type === 'bar'" class="bar-chart">
+        <svg class="chart-svg" [attr.viewBox]="'0 0 ' + svgWidth + ' ' + svgHeight" preserveAspectRatio="xMidYMid meet">
+
+          <!-- Grille -->
+          <g class="grid" *ngIf="config.showGrid">
+            <line *ngFor="let line of getGridLines(); trackBy: trackByGridLine" [attr.x1]="line.x1" [attr.y1]="line.y1"
+              [attr.x2]="line.x2" [attr.y2]="line.y2" class="grid-line">
+            </line>
+          </g>
+
+          <!-- Barres -->
+          <g class="data-bars">
+            <g *ngFor="let series of dataSeries; let seriesIndex = index; trackBy: trackByDataSeries">
+              <rect *ngFor="let point of series.data; let pointIndex = index; trackBy: trackByDataPoint"
+                [attr.x]="getBarX(point, pointIndex, seriesIndex)" [attr.y]="getBarY(point)"
+                [attr.width]="getBarWidth()" [attr.height]="getBarHeight(point)"
+                [attr.fill]="series.color || getSeriesColor(seriesIndex)" class="data-bar"
+                (click)="onDataPointClick(point, seriesIndex, pointIndex)" (mouseenter)="showTooltip(point, $event)"
+                (mouseleave)="hideTooltip()">
+              </rect>
+            </g>
+          </g>
+
+          <!-- Axes -->
+          <g class="axes">
+            <line [attr.x1]="chartMargin.left" [attr.y1]="svgHeight - chartMargin.bottom"
+              [attr.x2]="svgWidth - chartMargin.right" [attr.y2]="svgHeight - chartMargin.bottom" class="axis-line">
+            </line>
+            <line [attr.x1]="chartMargin.left" [attr.y1]="chartMargin.top" [attr.x2]="chartMargin.left"
+              [attr.y2]="svgHeight - chartMargin.bottom" class="axis-line">
+            </line>
+          </g>
+
+          <!-- Labels des axes -->
+          <g class="axis-labels">
+            <text *ngFor="let label of getXAxisLabels(); trackBy: trackByAxisLabel" [attr.x]="label.x"
+              [attr.y]="label.y" class="axis-label x-label">
+              {{ label.text }}
+            </text>
+            <text *ngFor="let label of getYAxisLabels(); trackBy: trackByAxisLabel" [attr.x]="label.x"
+              [attr.y]="label.y" class="axis-label y-label">
+              {{ label.text }}
+            </text>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Graphique circulaire -->
+      <div *ngIf="config.type === 'pie' || config.type === 'doughnut'" class="pie-chart">
+        <svg class="chart-svg" [attr.viewBox]="'0 0 ' + svgWidth + ' ' + svgHeight" preserveAspectRatio="xMidYMid meet">
+
+          <g [attr.transform]="'translate(' + (svgWidth/2) + ',' + (svgHeight/2) + ')'">
+            <path *ngFor="let slice of getPieSlices(); let i = index; trackBy: trackByPieSlice" [attr.d]="slice.path"
+              [attr.fill]="slice.color" class="pie-slice" (click)="onDataPointClick(slice.data, 0, i)"
+              (mouseenter)="showTooltip(slice.data, $event)" (mouseleave)="hideTooltip()">
+            </path>
+
+            <!-- Textes des pourcentages -->
+            <text *ngFor="let slice of getPieSlices(); trackBy: trackByPieSlice" [attr.x]="slice.labelX"
+              [attr.y]="slice.labelY" class="pie-label" text-anchor="middle" dominant-baseline="middle">
+              {{ slice.percentage }}%
+            </text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Légende -->
+  <div class="chart-legend" *ngIf="config.showLegend && hasData()">
+    <div class="legend-items">
+      <div *ngFor="let series of dataSeries; let i = index; trackBy: trackByDataSeries" class="legend-item"
+        (click)="toggleSeriesVisibility(i)">
+        <div class="legend-color" [style.background-color]="series.color || getSeriesColor(i)">
+        </div>
+        <span class="legend-label">{{ series.name }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tooltip -->
+  <div class="chart-tooltip" *ngIf="tooltip.visible" [style.left.px]="tooltip.x" [style.top.px]="tooltip.y">
+    <div class="tooltip-content">
+      <strong>{{ tooltip.label }}</strong>
+      <span class="tooltip-value">{{ formatTooltipValue(tooltip.value) }}</span>
+    </div>
+  </div>
+</div>
