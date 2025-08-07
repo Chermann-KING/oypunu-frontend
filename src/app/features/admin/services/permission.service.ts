@@ -346,6 +346,7 @@ export class PermissionService {
     }));
 
     // Charger les permissions contextuelles depuis le serveur
+    // Route maintenant implémentée dans AdminPermissionsController
     this.adminApiService.getUserContextualPermissions(userId)
       .pipe(
         map(serverPermissions => {
@@ -368,9 +369,10 @@ export class PermissionService {
 
           return allPermissions;
         }),
-        catchError(() => {
+        catchError((error) => {
+          console.warn('[PermissionService] Erreur lors du chargement des permissions contextuelles:', error.message);
+          console.warn('[PermissionService] Utilisation des permissions de rôle uniquement');
           // En cas d'erreur, utiliser seulement les permissions basées sur le rôle
-          console.warn('Impossible de charger les permissions contextuelles, utilisation des permissions de rôle uniquement');
           return of(contextualPermissions);
         })
       )
