@@ -345,9 +345,9 @@ export class PermissionService {
       grantedAt: new Date()
     }));
 
-    // TODO: Réactiver quand la route GET /api/admin/permissions/user/:userId/contextual sera implémentée dans le backend
     // Charger les permissions contextuelles depuis le serveur
-    /*this.adminApiService.getUserContextualPermissions(userId)
+    // Route maintenant implémentée dans AdminPermissionsController
+    this.adminApiService.getUserContextualPermissions(userId)
       .pipe(
         map(serverPermissions => {
           // Fusionner les permissions de rôle avec les permissions contextuelles du serveur
@@ -369,9 +369,10 @@ export class PermissionService {
 
           return allPermissions;
         }),
-        catchError(() => {
+        catchError((error) => {
+          console.warn('[PermissionService] Erreur lors du chargement des permissions contextuelles:', error.message);
+          console.warn('[PermissionService] Utilisation des permissions de rôle uniquement');
           // En cas d'erreur, utiliser seulement les permissions basées sur le rôle
-          console.warn('Impossible de charger les permissions contextuelles, utilisation des permissions de rôle uniquement');
           return of(contextualPermissions);
         })
       )
@@ -384,20 +385,7 @@ export class PermissionService {
         };
 
         this.userPermissionsSubject.next(userPermissionProfile);
-      });*/
-
-    // Utiliser temporairement seulement les permissions de rôle
-    console.warn('[PermissionService] Route /api/admin/permissions/user/:id/contextual non implémentée dans le backend');
-    console.warn('[PermissionService] Utilisation des permissions de rôle uniquement');
-    
-    const userPermissionProfile: UserPermissionProfile = {
-      userId: currentUser.id,
-      role: currentUser.role as UserRole,
-      permissions: contextualPermissions,
-      lastUpdated: new Date()
-    };
-
-    this.userPermissionsSubject.next(userPermissionProfile);
+      });
   }
 
   /**
