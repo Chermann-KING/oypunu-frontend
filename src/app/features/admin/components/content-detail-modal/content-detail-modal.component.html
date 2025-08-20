@@ -1,0 +1,517 @@
+<!-- Modal overlay -->
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" *ngIf="isVisible"
+  (click)="onBackdropClick($event)">
+
+  <!-- Modal container -->
+  <div class="bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+    (click)="$event.stopPropagation()">
+
+    <!-- Header -->
+    <div class="bg-gray-700 px-6 py-4 border-b border-gray-600">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div
+            class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-lg">
+            {{ getContentIcon() }}
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-white">{{ getContentTitle() }}</h2>
+            <p class="text-sm text-gray-400" *ngIf="content">
+              ID: {{ content.id }} • Type: {{ getContentTypeFromContent(content) }}
+            </p>
+          </div>
+        </div>
+
+        <button (click)="onClose()" class="text-gray-400 hover:text-white transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading state -->
+    <div class="flex items-center justify-center py-16" *ngIf="isLoading">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-4"></div>
+        <p class="text-gray-400">Chargement des détails...</p>
+      </div>
+    </div>
+
+    <!-- Content body -->
+    <div class="p-6 max-h-[60vh] overflow-y-auto" *ngIf="!isLoading && content">
+
+      <!-- Mot en attente -->
+      <div *ngIf="isPendingWord(content)" class="space-y-6">
+        <!-- Informations principales -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-3">Informations du mot</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Mot</label>
+              <p class="text-white font-medium">{{ content.word }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Langue</label>
+              <p class="text-white">{{ content.language }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Définition -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-2">Définition</h4>
+          <p class="text-gray-300">{{ content.definition }}</p>
+        </div>
+
+        <!-- Significations -->
+        <div class="bg-gray-700 rounded-lg p-4" *ngIf="content.meanings && content.meanings.length > 0">
+          <h4 class="text-md font-semibold text-white mb-3">Significations</h4>
+          <div class="space-y-3">
+            <div *ngFor="let meaning of content.meanings" class="border-l-2 border-purple-500 pl-3">
+              <p class="text-gray-300">{{ meaning.definition }}</p>
+              <div class="text-sm text-gray-500 mt-1" *ngIf="meaning.partOfSpeech">
+                <span class="inline-block bg-gray-600 rounded px-2 py-1">{{ meaning.partOfSpeech }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Exemples -->
+        <div class="bg-gray-700 rounded-lg p-4" *ngIf="content.examples && content.examples.length > 0">
+          <h4 class="text-md font-semibold text-white mb-3">Exemples d'utilisation</h4>
+          <div class="space-y-2">
+            <div *ngFor="let example of content.examples" class="bg-gray-600 rounded p-3">
+              <p class="text-gray-300 italic">"{{ example.sentence }}"</p>
+              <p class="text-gray-500 text-sm mt-1" *ngIf="example.translation">
+                Traduction : {{ example.translation }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Post de communauté -->
+      <div *ngIf="isPendingCommunityPost(content)" class="space-y-6">
+        <!-- En-tête du post -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-2">{{ content.title }}</h3>
+          <div class="flex items-center gap-4 text-sm text-gray-400">
+            <span>{{ content.community.name }}</span>
+            <span>•</span>
+            <span>par {{ content.author.username }}</span>
+            <span>•</span>
+            <span>{{ formatDate(content.createdAt) }}</span>
+          </div>
+        </div>
+
+        <!-- Contenu du post -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-2">Contenu</h4>
+          <div class="prose prose-invert max-w-none">
+            <p class="text-gray-300 whitespace-pre-wrap">{{ content.content }}</p>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="bg-gray-700 rounded-lg p-4" *ngIf="content.tags && content.tags.length > 0">
+          <h4 class="text-md font-semibold text-white mb-2">Tags</h4>
+          <div class="flex flex-wrap gap-2">
+            <span *ngFor="let tag of content.tags" class="bg-purple-600 text-white px-2 py-1 rounded text-sm">
+              #{{ tag }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Pièces jointes -->
+        <div class="bg-gray-700 rounded-lg p-4" *ngIf="content.attachments && content.attachments.length > 0">
+          <h4 class="text-md font-semibold text-white mb-2">Pièces jointes</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div *ngFor="let attachment of content.attachments" class="bg-gray-600 rounded p-3 flex items-center gap-3">
+              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <div>
+                <p class="text-white text-sm">{{ attachment.filename }}</p>
+                <p class="text-gray-400 text-xs">{{ formatFileSize(attachment.size) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message privé signalé -->
+      <div *ngIf="isReportedPrivateMessage(content)" class="space-y-6">
+        <!-- Détails du signalement -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-3">Signalement de message privé</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Expéditeur</label>
+              <p class="text-white">{{ content.sender.username }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Destinataire</label>
+              <p class="text-white">{{ content.recipient.username }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Signalé par</label>
+              <p class="text-white">{{ content.reportedBy.username }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Sévérité</label>
+              <span class="px-2 py-1 rounded text-sm" [ngClass]="getSeverityColor(content.severity)">
+                {{ content.severity | titlecase }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contenu du message -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-2">Contenu signalé</h4>
+          <div class="bg-gray-600 rounded p-3">
+            <p class="text-gray-300">{{ content.content }}</p>
+          </div>
+        </div>
+
+        <!-- Raison du signalement -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-2">Raison du signalement</h4>
+          <p class="text-yellow-400 mb-2">{{ getReportReasonLabel(content.reportReason) }}</p>
+          <p class="text-gray-300" *ngIf="content.reportDescription">{{ content.reportDescription }}</p>
+        </div>
+      </div>
+
+      <!-- Profil utilisateur signalé -->
+      <div *ngIf="isReportedUserProfile(content)" class="space-y-6">
+        <!-- Informations utilisateur -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-3">Profil signalé</h3>
+          <div class="flex items-center gap-4 mb-4">
+            <div
+              class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <span class="text-white text-lg font-bold">
+                {{ content.user.username.charAt(0).toUpperCase() }}
+              </span>
+            </div>
+            <div>
+              <h4 class="text-white font-medium">{{ content.user.username }}</h4>
+              <p class="text-gray-400">{{ content.user.email }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Champs signalés -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-3">Champs signalés</h4>
+          <div class="space-y-2">
+            <div *ngIf="content.reportedFields.bio" class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              <span class="text-white">Biographie</span>
+            </div>
+            <div *ngIf="content.reportedFields.avatar" class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              <span class="text-white">Photo de profil</span>
+            </div>
+            <div *ngIf="content.reportedFields.username" class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"></path>
+              </svg>
+              <span class="text-white">Nom d'utilisateur</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Détails du signalement -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-2">Détails du signalement</h4>
+          <p class="text-yellow-400 mb-2">{{ getReportReasonLabel(content.reportReason) }}</p>
+          <p class="text-gray-300" *ngIf="content.reportDescription">{{ content.reportDescription }}</p>
+        </div>
+      </div>
+
+      <!-- Contenu IA -->
+      <div *ngIf="isAIFlaggedContent(content)" class="space-y-6">
+        <!-- Détection IA -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-3">Détection automatique par IA</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Modèle IA</label>
+              <p class="text-white">{{ content.aiModel }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Confiance</label>
+              <div class="flex items-center gap-2">
+                <div class="w-20 bg-gray-600 rounded-full h-2">
+                  <div class="bg-gradient-to-r from-red-500 to-yellow-500 h-2 rounded-full"
+                    [style.width.%]="content.confidence">
+                  </div>
+                </div>
+                <span class="text-white text-sm">{{ content.confidence }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Raisons détectées -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-3">Problèmes détectés</h4>
+          <div class="flex flex-wrap gap-2">
+            <span *ngFor="let reason of content.flaggedReasons" class="bg-red-600 text-white px-2 py-1 rounded text-sm">
+              {{ getReportReasonLabel(reason) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Contenu analysé -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-2">Contenu analysé</h4>
+          <div class="bg-gray-600 rounded p-3">
+            <p class="text-gray-300">{{ content.content }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Catégorie en attente -->
+      <div *ngIf="isPendingCategory(content)" class="space-y-6">
+        <!-- Informations principales -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-3">Informations de la catégorie</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Nom</label>
+              <p class="text-white font-semibold">{{ getCategoryName(content) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Langue</label>
+              <p class="text-white">{{ getLanguageDisplayName(content) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="bg-gray-700 rounded-lg p-4" *ngIf="getCategoryDescription(content)">
+          <h4 class="text-md font-semibold text-white mb-2">Description</h4>
+          <p class="text-gray-300">{{ getCategoryDescription(content) }}</p>
+        </div>
+
+        <!-- Statut système -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-3">Statut de modération</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Statut système</label>
+              <span [class]="getSystemStatusClass(getCategorySystemStatus(content))"
+                class="px-2 py-1 rounded-full text-sm font-medium">
+                {{ getSystemStatusLabel(getCategorySystemStatus(content)) }}
+              </span>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Ordre d'affichage</label>
+              <span class="text-white">{{ getCategoryOrder(content) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Informations de soumission -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-3">Soumission</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Proposée par</label>
+              <p class="text-white">{{ getContentAuthor(content) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Date de soumission</label>
+              <p class="text-white">{{ formatDate(getCategorySubmittedAt(content)) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes de modération (si disponibles) -->
+        <div class="bg-gray-700 rounded-lg p-4" *ngIf="getCategoryModerationNotes(content)">
+          <h4 class="text-md font-semibold text-white mb-2">Notes de modération</h4>
+          <p class="text-gray-300">{{ getCategoryModerationNotes(content) }}</p>
+        </div>
+      </div>
+
+      <!-- Langue en attente -->
+      <div *ngIf="isPendingLanguage(content)" class="space-y-6">
+        <!-- Informations principales -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h3 class="text-lg font-semibold text-white mb-3">Informations de la langue</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Nom</label>
+              <p class="text-white font-semibold">{{ content.name }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Nom natif</label>
+              <p class="text-white">{{ content.nativeName || 'Non spécifié' }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Région</label>
+              <p class="text-white">{{ content.region }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Pays</label>
+              <p class="text-white">{{ content.country }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Code ISO</label>
+              <p class="text-white">{{ content.code || 'Non défini' }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Famille linguistique</label>
+              <p class="text-white">{{ content.family || 'Non spécifiée' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statut système -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-3">Statut de modération</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Statut système</label>
+              <span [class]="getSystemStatusClass(content.systemStatus)"
+                class="px-2 py-1 rounded-full text-sm font-medium">
+                {{ getSystemStatusLabel(content.systemStatus) }}
+              </span>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Priorité</label>
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 rounded-full" [class]="getPriorityColorClass(content.priority)"></div>
+                <span class="text-white">{{ content.priority }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistiques (si disponibles) -->
+        <div class="bg-gray-700 rounded-lg p-4" *ngIf="content.stats">
+          <h4 class="text-md font-semibold text-white mb-3">Statistiques</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Nombre de mots</label>
+              <p class="text-white">{{ content.stats.totalWords || 0 }}</p>
+            </div>
+            <div *ngIf="content.stats.totalSpeakers">
+              <label class="block text-sm text-gray-400 mb-1">Locuteurs estimés</label>
+              <p class="text-white">{{ formatNumber(content.stats.totalSpeakers) }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Informations de soumission -->
+        <div class="bg-gray-700 rounded-lg p-4">
+          <h4 class="text-md font-semibold text-white mb-3">Soumission</h4>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Proposée par</label>
+              <p class="text-white">{{ getContentAuthor(content) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Date de soumission</label>
+              <p class="text-white">{{ formatDate(content.submittedAt) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Métadonnées communes -->
+      <div class="bg-gray-700 rounded-lg p-4 mt-6">
+        <h4 class="text-md font-semibold text-white mb-3">Métadonnées</h4>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <label class="block text-gray-400 mb-1">Créé le</label>
+            <p class="text-white">{{ formatDate(getContentCreationDate(content)) }}</p>
+          </div>
+          <div *ngIf="getModeratedBy(content)">
+            <label class="block text-gray-400 mb-1">Modéré par</label>
+            <p class="text-white">{{ getModeratedBy(content) }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions footer -->
+    <div class="bg-gray-700 px-6 py-4 border-t border-gray-600" *ngIf="!isLoading && content">
+      <!-- Formulaire de raison (si affiché) -->
+      <div class="mb-4" *ngIf="showReasonInput">
+        <label class="block text-sm font-medium text-gray-300 mb-2">
+          Raison pour {{ selectedAction === 'reject' ? 'le rejet' : 'l\'escalade' }} :
+        </label>
+        <textarea [(ngModel)]="actionReason" placeholder="Expliquez la raison..."
+          class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+          rows="3">
+        </textarea>
+
+        <label class="block text-sm font-medium text-gray-300 mb-2 mt-3">
+          Notes additionnelles (optionnel) :
+        </label>
+        <textarea [(ngModel)]="actionNotes" placeholder="Notes pour l'équipe de modération..."
+          class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+          rows="2">
+        </textarea>
+
+        <div class="flex justify-end gap-3 mt-4">
+          <button (click)="onCancelReason()"
+            class="px-4 py-2 text-gray-300 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors">
+            Annuler
+          </button>
+          <button (click)="onConfirmActionWithReason()" [disabled]="!actionReason.trim()"
+            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors">
+            Confirmer
+          </button>
+        </div>
+      </div>
+
+      <!-- Boutons d'actions -->
+      <div class="flex justify-end gap-3" *ngIf="!showReasonInput">
+        <button (click)="onClose()"
+          class="px-4 py-2 text-gray-300 bg-gray-600 hover:bg-gray-500 rounded-lg transition-colors">
+          Fermer
+        </button>
+
+        <button (click)="onAction('approve')"
+          class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          Approuver
+        </button>
+
+        <button (click)="onAction('reject')"
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Rejeter
+        </button>
+
+        <button (click)="onAction('escalate')"
+          class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12" />
+          </svg>
+          Escalader
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

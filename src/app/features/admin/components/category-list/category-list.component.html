@@ -1,0 +1,254 @@
+<div class="category-list-container">
+  <!-- Header avec statistiques et actions -->
+  <div class="list-header">
+    <div class="stats-section">
+      <div class="stat-item">
+        <i class="fas fa-tags"></i>
+        <span class="stat-value">{{ totalCategories }}</span>
+        <span class="stat-label">Catégories</span>
+      </div>
+      <div class="stat-item">
+        <i class="fas fa-check-circle text-success"></i>
+        <span class="stat-value">{{ activeCategories }}</span>
+        <span class="stat-label">Actives</span>
+      </div>
+      <div class="stat-item">
+        <i class="fas fa-pause-circle text-warning"></i>
+        <span class="stat-value">{{ inactiveCategories }}</span>
+        <span class="stat-label">Inactives</span>
+      </div>
+    </div>
+
+    <div class="list-actions">
+      <!-- Sélection globale -->
+      <div class="selection-controls">
+        <input type="checkbox" class="form-check-input" [checked]="allSelected"
+          [indeterminate]="someSelected && !allSelected" (change)="onToggleSelectAll($event)"
+          [disabled]="isLoading || !categories || categories.length === 0" />
+        <span class="selection-text">
+          {{ selectedCount }} / {{ totalCategories }} sélectionnée(s)
+        </span>
+      </div>
+
+      <!-- Actions rapides -->
+      <div class="quick-actions" *ngIf="selectedCount > 0">
+        <button class="btn btn-sm btn-outline-success" (click)="onBulkActivate()" [disabled]="isLoading">
+          <i class="fas fa-check"></i>
+          Activer ({{ selectedCount }})
+        </button>
+        <button class="btn btn-sm btn-outline-warning" (click)="onBulkDeactivate()" [disabled]="isLoading">
+          <i class="fas fa-pause"></i>
+          Désactiver ({{ selectedCount }})
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des catégories -->
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th scope="col" class="selection-column">
+              <input type="checkbox" class="form-check-input" [checked]="allSelected"
+                [indeterminate]="someSelected && !allSelected" (change)="onToggleSelectAll($event)"
+                [disabled]="isLoading || !categories || categories.length === 0" />
+            </th>
+
+            <th scope="col" class="sortable-column"
+              [class.sorted-asc]="currentSort?.field === 'name' && currentSort?.direction === 'asc'"
+              [class.sorted-desc]="currentSort?.field === 'name' && currentSort?.direction === 'desc'"
+              (click)="onSort('name')">
+              <div class="column-header">
+                <span>Nom</span>
+                <i class="fas fa-sort"></i>
+              </div>
+            </th>
+
+            <th scope="col">Description</th>
+
+            <th scope="col" class="sortable-column"
+              [class.sorted-asc]="currentSort?.field === 'language' && currentSort?.direction === 'asc'"
+              [class.sorted-desc]="currentSort?.field === 'language' && currentSort?.direction === 'desc'"
+              (click)="onSort('language')">
+              <div class="column-header">
+                <span>Langue</span>
+                <i class="fas fa-sort"></i>
+              </div>
+            </th>
+
+            <th scope="col" class="sortable-column"
+              [class.sorted-asc]="currentSort?.field === 'wordCount' && currentSort?.direction === 'asc'"
+              [class.sorted-desc]="currentSort?.field === 'wordCount' && currentSort?.direction === 'desc'"
+              (click)="onSort('wordCount')">
+              <div class="column-header">
+                <span>Mots</span>
+                <i class="fas fa-sort"></i>
+              </div>
+            </th>
+
+            <th scope="col" class="sortable-column"
+              [class.sorted-asc]="currentSort?.field === 'isActive' && currentSort?.direction === 'asc'"
+              [class.sorted-desc]="currentSort?.field === 'isActive' && currentSort?.direction === 'desc'"
+              (click)="onSort('isActive')">
+              <div class="column-header">
+                <span>Statut</span>
+                <i class="fas fa-sort"></i>
+              </div>
+            </th>
+
+            <th scope="col" class="sortable-column"
+              [class.sorted-asc]="currentSort?.field === 'createdAt' && currentSort?.direction === 'asc'"
+              [class.sorted-desc]="currentSort?.field === 'createdAt' && currentSort?.direction === 'desc'"
+              (click)="onSort('createdAt')">
+              <div class="column-header">
+                <span>Créée le</span>
+                <i class="fas fa-sort"></i>
+              </div>
+            </th>
+
+            <th scope="col" class="actions-column">Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <!-- Loader pendant le chargement -->
+          <tr *ngIf="isLoading" class="loading-row">
+            <td colspan="8" class="text-center py-4">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Chargement...</span>
+              </div>
+              <p class="loading-text mb-0">Chargement des catégories...</p>
+            </td>
+          </tr>
+
+          <!-- Message si aucune catégorie -->
+          <tr *ngIf="!isLoading && (!categories || categories.length === 0)" class="empty-row">
+            <td colspan="8" class="text-center py-5">
+              <div class="empty-state">
+                <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">Aucune catégorie trouvée</h5>
+                <p class="text-muted mb-0">
+                  Aucune catégorie ne correspond aux critères de recherche actuels.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Lignes des catégories -->
+          <tr *ngFor="let category of categories; trackBy: trackByFn" class="category-row"
+            [class.selected]="isSelected(category.id)" [class.inactive]="!category.isActive">
+            <!-- Checkbox de sélection -->
+            <td class="selection-cell">
+              <input type="checkbox" class="form-check-input" [checked]="isSelected(category.id)"
+                (change)="onToggleSelection(category.id, $event)" [disabled]="isLoading" />
+            </td>
+
+            <!-- Nom -->
+            <td class="name-cell">
+              <div class="category-name">
+                <strong>{{ category.name }}</strong>
+                <span *ngIf="!category.isActive" class="badge bg-warning ms-2">Inactive</span>
+              </div>
+            </td>
+
+            <!-- Description -->
+            <td class="description-cell">
+              <span class="description-text" [title]="category.description || 'Aucune description'">
+                {{ category.description || 'Aucune description' }}
+              </span>
+            </td>
+
+            <!-- Langue -->
+            <td class="language-cell">
+              <div class="language-info">
+                <span class="language-name">{{ getLanguageName(category) }}</span>
+              </div>
+            </td>
+
+            <!-- Nombre de mots -->
+            <td class="word-count-cell">
+              <span class="badge bg-primary">
+                {{ category.wordCount || 0 }}
+              </span>
+            </td>
+
+            <!-- Statut -->
+            <td class="status-cell">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" [checked]="category.isActive"
+                  (change)="onToggleActive(category)" [disabled]="isLoading" [id]="'status-' + category.id" />
+                <label class="form-check-label" [for]="'status-' + category.id">
+                  {{ category.isActive ? 'Active' : 'Inactive' }}
+                </label>
+              </div>
+            </td>
+
+            <!-- Date de création -->
+            <td class="date-cell">
+              <span class="date-text">
+                {{ formatDate(category.createdAt) }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="actions-cell">
+              <div class="btn-group" role="group">
+                <button class="btn btn-sm btn-outline-primary" (click)="onEdit(category)" [disabled]="isLoading"
+                  title="Modifier la catégorie">
+                  <i class="fas fa-edit"></i>
+                </button>
+
+                <button class="btn btn-sm btn-outline-danger" (click)="onDelete(category)" [disabled]="isLoading"
+                  title="Supprimer la catégorie">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination-container" *ngIf="pagination && pagination.totalPages > 1">
+    <nav aria-label="Navigation des pages">
+      <ul class="pagination pagination-sm justify-content-center mb-0">
+        <!-- Page précédente -->
+        <li class="page-item" [class.disabled]="!pagination.hasPrevPage || isLoading">
+          <button class="page-link" (click)="onPageChange(pagination.page - 1)"
+            [disabled]="!pagination.hasPrevPage || isLoading">
+            <i class="fas fa-chevron-left"></i>
+            Précédent
+          </button>
+        </li>
+
+        <!-- Pages -->
+        <li *ngFor="let page of getPageNumbers()" class="page-item" [class.active]="page === pagination.page">
+          <button class="page-link" (click)="onPageChange(page)" [disabled]="isLoading || page === pagination.page">
+            {{ page }}
+          </button>
+        </li>
+
+        <!-- Page suivante -->
+        <li class="page-item" [class.disabled]="!pagination.hasNextPage || isLoading">
+          <button class="page-link" (click)="onPageChange(pagination.page + 1)"
+            [disabled]="!pagination.hasNextPage || isLoading">
+            Suivant
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Info pagination -->
+    <div class="pagination-info">
+      <small class="text-muted">
+        Page {{ pagination.page }} sur {{ pagination.totalPages }}
+        ({{ pagination.total }} catégorie(s) au total)
+      </small>
+    </div>
+  </div>
+</div>

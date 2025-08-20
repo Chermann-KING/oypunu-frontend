@@ -1,0 +1,333 @@
+/* Styles pour le composant Content Detail Modal */
+
+.modal-overlay {
+  backdrop-filter: blur(4px);
+  animation: fade-in 0.2s ease-out;
+}
+
+.modal-container {
+  animation: slide-in 0.3s ease-out;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-1rem) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Content sections */
+.content-section {
+  @apply bg-gray-700 rounded-lg p-4 space-y-4;
+  
+  &.highlight {
+    @apply ring-2 ring-purple-500 ring-opacity-50;
+  }
+}
+
+.content-header {
+  @apply border-b border-gray-600 pb-3 mb-4;
+  
+  h3 {
+    @apply text-lg font-semibold text-white;
+  }
+  
+  .meta-info {
+    @apply text-sm text-gray-400 flex items-center gap-2;
+    
+    .separator {
+      @apply w-1 h-1 bg-gray-500 rounded-full;
+    }
+  }
+}
+
+/* Field groups */
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.field-item {
+  @apply space-y-1;
+  
+  .field-label {
+    @apply block text-sm text-gray-400 font-medium;
+  }
+  
+  .field-value {
+    @apply text-white;
+  }
+}
+
+/* Severity indicators */
+.severity-low {
+  @apply text-green-400 bg-green-400 bg-opacity-10;
+}
+
+.severity-medium {
+  @apply text-yellow-400 bg-yellow-400 bg-opacity-10;
+}
+
+.severity-high {
+  @apply text-orange-400 bg-orange-400 bg-opacity-10;
+}
+
+.severity-critical {
+  @apply text-red-400 bg-red-400 bg-opacity-10;
+}
+
+/* Status indicators */
+.status-pending {
+  @apply text-yellow-400;
+}
+
+.status-resolved {
+  @apply text-green-400;
+}
+
+.status-dismissed {
+  @apply text-gray-400;
+}
+
+.status-escalated {
+  @apply text-red-400;
+}
+
+/* Content display */
+.content-text {
+  @apply bg-gray-600 rounded-lg p-3 text-gray-300;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.content-examples {
+  .example-item {
+    @apply bg-gray-600 rounded-lg p-3 border-l-4 border-purple-500;
+    
+    .example-text {
+      @apply text-gray-300 italic;
+    }
+    
+    .example-meta {
+      @apply text-gray-500 text-sm mt-2;
+    }
+  }
+}
+
+/* Tags and badges */
+.tag-list {
+  @apply flex flex-wrap gap-2;
+}
+
+.tag-item {
+  @apply bg-purple-600 text-white px-2 py-1 rounded text-sm;
+}
+
+.badge-list {
+  @apply flex flex-wrap gap-2;
+}
+
+.report-reason-badge {
+  @apply bg-red-600 text-white px-2 py-1 rounded text-sm;
+}
+
+.field-flag-badge {
+  @apply bg-orange-600 text-white px-2 py-1 rounded text-sm;
+}
+
+/* Progress indicators */
+.confidence-bar {
+  @apply w-full bg-gray-600 rounded-full h-2;
+  
+  .confidence-fill {
+    @apply bg-gradient-to-r from-red-500 to-yellow-500 h-2 rounded-full transition-all duration-300;
+  }
+}
+
+/* Media content */
+.attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.attachment-item {
+  @apply bg-gray-600 rounded-lg p-3 flex items-center gap-3;
+  
+  .attachment-icon {
+    @apply w-8 h-8 text-gray-400 flex-shrink-0;
+  }
+  
+  .attachment-info {
+    @apply min-w-0 flex-1;
+    
+    .attachment-name {
+      @apply text-white text-sm truncate;
+    }
+    
+    .attachment-size {
+      @apply text-gray-400 text-xs;
+    }
+  }
+}
+
+/* Action buttons */
+.action-button {
+  @apply px-4 py-2 rounded-lg transition-colors flex items-center gap-2;
+  
+  &.approve {
+    @apply bg-green-600 hover:bg-green-700 text-white;
+  }
+  
+  &.reject {
+    @apply bg-red-600 hover:bg-red-700 text-white;
+  }
+  
+  &.escalate {
+    @apply bg-orange-600 hover:bg-orange-700 text-white;
+  }
+  
+  &.neutral {
+    @apply bg-gray-600 hover:bg-gray-500 text-gray-300;
+  }
+  
+  &:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+}
+
+/* Form elements */
+.reason-input {
+  @apply w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2;
+  @apply text-white placeholder-gray-400 resize-none;
+  @apply focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent;
+  
+  &:focus {
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+  }
+}
+
+/* User avatars */
+.user-avatar {
+  @apply w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600;
+  @apply flex items-center justify-center text-white font-bold;
+}
+
+.user-info {
+  @apply flex items-center gap-3;
+  
+  .user-details {
+    .user-name {
+      @apply text-white font-medium;
+    }
+    
+    .user-email {
+      @apply text-gray-400 text-sm;
+    }
+  }
+}
+
+/* Scrollbar styling */
+.modal-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(75 85 99) rgb(55 65 81);
+}
+
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: rgb(55 65 81);
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgb(75 85 99);
+  border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: rgb(107 114 128);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .attachment-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-container {
+    margin: 0.5rem;
+    max-height: calc(100vh - 1rem);
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .action-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Loading state */
+.loading-spinner {
+  @apply animate-spin rounded-full border-b-2 border-purple-500;
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .content-section {
+    @apply border border-gray-500;
+  }
+  
+  .field-value {
+    @apply text-white;
+  }
+  
+  .action-button {
+    @apply border-2 border-current;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-container {
+    animation: none;
+  }
+  
+  .loading-spinner {
+    animation: none;
+  }
+  
+  .confidence-fill {
+    transition: none;
+  }
+}
