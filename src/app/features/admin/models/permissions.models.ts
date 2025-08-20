@@ -53,6 +53,11 @@ export enum Permission {
   MANAGE_SYSTEM = 'canManageSystem',
   VIEW_SYSTEM_LOGS = 'canViewLogs',
   MANAGE_LANGUAGES = 'canManageLanguages',
+  MANAGE_CATEGORIES = 'canManageCategories',
+  CREATE_CATEGORIES = 'canCreateCategories',
+  EDIT_CATEGORIES = 'canEditCategories',
+  DELETE_CATEGORIES = 'canDeleteCategories',
+  VIEW_CATEGORIES = 'canViewCategories',
   MANAGE_SETTINGS = 'canManageSettings',
   VIEW_AUDIT_LOGS = 'canViewAuditLogs',
   MANAGE_BACKUPS = 'canManageBackups',
@@ -306,7 +311,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     Permission.EXPORT_ANALYTICS,
     Permission.GENERATE_REPORTS,
     Permission.EXPORT_DATA,
-    Permission.VIEW_SYSTEM_STATUS
+    Permission.VIEW_SYSTEM_STATUS,
+    Permission.VIEW_CATEGORIES,
+    Permission.MANAGE_CATEGORIES,
+    Permission.CREATE_CATEGORIES,
+    Permission.EDIT_CATEGORIES,
+    Permission.DELETE_CATEGORIES
   ],
   
   [UserRole.SUPERADMIN]: [
@@ -405,6 +415,11 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       Permission.MANAGE_SYSTEM,
       Permission.VIEW_SYSTEM_LOGS,
       Permission.MANAGE_LANGUAGES,
+      Permission.MANAGE_CATEGORIES,
+      Permission.CREATE_CATEGORIES,
+      Permission.EDIT_CATEGORIES,
+      Permission.DELETE_CATEGORIES,
+      Permission.VIEW_CATEGORIES,
       Permission.MANAGE_SETTINGS,
       Permission.VIEW_AUDIT_LOGS,
       Permission.MANAGE_BACKUPS,

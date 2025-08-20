@@ -1,9 +1,9 @@
 /**
  * @fileoverview Modèles TypeScript pour le module Admin
- * 
+ *
  * Définit toutes les interfaces, types et enums nécessaires pour le module
  * d'administration, suivant les principes SOLID et la séparation des responsabilités.
- * 
+ *
  * @author Équipe O'Ypunu Frontend
  * @version 1.0.0
  * @since 2025-01-01
@@ -16,9 +16,9 @@
  */
 export enum UserRole {
   USER = 'user',
-  CONTRIBUTOR = 'contributor', 
+  CONTRIBUTOR = 'contributor',
   ADMIN = 'admin',
-  SUPERADMIN = 'superadmin'
+  SUPERADMIN = 'superadmin',
 }
 
 /**
@@ -26,8 +26,8 @@ export enum UserRole {
  */
 export enum ModerationStatus {
   PENDING = 'pending',
-  APPROVED = 'approved', 
-  REJECTED = 'rejected'
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
 }
 
 /**
@@ -42,7 +42,7 @@ export enum ActivityType {
   USER_SUSPENDED = 'user_suspended',
   ROLE_CHANGED = 'role_changed',
   COMMUNITY_CREATED = 'community_created',
-  COMMUNITY_DELETED = 'community_deleted'
+  COMMUNITY_DELETED = 'community_deleted',
 }
 
 // ===== INTERFACES UTILISATEUR =====
@@ -152,11 +152,344 @@ export interface WordExample {
   readonly context?: string;
 }
 
+// ===== INTERFACES POUR TOUS LES TYPES DE CONTENU MODÉRABLE =====
+
+/**
+ * Types de contenu modérable étendus
+ */
+export enum ModerableContentType {
+  WORD = 'word',
+  DEFINITION = 'definition', 
+  COMMENT = 'comment',
+  COMMUNITY_POST = 'community_post',
+  PRIVATE_MESSAGE = 'private_message',
+  USER_PROFILE = 'user_profile',
+  MEDIA_CONTENT = 'media_content',
+  LANGUAGE = 'language',
+  CATEGORY = 'category',
+  REPORT = 'report'
+}
+
+/**
+ * Raisons de signalement
+ */
+export enum ReportReason {
+  INAPPROPRIATE = 'inappropriate',
+  SPAM = 'spam', 
+  INCORRECT = 'incorrect',
+  OFFENSIVE = 'offensive',
+  COPYRIGHT = 'copyright',
+  HARASSMENT = 'harassment',
+  HATE_SPEECH = 'hate_speech',
+  MISINFORMATION = 'misinformation',
+  OTHER = 'other'
+}
+
+/**
+ * Niveaux de sévérité
+ */
+export enum ReportSeverity {
+  LOW = 'low',
+  MEDIUM = 'medium', 
+  HIGH = 'high',
+  CRITICAL = 'critical'
+}
+
+/**
+ * Statuts des signalements
+ */
+export enum ReportStatus {
+  PENDING = 'pending',
+  UNDER_REVIEW = 'under_review',
+  RESOLVED = 'resolved',
+  DISMISSED = 'dismissed',
+  ESCALATED = 'escalated'
+}
+
+/**
+ * Post de communauté en attente de modération
+ */
+export interface PendingCommunityPost {
+  readonly id: string;
+  readonly _id: string;
+  readonly title: string;
+  readonly content: string;
+  readonly community: {
+    readonly id: string;
+    readonly name: string;
+    readonly slug: string;
+  };
+  readonly author: User;
+  readonly attachments?: MediaAttachment[];
+  readonly tags?: string[];
+  readonly status: ModerationStatus;
+  readonly createdAt: Date;
+  readonly reportCount: number;
+  readonly autoFlagged: boolean;
+  readonly flaggedReason?: string;
+  readonly moderatedBy?: User;
+  readonly moderatedAt?: Date;
+  readonly moderationReason?: string;
+}
+
+/**
+ * Message privé signalé
+ */
+export interface ReportedPrivateMessage {
+  readonly id: string;
+  readonly _id: string;
+  readonly content: string;
+  readonly sender: User;
+  readonly recipient: User;
+  readonly conversationId: string;
+  readonly reportedBy: User;
+  readonly reportReason: ReportReason;
+  readonly reportDescription?: string;
+  readonly status: ReportStatus;
+  readonly severity: ReportSeverity;
+  readonly createdAt: Date;
+  readonly reportedAt: Date;
+  readonly moderatedBy?: User;
+  readonly moderatedAt?: Date;
+  readonly actionTaken?: string;
+}
+
+/**
+ * Profil utilisateur signalé
+ */
+export interface ReportedUserProfile {
+  readonly id: string;
+  readonly _id: string;
+  readonly user: User;
+  readonly reportedFields: {
+    readonly bio?: boolean;
+    readonly avatar?: boolean;
+    readonly coverPhoto?: boolean;
+    readonly username?: boolean;
+    readonly displayName?: boolean;
+  };
+  readonly reportedBy: User;
+  readonly reportReason: ReportReason;
+  readonly reportDescription?: string;
+  readonly status: ReportStatus;
+  readonly severity: ReportSeverity;
+  readonly reportedAt: Date;
+  readonly moderatedBy?: User;
+  readonly moderatedAt?: Date;
+  readonly actionTaken?: string;
+}
+
+/**
+ * Commentaire signalé
+ */
+export interface ReportedComment {
+  readonly id: string;
+  readonly _id: string;
+  readonly content: string;
+  readonly author: User;
+  readonly targetType: 'word' | 'community_post' | 'user_profile';
+  readonly targetId: string;
+  readonly targetTitle?: string;
+  readonly parentComment?: string;
+  readonly reportedBy: User;
+  readonly reportReason: ReportReason;
+  readonly reportDescription?: string;
+  readonly status: ReportStatus;
+  readonly severity: ReportSeverity;
+  readonly createdAt: Date;
+  readonly reportedAt: Date;
+  readonly moderatedBy?: User;
+  readonly moderatedAt?: Date;
+  readonly actionTaken?: string;
+}
+
+/**
+ * Contenu multimédia signalé
+ */
+export interface ReportedMediaContent {
+  readonly id: string;
+  readonly _id: string;
+  readonly mediaType: 'image' | 'audio' | 'video' | 'document';
+  readonly filename: string;
+  readonly url: string;
+  readonly thumbnailUrl?: string;
+  readonly uploadedBy: User;
+  readonly associatedContent?: {
+    readonly type: ModerableContentType;
+    readonly id: string;
+    readonly title?: string;
+  };
+  readonly reportedBy: User;
+  readonly reportReason: ReportReason;
+  readonly reportDescription?: string;
+  readonly status: ReportStatus;
+  readonly severity: ReportSeverity;
+  readonly fileSize: number;
+  readonly mimeType: string;
+  readonly uploadedAt: Date;
+  readonly reportedAt: Date;
+  readonly moderatedBy?: User;
+  readonly moderatedAt?: Date;
+  readonly actionTaken?: string;
+}
+
+/**
+ * Contenu auto-détecté par IA
+ */
+export interface AIFlaggedContent {
+  readonly id: string;
+  readonly _id: string;
+  readonly contentType: ModerableContentType;
+  readonly contentId: string;
+  readonly content: string;
+  readonly author: User;
+  readonly aiModel: string;
+  readonly confidence: number; // 0-100
+  readonly flaggedReasons: ReportReason[];
+  readonly detectedAt: Date;
+  readonly status: ReportStatus;
+  readonly severity: ReportSeverity;
+  readonly reviewedBy?: User;
+  readonly reviewedAt?: Date;
+  readonly humanOverride?: boolean;
+  readonly finalDecision?: 'approve' | 'reject' | 'needs_human_review';
+}
+
+/**
+ * Pièce jointe multimédia
+ */
+export interface MediaAttachment {
+  readonly id: string;
+  readonly filename: string;
+  readonly url: string;
+  readonly mimeType: string;
+  readonly size: number;
+  readonly thumbnailUrl?: string;
+}
+
+/**
+ * Langue en attente de modération
+ */
+export interface PendingLanguage {
+  readonly id: string;
+  readonly _id: string;
+  readonly name: string;
+  readonly nativeName?: string;
+  readonly code?: string; // Code ISO langue
+  readonly region: string;
+  readonly country: string;
+  readonly family?: string; // Famille linguistique
+  readonly status: ModerationStatus;
+  readonly systemStatus: 'pending_approval' | 'approved' | 'rejected';
+  readonly submittedBy: User;
+  readonly createdBy: User;
+  readonly submittedAt: Date;
+  readonly createdAt: Date;
+  readonly moderatedBy?: User;
+  readonly moderatedAt?: Date;
+  readonly moderationReason?: string;
+  readonly isActive: boolean;
+  readonly isFeatured: boolean;
+  readonly priority: number;
+  readonly stats?: {
+    readonly totalWords: number;
+    readonly totalSpeakers?: number;
+  };
+}
+
+/**
+ * Interface pour une catégorie en attente de modération
+ * Soumise par un contributeur et en attente d'approbation par un admin
+ */
+export interface PendingCategory {
+  readonly id: string;
+  readonly _id: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly languageId: string;
+  readonly language?: string; // Nom de la langue pour l'affichage
+  readonly order: number;
+  readonly systemStatus: ModerationStatus;
+  readonly submittedBy: User;
+  readonly submittedAt: Date;
+  readonly moderatedBy?: User;
+  readonly moderatedAt?: Date;
+  readonly moderationReason?: string;
+  readonly moderationNotes?: string;
+  readonly isVisible: boolean;
+  readonly isActive: boolean;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+}
+
+// ===== INTERFACES CATÉGORIES =====
+
+/**
+ * Interface pour une catégorie
+ */
+export interface CategoryAdmin {
+  readonly id: string;
+  readonly _id: string;
+  readonly name: string;
+  readonly description?: string;
+  readonly languageId: string; // Maintenant requis pour cohérence
+  readonly language?: string; // Legacy field
+  readonly isActive: boolean;
+  readonly order: number;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly wordCount?: number;
+  // Champs de modération - pour les contributeurs
+  readonly systemStatus: ModerationStatus;
+  readonly moderatedBy?: string;
+  readonly moderatedAt?: Date;
+  readonly moderationNotes?: string;
+  readonly submittedBy?: string;
+  readonly isVisible?: boolean; // Contrôle la visibilité après approbation
+}
+
+/**
+ * Interface pour créer une nouvelle catégorie
+ */
+export interface CreateCategoryData {
+  readonly name: string;
+  readonly description?: string;
+  readonly languageId: string;
+  readonly isActive?: boolean;
+  readonly order?: number;
+}
+
+/**
+ * Interface pour modifier une catégorie
+ */
+export interface UpdateCategoryData {
+  readonly name?: string;
+  readonly description?: string;
+  readonly languageId?: string;
+  readonly isActive?: boolean;
+  readonly order?: number;
+}
+
+
+/**
+ * Union de tous les types de contenu modérable
+ */
+export type ModerableContent = 
+  | PendingWord
+  | PendingCommunityPost  
+  | ReportedPrivateMessage
+  | ReportedUserProfile
+  | ReportedComment
+  | ReportedMediaContent
+  | AIFlaggedContent
+  | PendingLanguage
+  | PendingCategory;
+
 /**
  * Action de modération
  */
 export interface ModerationAction {
-  readonly action: 'approve' | 'reject';
+  readonly action: 'approve' | 'reject' | 'escalate';
   readonly reason?: string;
   readonly notes?: string;
 }
@@ -355,28 +688,32 @@ export interface ApiResponse<T = any> {
  * Statistiques du dashboard admin
  */
 export interface DashboardStats {
+  /** Nombre total d'utilisateurs inscrits */
   readonly totalUsers: number;
+  /** Nombre d'utilisateurs actifs (connexion récente) */
   readonly activeUsers: number;
-  readonly newUsersToday: number;
-  readonly newUsersThisWeek: number;
-  readonly newUsersThisMonth: number;
-  
+  /** Nombre d'utilisateurs suspendus */
+  readonly suspendedUsers: number;
+  /** Nombre total de mots dans le dictionnaire */
   readonly totalWords: number;
+  /** Nombre de mots en attente de modération */
   readonly pendingWords: number;
+  /** Nombre de mots approuvés */
   readonly approvedWords: number;
+  /** Nombre de mots rejetés */
   readonly rejectedWords: number;
-  readonly newWordsToday: number;
-  readonly newWordsThisWeek: number;
-  readonly newWordsThisMonth: number;
-  
+  /** Nombre total de communautés */
   readonly totalCommunities: number;
+  /** Nombre de communautés actives */
   readonly activeCommunities: number;
-  readonly newCommunitiesToday: number;
-  readonly newCommunitiesThisWeek: number;
-  readonly newCommunitiesThisMonth: number;
-  
-  readonly systemHealthStatus?: 'healthy' | 'warning' | 'critical';
-  readonly lastUpdateCheck?: Date;
+  /** Nombre total de posts de communauté */
+  readonly totalPosts: number;
+  /** Nombre total de messages échangés */
+  readonly totalMessages: number;
+  /** Nouveaux utilisateurs ce mois-ci */
+  readonly newUsersThisMonth: number;
+  /** Nouveaux mots cette semaine */
+  readonly newWordsThisWeek: number;
 }
 
 /**
@@ -396,32 +733,50 @@ export interface ContributorDashboard {
   readonly approvedWords: number;
   readonly rejectedWords: number;
   readonly newWordsThisWeek: number;
-  readonly moderationQueue: PendingWord[];
 }
 
 /**
  * Dashboard pour administrateurs
  */
-export interface AdminDashboard extends DashboardStats {
+export interface AdminDashboard {
+  readonly stats: DashboardStats;
   readonly recentActivity: SystemActivity[];
-  readonly alertsCount: number;
-  readonly pendingReports: number;
 }
 
 /**
  * Dashboard pour super-administrateurs
  */
-export interface SuperAdminDashboard extends AdminDashboard {
+export interface SuperAdminDashboard {
+  readonly stats: DashboardStats;
+  readonly recentActivity: SystemActivity[];
   readonly systemHealth: {
     readonly uptime: number;
     readonly memory: {
-      readonly used: number;
-      readonly total: number;
+      readonly rss: number;        // Resident Set Size
+      readonly heapTotal: number;  // Total heap allocated
+      readonly heapUsed: number;   // Heap actually used
+      readonly external: number;   // Memory used by C++ objects
+      readonly arrayBuffers: number; // Array buffers memory
     };
     readonly nodeVersion: string;
   };
-  readonly criticalAlerts: number;
-  readonly systemLogs: SystemLog[];
+  readonly languageStats?: {
+    readonly totalLanguages: number;
+    readonly activeLanguages: number;
+    readonly pendingLanguages: number;
+    readonly approvedLanguages: number;
+    readonly byStatus: any[];
+    readonly wordsByLanguage: any[];
+  };
+  readonly categoryStats?: {
+    readonly totalCategories: number;
+    readonly activeCategories: number;
+    readonly pendingCategories: number;
+    readonly approvedCategories: number;
+    readonly byStatus: any[];
+    readonly wordsByCategory: any[];
+  };
+  readonly contentStats?: any;
 }
 
 /**
@@ -522,6 +877,33 @@ export interface ContentAnalytics {
     readonly date: Date;
     readonly submissions: number;
     readonly approvals: number;
+  }[];
+}
+
+/**
+ * Données statistiques par langue
+ */
+export interface LanguageData {
+  readonly language: string;
+  readonly count: number;
+  readonly percentage: number;
+}
+
+/**
+ * Statistiques complètes des langues
+ */
+export interface LanguageStatistics {
+  readonly totalLanguages: number;
+  readonly activeLanguages: number;
+  readonly pendingLanguages: number;
+  readonly approvedLanguages: number;
+  readonly wordsByLanguage: LanguageData[];
+  readonly communitiesByLanguage: LanguageData[];
+  readonly mostActiveLanguage: string;
+  readonly languageGrowthTrend: {
+    readonly date: Date;
+    readonly newLanguages: number;
+    readonly totalWords: number;
   }[];
 }
 

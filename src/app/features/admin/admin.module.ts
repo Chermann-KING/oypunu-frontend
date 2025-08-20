@@ -43,6 +43,7 @@ import {
 import { AdminDashboardContainer } from './containers/admin-dashboard/admin-dashboard.container';
 import { UserAdminContainer } from './containers/user-admin/user-admin.container';
 import { ContentModerationContainer } from './containers/content-moderation/content-moderation.container';
+import { CategoryManagementContainer } from './containers/category-management/category-management.container';
 import { AnalyticsOverviewContainer } from './containers/analytics-overview/analytics-overview.container';
 import { SystemAdminContainer } from './containers/system-admin/system-admin.container';
 
@@ -53,6 +54,15 @@ import { UserPermissionsModalComponent } from './components/user-management/user
 import { AnalyticsChartComponent } from './components/analytics-charts/analytics-chart.component';
 import { ModerationPanelComponent } from './components/moderation-panel/moderation-panel.component';
 import { SystemMetricsComponent } from './components/system-metrics/system-metrics.component';
+
+// Nouveaux composants de modération étendue
+import { ModerationCategoriesComponent } from './components/moderation-categories/moderation-categories.component';
+import { ContentDetailModalComponent } from './components/content-detail-modal/content-detail-modal.component';
+
+// Composants de gestion des catégories
+import { CategoryListComponent } from './components/category-list/category-list.component';
+import { CategoryFormComponent } from './components/category-form/category-form.component';
+import { CategoryFiltersComponent } from './components/category-filters/category-filters.component';
 
 // Pipes
 import { RoleDisplayPipe } from './pipes/role-display.pipe';
@@ -99,6 +109,7 @@ import { UserRole } from './models/admin.models';
     AdminDashboardContainer,
     UserAdminContainer,
     ContentModerationContainer,
+    CategoryManagementContainer,
     AnalyticsOverviewContainer,
     SystemAdminContainer,
 
@@ -109,6 +120,15 @@ import { UserRole } from './models/admin.models';
     AnalyticsChartComponent,
     ModerationPanelComponent,
     SystemMetricsComponent,
+    
+    // Nouveaux composants de modération étendue
+    ModerationCategoriesComponent,
+    ContentDetailModalComponent,
+    
+    // Composants de gestion des catégories
+    CategoryListComponent,
+    CategoryFormComponent,
+    CategoryFiltersComponent,
   ],
 
   providers: [
