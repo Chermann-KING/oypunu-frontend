@@ -11,6 +11,7 @@ import { WordDetailsComponent } from './components/word-details/word-details.com
 import { SearchResultsComponent } from './components/search-results/search-results.component';
 import { AddWordComponent } from './components/add-word/add-word.component';
 import { EditWordComponent } from './components/edit-word/edit-word.component';
+import { AddCategoryComponent } from './components/add-category/add-category.component';
 
 @NgModule({
   declarations: [
@@ -19,6 +20,7 @@ import { EditWordComponent } from './components/edit-word/edit-word.component';
     SearchResultsComponent,
     AddWordComponent,
     EditWordComponent,
+    AddCategoryComponent,
   ],
   imports: [
     CommonModule,

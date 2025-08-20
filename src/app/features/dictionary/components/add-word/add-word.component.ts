@@ -12,7 +12,7 @@ import {
   FormControl,
   Validators,
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { DictionaryService } from '../../../../core/services/dictionary.service';
@@ -32,7 +32,13 @@ export class AddWordComponent implements OnInit, OnDestroy {
   successMessage = '';
 
   // ✨ NOUVEAU : Langues chargées dynamiquement depuis la base de données
-  languages: { id: string; code: string; name: string; nativeName?: string; wordCount?: number }[] = [];
+  languages: {
+    id: string;
+    code: string;
+    name: string;
+    nativeName?: string;
+    wordCount?: number;
+  }[] = [];
 
   // Propriétés pour le système de traduction intelligente
   similarWords: any[] = [];
@@ -71,7 +77,8 @@ export class AddWordComponent implements OnInit, OnDestroy {
   constructor(
     private _fb: FormBuilder,
     private _dictionaryService: DictionaryService,
-    private _router: Router
+    private _router: Router,
+    private _route: ActivatedRoute
   ) {
     // Initialisation du formulaire
     this.wordForm = this._fb.group({
@@ -90,6 +97,26 @@ export class AddWordComponent implements OnInit, OnDestroy {
     // ✨ NOUVEAU : Charger les langues disponibles depuis la base de données
     this.loadAvailableLanguages();
 
+    // ✨ NOUVEAU : Gestion des paramètres de retour depuis add-category
+    this._route.queryParams
+      .pipe(takeUntil(this._destroy$))
+      .subscribe((params) => {
+        // Gestion du contexte de langue depuis URL
+        if (params['languageId']) {
+          this.wordForm.patchValue({
+            languageId: params['languageId'],
+          });
+        }
+
+        // Gestion des notifications de retour
+        if (params['categoryProposed'] === 'true') {
+          this.successMessage =
+            params['message'] ||
+            'Catégorie proposée avec succès ! Elle sera disponible après approbation.';
+          console.log('✅ Notification reçue: catégorie proposée');
+        }
+      });
+
     // Chargement des catégories au démarrage
     this.wordForm.get('categoryId')?.valueChanges.subscribe((categoryId) => {
       this.informationRecue += categoryId;
@@ -102,11 +129,25 @@ export class AddWordComponent implements OnInit, OnDestroy {
         if (selectedLanguageId) {
           this.informationRecue += selectedLanguageId;
           // Trouver la langue correspondante et son code pour charger les catégories
-          const selectedLanguage = this.languages.find(lang => lang.id === selectedLanguageId);
+          const selectedLanguage = this.languages.find(
+            (lang) => lang.id === selectedLanguageId
+          );
           if (selectedLanguage) {
-            this._loadCategoriesByLanguage(selectedLanguage.code);
+            console.log('🔍 Loading categories for language:', {
+              id: selectedLanguage.id,
+              code: selectedLanguage.code,
+              name: selectedLanguage.name,
+            });
+            // Utiliser l'ID de la langue au lieu du code qui peut être manquant
+            this._loadCategoriesByLanguage(selectedLanguage.id);
             // Synchroniser l'ancien champ language pour compatibilité
-            this.wordForm.get('language')?.setValue(selectedLanguage.code, { emitEvent: false });
+            this.wordForm
+              .get('language')
+              ?.setValue(selectedLanguage.code || selectedLanguage.id, {
+                emitEvent: false,
+              });
+          } else {
+            console.warn('⚠️ Selected language not found:', selectedLanguageId);
           }
         } else {
           // Si aucune langue n'est sélectionnée, vider la liste des catégories
@@ -219,13 +260,25 @@ export class AddWordComponent implements OnInit, OnDestroy {
     // Nettoyage des translations - suppression des propriétés non autorisées
     if (formData.translations && formData.translations.length > 0) {
       formData.translations = formData.translations
-        .filter((translation: any) => (translation.languageId || translation.language) && translation.translatedWord)
+        .filter(
+          (translation: any) =>
+            (translation.languageId || translation.language) &&
+            translation.translatedWord
+        )
         .map((translation: any) => {
           // Supprimer les propriétés non autorisées par le backend
-          const { targetWordId, searchTerm, selectedWordId, ...cleanTranslation } = translation;
-          
+          const {
+            targetWordId,
+            searchTerm,
+            selectedWordId,
+            ...cleanTranslation
+          } = translation;
+
           // Convertir context string en tableau si nécessaire
-          if (cleanTranslation.context && typeof cleanTranslation.context === 'string') {
+          if (
+            cleanTranslation.context &&
+            typeof cleanTranslation.context === 'string'
+          ) {
             const contextStr = cleanTranslation.context.trim();
             if (contextStr) {
               // Séparer par virgules et nettoyer
@@ -237,11 +290,15 @@ export class AddWordComponent implements OnInit, OnDestroy {
               // Contexte vide, supprimer la propriété
               delete cleanTranslation.context;
             }
-          } else if (!cleanTranslation.context || (Array.isArray(cleanTranslation.context) && cleanTranslation.context.length === 0)) {
+          } else if (
+            !cleanTranslation.context ||
+            (Array.isArray(cleanTranslation.context) &&
+              cleanTranslation.context.length === 0)
+          ) {
             // Supprimer context s'il est vide
             delete cleanTranslation.context;
           }
-          
+
           return cleanTranslation;
         });
     }
@@ -457,33 +514,41 @@ export class AddWordComponent implements OnInit, OnDestroy {
   // Méthode pour charger les catégories par langue
   // Cette méthode est appelée lorsque la langue change dans le formulaire
   // Elle utilise le service DictionaryService pour récupérer les catégories
-  private _loadCategoriesByLanguage(language: string): void {
+  private _loadCategoriesByLanguage(languageIdOrCode: string): void {
+    console.log(
+      '📦 Chargement des catégories pour la langue:',
+      languageIdOrCode
+    );
     this._dictionaryService
-      .getCategories(language)
+      .getCategories(languageIdOrCode)
       .pipe(takeUntil(this._destroy$))
-      .subscribe((categoriesFromApi) => {
-        this.categories = categoriesFromApi.map((cat) => ({
-          _id: cat._id as string,
-          id: cat._id as string,
-          name: cat.name,
-          description: cat.description,
-          language: cat.language,
-        }));
-        // Vérifier si la catégorie actuelle est toujours valide
-        // Si la catégorie actuelle n'est pas dans la liste des catégories chargées,
-        // réinitialiser le champ categoryId
-        // Cela garantit que l'utilisateur ne peut pas soumettre une catégorie invalide
-        // après avoir changé la langue
-        // et que le formulaire est toujours valide
-        const currentCategoryId = this.wordForm.get('categoryId')?.value;
-        console.log('Current category: ' + currentCategoryId);
+      .subscribe({
+        next: (categoriesFromApi) => {
+          console.log('📦 Catégories reçues du backend:', categoriesFromApi);
+          this.categories = categoriesFromApi.map((cat) => ({
+            _id: cat._id as string,
+            id: cat._id as string,
+            name: cat.name,
+            description: cat.description,
+            language: cat.language,
+          }));
+          console.log('✅ Catégories mappées:', this.categories);
 
-        if (
-          currentCategoryId &&
-          !this.categories.some((cat) => cat._id === currentCategoryId)
-        ) {
-          this.wordForm.get('categoryId')?.setValue('');
-        }
+          // Vérifier si la catégorie actuelle est toujours valide
+          const currentCategoryId = this.wordForm.get('categoryId')?.value;
+          console.log('Current category: ' + currentCategoryId);
+
+          if (
+            currentCategoryId &&
+            !this.categories.some((cat) => cat._id === currentCategoryId)
+          ) {
+            this.wordForm.get('categoryId')?.setValue('');
+          }
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors du chargement des catégories:', error);
+          this.categories = [];
+        },
       });
   }
 
@@ -541,7 +606,7 @@ export class AddWordComponent implements OnInit, OnDestroy {
       language: [''], // ✨ TRANSITION : garde l'ancien champ pour compatibilité
       translatedWord: ['', Validators.required],
       context: [''],
-      confidence: [0.8, [Validators.min(0), Validators.max(1)]]
+      confidence: [0.8, [Validators.min(0), Validators.max(1)]],
     });
   }
 
@@ -555,21 +620,21 @@ export class AddWordComponent implements OnInit, OnDestroy {
 
   getAvailableLanguagesForTranslation(index: number): any[] {
     const sourceLanguageId = this.wordForm.get('languageId')?.value;
-    return this.languages.filter(lang => lang.id !== sourceLanguageId);
+    return this.languages.filter((lang) => lang.id !== sourceLanguageId);
   }
 
   getLanguageName(code: string): string {
-    const language = this.languages.find(lang => lang.code === code);
+    const language = this.languages.find((lang) => lang.code === code);
     return language ? language.name : code;
   }
 
   getLanguageNameById(id: string): string {
-    const language = this.languages.find(lang => lang.id === id);
+    const language = this.languages.find((lang) => lang.id === id);
     return language ? language.name : id;
   }
 
   getLanguageCodeById(id: string): string {
-    const language = this.languages.find(lang => lang.id === id);
+    const language = this.languages.find((lang) => lang.id === id);
     return language ? language.code : '';
   }
 
@@ -579,7 +644,11 @@ export class AddWordComponent implements OnInit, OnDestroy {
   }
 
   // Méthodes pour la recherche de mots existants
-  searchWordsInTargetLanguage(translationIndex: number, language: string, searchTerm: string): void {
+  searchWordsInTargetLanguage(
+    translationIndex: number,
+    language: string,
+    searchTerm: string
+  ): void {
     if (!searchTerm || searchTerm.length < 2) {
       this.translationWordResults[translationIndex] = [];
       return;
@@ -590,34 +659,41 @@ export class AddWordComponent implements OnInit, OnDestroy {
     }
 
     this.isSearchingTranslationWords[translationIndex] = true;
-    
+
     // Appel API réel pour chercher des mots existants
-    this._dictionaryService.searchWords({
-      query: searchTerm,
-      languages: [language],
-      limit: 10,
-      page: 1
-    }).pipe(takeUntil(this._destroy$))
-    .subscribe({
-      next: (results) => {
-        this.translationWordResults[translationIndex] = results.words || [];
-        this.isSearchingTranslationWords[translationIndex] = false;
-        console.log(`🔍 Trouvé ${results.words?.length || 0} mots en ${language} pour "${searchTerm}":`, results.words);
-      },
-      error: (error) => {
-        console.error('❌ Erreur lors de la recherche de mots:', error);
-        this.translationWordResults[translationIndex] = [];
-        this.isSearchingTranslationWords[translationIndex] = false;
-      }
-    });
+    this._dictionaryService
+      .searchWords({
+        query: searchTerm,
+        languages: [language],
+        limit: 10,
+        page: 1,
+      })
+      .pipe(takeUntil(this._destroy$))
+      .subscribe({
+        next: (results) => {
+          this.translationWordResults[translationIndex] = results.words || [];
+          this.isSearchingTranslationWords[translationIndex] = false;
+          console.log(
+            `🔍 Trouvé ${
+              results.words?.length || 0
+            } mots en ${language} pour "${searchTerm}":`,
+            results.words
+          );
+        },
+        error: (error) => {
+          console.error('❌ Erreur lors de la recherche de mots:', error);
+          this.translationWordResults[translationIndex] = [];
+          this.isSearchingTranslationWords[translationIndex] = false;
+        },
+      });
   }
 
   selectTranslationWord(translationIndex: number, word: any): void {
     this.selectedTranslationWords[translationIndex] = word;
-    
+
     const translationControl = this.translations.at(translationIndex);
     translationControl.patchValue({
-      translatedWord: word.word
+      translatedWord: word.word,
     });
 
     this.translationWordResults[translationIndex] = [];
@@ -628,26 +704,34 @@ export class AddWordComponent implements OnInit, OnDestroy {
     this.translationWordSearch[translationIndex] = '';
     this.translationWordResults[translationIndex] = [];
     this.selectedTranslationWords[translationIndex] = null;
-    
+
     const translationControl = this.translations.at(translationIndex);
     const selectedLanguageId = translationControl.get('languageId')?.value;
-    
+
     // Synchroniser l'ancien champ language pour compatibilité
     if (selectedLanguageId) {
-      const selectedLanguage = this.languages.find(lang => lang.id === selectedLanguageId);
+      const selectedLanguage = this.languages.find(
+        (lang) => lang.id === selectedLanguageId
+      );
       if (selectedLanguage) {
-        translationControl.patchValue({
-          language: selectedLanguage.code,
-          translatedWord: '',
-          targetWordId: null
-        }, { emitEvent: false });
+        translationControl.patchValue(
+          {
+            language: selectedLanguage.code,
+            translatedWord: '',
+            targetWordId: null,
+          },
+          { emitEvent: false }
+        );
       }
     } else {
-      translationControl.patchValue({
-        language: '',
-        translatedWord: '',
-        targetWordId: null
-      }, { emitEvent: false });
+      translationControl.patchValue(
+        {
+          language: '',
+          translatedWord: '',
+          targetWordId: null,
+        },
+        { emitEvent: false }
+      );
     }
   }
 
@@ -665,15 +749,19 @@ export class AddWordComponent implements OnInit, OnDestroy {
    * ✨ NOUVELLE MÉTHODE : Charge les langues disponibles depuis la base de données
    */
   private loadAvailableLanguages(): void {
-    console.log('🔄 Tentative de chargement des langues depuis l\'API...');
-    
-    this._dictionaryService.getAvailableLanguages()
+    console.log("🔄 Tentative de chargement des langues depuis l'API...");
+
+    this._dictionaryService
+      .getAvailableLanguages()
       .pipe(takeUntil(this._destroy$))
       .subscribe({
         next: (languages) => {
-          console.log('✅ Langues reçues depuis l\'API:', languages);
+          console.log("✅ Langues reçues depuis l'API:", languages);
           this.languages = languages;
-          console.log('🌍 Langues disponibles chargées dans le composant:', this.languages);
+          console.log(
+            '🌍 Langues disponibles chargées dans le composant:',
+            this.languages
+          );
         },
         error: (error) => {
           console.error('❌ Erreur lors du chargement des langues:', error);
@@ -686,7 +774,29 @@ export class AddWordComponent implements OnInit, OnDestroy {
             { id: 'fallback-de', code: 'de', name: 'Allemand', wordCount: 8 },
           ];
           console.log('🌍 Langues fallback chargées:', this.languages);
-        }
+        },
       });
+  }
+
+  // Méthode pour obtenir les paramètres contextuels pour ajouter une catégorie
+  getAddCategoryParams(): any {
+    const selectedLanguageId = this.wordForm.get('languageId')?.value;
+    const selectedLanguage = this.languages.find(
+      (lang) => lang.id === selectedLanguageId
+    );
+
+    if (selectedLanguageId && selectedLanguage) {
+      console.log(
+        '🎯 Navigation contextuelle vers add-category avec langue:',
+        selectedLanguage
+      );
+      return {
+        languageId: selectedLanguageId,
+        returnTo: 'add-word',
+      };
+    }
+
+    console.log('⚠️ Aucune langue sélectionnée pour le contexte add-category');
+    return {};
   }
 }
