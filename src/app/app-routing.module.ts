@@ -67,6 +67,20 @@ const routes: Routes = [
       import('./features/legal/legal.module').then((m) => m.LegalModule),
   },
   {
+    path: 'languages',
+    loadChildren: () =>
+      import('./features/languages/languages.module').then(
+        (m) => m.LanguagesModule
+      ),
+  },
+  {
+    path: 'categories',
+    loadChildren: () =>
+      import('./features/categories/categories.module').then(
+        (m) => m.CategoriesModule
+      ),
+  },
+  {
     path: 'contributor-request',
     component: ContributorRequestComponent,
     canActivate: [AuthGuard],
