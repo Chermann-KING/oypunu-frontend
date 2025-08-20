@@ -1,215 +1,85 @@
-.admin-dashboard {
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
+// Styles personnalisés pour le dashboard admin utilisant Tailwind CSS
+:host {
+  display: block;
 }
 
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e1e5e9;
+// Classes Tailwind personnalisées si nécessaire
+.bg-gray-750 {
+  background-color: rgb(55 65 81 / 0.8);
 }
 
-.dashboard-title {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #1a202c;
-  margin: 0;
+.bg-gray-650 {
+  background-color: rgb(75 85 99 / 0.8);
 }
 
-.user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.user-role {
-  background: #4299e1;
-  color: white;
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.user-name {
-  color: #4a5568;
-  font-size: 0.875rem;
-}
-
-.loading-indicator {
-  text-align: center;
-  padding: 48px;
-  color: #4a5568;
-}
-
-.error-message {
-  background: #fed7d7;
-  border: 1px solid #f56565;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 24px;
-}
-
-.error-message h3 {
-  color: #c53030;
-  margin: 0 0 8px 0;
-}
-
-.error-message p {
-  color: #742a2a;
-  margin: 0 0 16px 0;
-}
-
-.retry-button {
-  background: #c53030;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.retry-button:hover {
-  background: #9c2626;
-}
-
-.stats-grid,
-.stats-overview,
-.basic-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 24px;
-  margin-bottom: 32px;
+// Animations personnalisées
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .stat-card {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 24px;
-  text-align: center;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  animation: slideInUp 0.3s ease-out;
 }
 
-.stat-card h3 {
-  margin: 0 0 8px 0;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #4a5568;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
+.stat-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.stat-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.stat-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.stat-card:nth-child(4) {
+  animation-delay: 0.4s;
+}
+.stat-card:nth-child(5) {
+  animation-delay: 0.5s;
+}
+.stat-card:nth-child(6) {
+  animation-delay: 0.6s;
 }
 
-.stat-number {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #1a202c;
+// Animation pour les éléments d'activité
+.activity-item {
+  animation: slideInUp 0.2s ease-out;
 }
 
-.stat-number.alert {
-  color: #e53e3e;
+// Application des animations aux nouvelles cards
+.bg-gray-800:has(h4) {
+  animation: slideInUp 0.3s ease-out;
 }
 
-.system-health {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 32px;
+.bg-gray-700 {
+  animation: slideInUp 0.2s ease-out;
 }
 
-.system-health h3 {
-  margin: 0 0 16px 0;
-  color: #1a202c;
-}
-
-.health-metrics {
-  display: grid;
-  gap: 12px;
-}
-
-.metric {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.metric label {
-  font-weight: 500;
-  color: #4a5568;
-}
-
-.metric span {
-  color: #1a202c;
-}
-
-.quick-actions {
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 24px;
-}
-
-.quick-actions h3 {
-  margin: 0 0 16px 0;
-  color: #1a202c;
-}
-
-.action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.action-button {
-  background: #4299e1;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  text-decoration: none;
-  display: inline-block;
-  transition: background-color 0.2s;
-}
-
+// Effets de hover personnalisés
 .action-button:hover {
-  background: #3182ce;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
 }
 
-@media (max-width: 768px) {
-  .admin-dashboard {
-    padding: 16px;
-  }
+// Style pour le gradient avatar
+.avatar-gradient {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
 
-  .dashboard-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .user-info {
-    align-items: flex-start;
-  }
-
-  .stats-grid,
-  .stats-overview,
-  .basic-stats {
+// Responsive amélioré
+@media (max-width: 640px) {
+  .grid-cols-1 {
     grid-template-columns: 1fr;
   }
 
-  .action-buttons {
-    flex-direction: column;
-  }
-
-  .action-button {
-    width: 100%;
-    text-align: center;
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 }

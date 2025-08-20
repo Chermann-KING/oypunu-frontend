@@ -20,6 +20,7 @@ import { GuestLimitsBadgeComponent } from './components/guest-limits-badge/guest
 import { SignupPromptModalComponent } from './components/signup-prompt-modal/signup-prompt-modal.component';
 import { ToastContainerComponent } from './components/toast-container/toast-container.component';
 import { LanguageAutocompleteComponent } from './components/language-autocomplete/language-autocomplete.component';
+import { ConfirmationModalComponent } from './components/confirmation-modal/confirmation-modal.component';
 // import { IntelligentRecommendationsComponent } from './components/intelligent-recommendations/intelligent-recommendations.component';
 
 @NgModule({
@@ -42,6 +43,7 @@ import { LanguageAutocompleteComponent } from './components/language-autocomplet
     SignupPromptModalComponent,
     ToastContainerComponent,
     LanguageAutocompleteComponent,
+    ConfirmationModalComponent,
     // IntelligentRecommendationsComponent,
   ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
@@ -64,6 +66,7 @@ import { LanguageAutocompleteComponent } from './components/language-autocomplet
     SignupPromptModalComponent,
     ToastContainerComponent,
     LanguageAutocompleteComponent,
+    ConfirmationModalComponent,
     // IntelligentRecommendationsComponent,
   ],
 })

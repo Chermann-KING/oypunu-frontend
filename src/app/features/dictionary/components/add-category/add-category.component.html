@@ -1,0 +1,276 @@
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-2xl mx-auto px-4">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center gap-4 mb-4">
+        <button 
+          (click)="onCancel()"
+          class="flex items-center text-gray-600 hover:text-gray-800 transition-colors">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Retour au dictionnaire
+        </button>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900">Proposer une catégorie</h1>
+            <p class="text-gray-600">Proposez une nouvelle catégorie pour organiser les mots par thème</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div *ngIf="errorMessage" class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <h3 class="text-red-800 font-semibold">Erreur</h3>
+          <p class="text-red-700">{{ errorMessage }}</p>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="successMessage" class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <div>
+          <h3 class="text-green-800 font-semibold">Succès</h3>
+          <p class="text-green-700">{{ successMessage }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulaire -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()" novalidate>
+        <div class="space-y-6">
+          <!-- Nom de la catégorie -->
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+              Nom de la catégorie *
+            </label>
+            <input
+              type="text"
+              id="name"
+              class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2"
+              [class.border-gray-300]="!isFieldInvalid('name')"
+              [class.border-red-500]="isFieldInvalid('name')"
+              [class.focus:ring-blue-500]="!isFieldInvalid('name')"
+              [class.focus:ring-red-500]="isFieldInvalid('name')"
+              formControlName="name"
+              placeholder="Ex: Salutations, Nourriture, Animaux..."
+              maxlength="100"
+            />
+            <div *ngIf="isFieldInvalid('name')" class="text-red-600 text-sm mt-1">
+              <div *ngIf="categoryForm.get('name')?.errors?.['required']">
+                Le nom de la catégorie est obligatoire
+              </div>
+              <div *ngIf="categoryForm.get('name')?.errors?.['minlength']">
+                Le nom doit contenir au moins 2 caractères
+              </div>
+              <div *ngIf="categoryForm.get('name')?.errors?.['maxlength']">
+                Le nom ne peut pas dépasser 100 caractères
+              </div>
+            </div>
+            <p class="text-gray-500 text-sm mt-1">
+              Un nom court et descriptif pour identifier la catégorie
+            </p>
+          </div>
+
+          <!-- Langue -->
+          <div>
+            <label for="languageId" class="block text-sm font-medium text-gray-700 mb-2">
+              Langue *
+            </label>
+            
+            <div *ngIf="isLoadingLanguages" class="flex items-center text-gray-500">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+              <span class="text-sm">Chargement des langues...</span>
+            </div>
+
+            <select
+              *ngIf="!isLoadingLanguages"
+              id="languageId"
+              class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2"
+              [class.border-gray-300]="!isFieldInvalid('languageId')"
+              [class.border-red-500]="isFieldInvalid('languageId')"
+              [class.focus:ring-blue-500]="!isFieldInvalid('languageId')"
+              [class.focus:ring-red-500]="isFieldInvalid('languageId')"
+              formControlName="languageId"
+            >
+              <option value="">Sélectionnez une langue</option>
+              <option 
+                *ngFor="let language of languages"
+                [value]="language.id"
+                [title]="language.nativeName"
+              >
+                {{ language.name }}
+                <span *ngIf="language.nativeName && language.nativeName !== language.name">
+                  ({{ language.nativeName }})
+                </span>
+              </option>
+            </select>
+
+            <div *ngIf="isFieldInvalid('languageId')" class="text-red-600 text-sm mt-1">
+              <div *ngIf="categoryForm.get('languageId')?.errors?.['required']">
+                La sélection d'une langue est obligatoire
+              </div>
+            </div>
+            <p class="text-gray-500 text-sm mt-1">
+              La langue à laquelle cette catégorie sera associée
+            </p>
+          </div>
+
+          <!-- Description -->
+          <div>
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+              Description <span class="text-gray-500 font-normal">(optionnel)</span>
+            </label>
+            <textarea
+              id="description"
+              class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2"
+              [class.border-gray-300]="!isFieldInvalid('description')"
+              [class.border-red-500]="isFieldInvalid('description')"
+              [class.focus:ring-blue-500]="!isFieldInvalid('description')"
+              [class.focus:ring-red-500]="isFieldInvalid('description')"
+              formControlName="description"
+              placeholder="Décrivez brièvement le type de mots que contiendra cette catégorie..."
+              rows="3"
+              maxlength="500"
+            ></textarea>
+            <div *ngIf="isFieldInvalid('description')" class="text-red-600 text-sm mt-1">
+              <div *ngIf="categoryForm.get('description')?.errors?.['maxlength']">
+                La description ne peut pas dépasser 500 caractères
+              </div>
+            </div>
+            <p class="text-gray-500 text-sm mt-1">
+              {{ getDescriptionLength() }}/500 caractères
+            </p>
+          </div>
+
+          <!-- Ordre d'affichage -->
+          <div>
+            <label for="order" class="block text-sm font-medium text-gray-700 mb-2">
+              Ordre d'affichage <span class="text-gray-500 font-normal">(optionnel)</span>
+            </label>
+            <input
+              type="number"
+              id="order"
+              class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2"
+              [class.border-gray-300]="!isFieldInvalid('order')"
+              [class.border-red-500]="isFieldInvalid('order')"
+              [class.focus:ring-blue-500]="!isFieldInvalid('order')"
+              [class.focus:ring-red-500]="isFieldInvalid('order')"
+              formControlName="order"
+              placeholder="0"
+              min="0"
+              max="9999"
+            />
+            <div *ngIf="isFieldInvalid('order')" class="text-red-600 text-sm mt-1">
+              <div *ngIf="categoryForm.get('order')?.errors?.['min']">
+                L'ordre doit être un nombre positif
+              </div>
+              <div *ngIf="categoryForm.get('order')?.errors?.['max']">
+                L'ordre ne peut pas dépasser 9999
+              </div>
+            </div>
+            <p class="text-gray-500 text-sm mt-1">
+              Ordre d'affichage dans la liste (0 = en premier)
+            </p>
+          </div>
+
+          <!-- Statut actif -->
+          <div>
+            <div class="flex items-center">
+              <input
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                type="checkbox"
+                id="isActive"
+                formControlName="isActive"
+              />
+              <label class="ml-2 text-sm text-gray-700" for="isActive">
+                Catégorie active (recommandée)
+              </label>
+            </div>
+            <p class="text-gray-500 text-sm mt-1">
+              Les catégories actives seront disponibles pour l'ajout de nouveaux mots une fois approuvées
+            </p>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-between pt-6 mt-6 border-t border-gray-200">
+          <button
+            type="button"
+            class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors"
+            (click)="onCancel()"
+            [disabled]="isSubmitting"
+          >
+            Annuler
+          </button>
+
+          <button
+            type="submit"
+            class="px-6 py-2 rounded-lg transition-colors flex items-center gap-2"
+            [class.bg-blue-600]="categoryForm.valid && !isSubmitting"
+            [class.hover:bg-blue-700]="categoryForm.valid && !isSubmitting"
+            [class.bg-gray-400]="!categoryForm.valid || isSubmitting"
+            [class.cursor-not-allowed]="!categoryForm.valid || isSubmitting"
+            [class.text-white]="true"
+            [disabled]="!categoryForm.valid || isSubmitting"
+          >
+            <div *ngIf="isSubmitting" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            <svg *ngIf="!isSubmitting" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            {{ isSubmitting ? 'Envoi en cours...' : 'Proposer la catégorie' }}
+          </button>
+        </div>
+
+        <!-- Message d'aide validation -->
+        <div *ngIf="!categoryForm.valid" class="mt-4 text-sm text-red-600">
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <div *ngIf="categoryForm.get('name')?.invalid">• Le nom de la catégorie est requis (minimum 2 caractères)</div>
+              <div *ngIf="categoryForm.get('languageId')?.invalid">• La sélection d'une langue est obligatoire</div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Informations sur le processus -->
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <h3 class="text-blue-800 font-semibold mb-2">Comment ça marche ?</h3>
+          <ul class="text-blue-700 space-y-1 text-sm">
+            <li>1. Vous proposez une nouvelle catégorie</li>
+            <li>2. Elle est examinée par notre équipe de modération</li>
+            <li>3. Une fois approuvée, elle devient disponible pour tous les utilisateurs</li>
+            <li>4. Vous pouvez suivre le statut de votre proposition dans votre profil</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

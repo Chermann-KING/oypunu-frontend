@@ -1,84 +1,270 @@
-<div class="user-admin" *ngIf="userAdminState$ | async as state">
-  <!-- Header avec filtres et actions -->
-  <div class="admin-header">
-    <div class="header-title">
-      <h1>Gestion des utilisateurs</h1>
-      <p class="subtitle">{{ state.totalUsers }} utilisateur(s) au total</p>
-    </div>
-
-    <div class="header-actions">
-      <button *appHasPermission="'canExportUserData'" (click)="exportUsers()" class="btn btn-secondary">
-        Exporter
-      </button>
-    </div>
-  </div>
-
-  <!-- Filtres et recherche -->
-  <div class="filters-section">
-    <div class="search-bar">
-      <input type="text" placeholder="Rechercher par nom, email ou ID..." [value]="searchTerm"
-        (input)="onSearchChange($event)" class="search-input">
-    </div>
-
-    <div class="filter-controls">
-      <select [value]="state.filters.role || ''" (change)="onRoleFilterChange($event)" class="filter-select">
-        <option value="">Tous les rôles</option>
-        <option value="user">Utilisateur</option>
-        <option value="contributor">Contributeur</option>
-        <option value="admin">Administrateur</option>
-        <option value="superadmin">Super-Administrateur</option>
-      </select>
-
-      <select [value]="state.filters.status || ''" (change)="onStatusFilterChange($event)" class="filter-select">
-        <option value="">Tous les statuts</option>
-        <option value="active">Actif</option>
-        <option value="suspended">Suspendu</option>
-        <option value="banned">Banni</option>
-      </select>
-
-      <button (click)="clearFilters()" class="btn btn-outline" [disabled]="!hasActiveFilters(state.filters)">
-        Effacer les filtres
-      </button>
-    </div>
-  </div>
-
-  <!-- Indicateur de chargement -->
-  <div class="loading-indicator" *ngIf="state.isLoading">
-    <p>Chargement des utilisateurs...</p>
-  </div>
-
-  <!-- Gestion des erreurs -->
-  <div class="error-message" *ngIf="state.error" role="alert">
-    <h3>Erreur de chargement</h3>
-    <p>{{ state.error }}</p>
-    <button (click)="retryLoad()" class="retry-button">
-      Réessayer
+<div class="min-h-screen bg-gray-900 text-white" *ngIf="userAdminState$ | async as state">
+  <!-- Header avec informations et actions -->
+  <div class="container mx-auto px-4 py-8">
+    <!-- Bouton de retour -->
+    <button routerLink="/admin/dashboard"
+      class="flex items-center text-gray-400 hover:text-white mb-4 transition-colors">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Retour au dashboard
     </button>
-  </div>
 
-  <!-- User Management Table -->
-  <app-user-management-table *ngIf="!state.isLoading && !state.error" [users]="state.users"
-    [selectedUsers]="state.selectedUsers" [pagination]="{
-      page: state.currentPage,
-      pageSize: state.pageSize,
-      total: state.totalUsers
-    }" [filters]="state.filters" [sort]="null" [isLoading]="state.isLoading" [errorMessage]="state.error"
-    (actionClicked)="handleUserAction($event)" (bulkActionClicked)="handleBulkAction($event)"
-    (selectionChanged)="handleSelectionChange($event)" (sortChanged)="handleSortChange($event)"
-    (filterChanged)="handleFilterChange($event)" (pageChanged)="goToPage($event)">
-  </app-user-management-table>
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div
+            class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold text-white">Gestion des utilisateurs</h1>
+            <p class="text-gray-400">{{ state.totalUsers }} utilisateur(s) au total</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <button *appHasPermission="'canExportUserData'" (click)="exportUsers()"
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Exporter
+          </button>
+        </div>
+      </div>
+    </div>
 
-  <!-- État vide -->
-  <div class="empty-state" *ngIf="!state.isLoading && !state.error && state.users.length === 0">
-    <h3>Aucun utilisateur trouvé</h3>
-    <p *ngIf="hasActiveFilters(state.filters); else noUsersAtAll">
-      Aucun utilisateur ne correspond aux critères de recherche.
-      <button (click)="clearFilters()" class="btn btn-link">
+    <!-- Notification de l'état des fonctionnalités -->
+    <div class="bg-blue-900 border border-blue-700 rounded-lg p-4 mb-6 text-blue-100">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <h4 class="font-semibold mb-1">ℹ️ État des fonctionnalités</h4>
+          <p class="text-sm">
+            <strong>Disponibles :</strong> Suspendre/Réactiver, Changer le rôle, Rechercher/Filtrer<br>
+            <strong>En développement :</strong> Voir détails, Éditer, Supprimer, Actions en lot, Export
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+      <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z" />
+        </svg>
+        Filtres et recherche
+      </h3>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Recherche -->
+        <div class="col-span-1 md:col-span-2 lg:col-span-2">
+          <label class="block text-sm font-medium text-gray-300 mb-2">Recherche</label>
+          <div class="relative">
+            <input type="text" placeholder="Rechercher par nom, email ou ID..." [value]="searchTerm"
+              (input)="onSearchChange($event)"
+              class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <svg class="absolute right-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Filtre par rôle -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Rôle</label>
+          <select [value]="state.filters.role || ''" (change)="onRoleFilterChange($event)"
+            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Tous les rôles</option>
+            <option value="user">Utilisateur</option>
+            <option value="contributor">Contributeur</option>
+            <option value="admin">Administrateur</option>
+            <option value="superadmin">Super-Administrateur</option>
+          </select>
+        </div>
+
+        <!-- Filtre par statut -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Statut</label>
+          <select [value]="state.filters.status || ''" (change)="onStatusFilterChange($event)"
+            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Tous les statuts</option>
+            <option value="active">Actif</option>
+            <option value="suspended">Suspendu</option>
+            <option value="banned">Banni</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Bouton effacer filtres -->
+      <div class="mt-4 flex justify-end" *ngIf="hasActiveFilters(state.filters)">
+        <button (click)="clearFilters()"
+          class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Effacer les filtres
+        </button>
+      </div>
+    </div>
+
+    <!-- Indicateur de chargement -->
+    <div class="flex justify-center items-center py-16" *ngIf="state.isLoading">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p class="text-gray-400">Chargement des utilisateurs...</p>
+      </div>
+    </div>
+
+    <!-- Gestion des erreurs -->
+    <div class="bg-red-900 border border-red-700 rounded-lg p-6 mb-6" *ngIf="state.error" role="alert">
+      <div class="flex items-start gap-3">
+        <svg class="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="flex-1">
+          <h3 class="text-red-400 font-semibold mb-2">Erreur de chargement</h3>
+          <p class="text-red-300 mb-4">{{ state.error }}</p>
+          <button (click)="retryLoad()"
+            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Réessayer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug info -->
+    <div class="bg-yellow-900 border border-yellow-700 rounded-lg p-4 mb-6 text-yellow-100"
+      *ngIf="!state.isLoading && !state.error">
+      <h4>🐛 Debug Info:</h4>
+      <p>State loading: {{ state.isLoading }}</p>
+      <p>State error: {{ state.error }}</p>
+      <p>State users length: {{ state.users.length || 'undefined' }}</p>
+      <p>State totalUsers: {{ state.totalUsers }}</p>
+      <p>State users (first 3): {{ (state.users | slice:0:3 | json) || 'aucun' }}</p>
+    </div>
+
+    <!-- User Management Table -->
+    <app-user-management-table *ngIf="!state.isLoading && !state.error" [users]="state.users"
+      [selectedUsers]="state.selectedUsers" [pagination]="{
+        page: state.currentPage,
+        pageSize: state.pageSize,
+        total: state.totalUsers
+      }" [filters]="state.filters" [sort]="null" [isLoading]="state.isLoading" [errorMessage]="state.error"
+      (actionClicked)="handleUserAction($event)" (bulkActionClicked)="handleBulkAction($event)"
+      (selectionChanged)="handleSelectionChange($event)" (sortChanged)="handleSortChange($event)"
+      (filterChanged)="handleFilterChange($event)" (pageChanged)="goToPage($event)">
+    </app-user-management-table>
+
+    <!-- État vide -->
+    <div class="bg-gray-800 rounded-lg p-12 text-center"
+      *ngIf="!state.isLoading && !state.error && state.users.length === 0">
+      <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+      </svg>
+      <h3 class="text-xl font-semibold text-white mb-2">Aucun utilisateur trouvé</h3>
+      <p class="text-gray-400 mb-4" *ngIf="hasActiveFilters(state.filters); else noUsersAtAll">
+        Aucun utilisateur ne correspond aux critères de recherche.
+      </p>
+      <ng-template #noUsersAtAll>
+        <p class="text-gray-400 mb-4">Il n'y a aucun utilisateur dans le système.</p>
+      </ng-template>
+      <button *ngIf="hasActiveFilters(state.filters)" (click)="clearFilters()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors">
         Effacer les filtres
       </button>
-    </p>
-    <ng-template #noUsersAtAll>
-      <p>Il n'y a aucun utilisateur dans le système.</p>
-    </ng-template>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmation -->
+<app-confirmation-modal [isVisible]="showConfirmationModal" [config]="confirmationConfig"
+  (confirmed)="onConfirmAction($event)" (cancelled)="onCancelAction()">
+</app-confirmation-modal>
+
+<!-- Modal de changement de rôle -->
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" *ngIf="showRoleChangeModal">
+  <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 border border-gray-700">
+    <!-- Header -->
+    <div class="flex items-center mb-4">
+      <div class="flex-shrink-0">
+        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
+      </div>
+      <h3 class="ml-3 text-lg font-medium text-white">Changer le rôle</h3>
+    </div>
+
+    <!-- User info -->
+    <div class="mb-4 p-3 bg-gray-700 rounded-lg">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <span class="text-sm font-medium text-white">{{ roleChangeUser?.username?.charAt(0)?.toUpperCase() }}</span>
+        </div>
+        <div>
+          <div class="text-sm font-medium text-white">{{ roleChangeUser?.username }}</div>
+          <div class="text-sm text-gray-400">{{ roleChangeUser?.email }}</div>
+          <div class="text-xs text-gray-500">Rôle actuel: {{ getRoleLabel(roleChangeUser?.role || '') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role selection -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium text-gray-300 mb-3">
+        Sélectionnez le nouveau rôle :
+      </label>
+      <div class="grid grid-cols-1 gap-2">
+        <button *ngFor="let role of availableRoles" (click)="onRoleChangeConfirm(role.value)"
+          [disabled]="role.value === roleChangeUser?.role"
+          class="w-full text-left px-4 py-3 rounded-lg transition-colors border" [ngClass]="{
+            'bg-gray-600 border-gray-500 text-gray-400 cursor-not-allowed': role.value === roleChangeUser?.role,
+            'bg-gray-700 border-gray-600 text-white hover:bg-gray-600 hover:border-gray-500': role.value !== roleChangeUser?.role
+          }">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-medium">{{ role.label }}</div>
+              <div class="text-sm text-gray-400" *ngIf="getroleDescription(role.value) as description">
+                {{ description }}
+              </div>
+            </div>
+            <div *ngIf="role.value === roleChangeUser?.role" class="text-green-400">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"></path>
+              </svg>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex justify-end gap-3">
+      <button type="button" (click)="onRoleChangeCancel()"
+        class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500">
+        Annuler
+      </button>
+    </div>
   </div>
 </div>

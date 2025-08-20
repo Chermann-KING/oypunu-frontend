@@ -1,0 +1,326 @@
+<!-- Header avec navigation et statistiques -->
+<div class="bg-gray-900 border-b border-gray-800 mb-6">
+  <div class="container mx-auto px-4 py-6">
+    <!-- Navigation -->
+    <div class="flex items-center gap-2 mb-4 text-gray-400">
+      <a routerLink="/admin/dashboard" class="hover:text-white transition-colors">Dashboard</a>
+      <span class="text-gray-600">/</span>
+      <span class="text-white">Catégories de Modération</span>
+    </div>
+
+    <!-- Header principal -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div
+          class="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-white">Catégories de Modération</h1>
+          <div class="flex items-center gap-3 mt-1">
+            <div class="flex items-center gap-2 text-gray-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{{ getTotalPending() }} en attente</span>
+            </div>
+            <span class="text-gray-600">•</span>
+            <div class="flex items-center gap-2 text-yellow-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.734 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <span>{{ getTotalPriority() }} prioritaire(s)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions globales -->
+      <div class="flex items-center gap-3">
+        <button (click)="onRefresh()"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-lg"
+          [disabled]="isLoading">
+          <svg class="w-4 h-4" [ngClass]="{'animate-spin': isLoading}" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {{ isLoading ? 'Actualisation...' : 'Actualiser' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Indicateurs de statut -->
+    <div class="mt-6 flex flex-wrap items-center gap-4 text-sm">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full"
+        [ngClass]="areStatsRecent() ? 'bg-green-500 bg-opacity-10 text-green-400' : 'bg-yellow-500 bg-opacity-10 text-yellow-400'">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>
+          {{ areStatsRecent() ? 'Données à jour' : 'Actualisation recommandée' }}
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500 bg-opacity-10 text-purple-400"
+        *ngIf="getHighestPendingCategory() as highest">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+        </svg>
+        <span>{{ highest.label }} : {{ highest.pendingCount }} en attente</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Indicateur de chargement -->
+<div class="container mx-auto px-4">
+  <div class="flex justify-center items-center py-24" *ngIf="isLoading">
+    <div class="text-center">
+      <div class="relative w-20 h-20 mx-auto mb-8">
+        <div class="absolute inset-0 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 animate-pulse"></div>
+        <div class="absolute inset-0.5 rounded-[calc(0.75rem-1px)] bg-gray-900 flex items-center justify-center">
+          <svg class="w-8 h-8 text-indigo-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </div>
+      </div>
+      <h3 class="text-xl font-semibold text-white mb-2">Chargement des catégories</h3>
+      <p class="text-gray-400">Veuillez patienter un instant...</p>
+    </div>
+  </div>
+
+  <!-- Gestion des erreurs -->
+  <div class="bg-red-500/10 backdrop-blur-sm border border-red-500/20 rounded-xl p-8 mb-8" *ngIf="errorMessage"
+    role="alert">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+        <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="flex-1">
+        <h3 class="text-xl font-semibold text-red-400 mb-2">Erreur de chargement</h3>
+        <p class="text-red-300/90 mb-6">{{ errorMessage }}</p>
+        <button (click)="onRefresh()"
+          class="inline-flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 px-6 py-2.5 rounded-lg transition-all duration-200 font-medium">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Réessayer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Grille des catégories -->
+<div class="container mx-auto px-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" *ngIf="!isLoading && !errorMessage">
+    <div *ngFor="let defaultCat of defaultCategories; trackBy: trackByDefaultCategory" class="relative group">
+
+      <ng-container *ngIf="getCategoryStats(defaultCat.contentType) as stats">
+        <!-- Carte principale -->
+        <div
+          class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border transition-all duration-200 hover:bg-gray-800/70 cursor-pointer shadow-xl"
+          [ngClass]="{
+            'border-indigo-500 ring-2 ring-indigo-500/20': isCategorySelected(defaultCat.contentType),
+            'border-gray-700/50 hover:border-gray-600/50': !isCategorySelected(defaultCat.contentType)
+          }" (click)="onCategorySelect(defaultCat.contentType)">
+
+          <!-- Header avec icône et titre -->
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-xl flex items-center justify-center text-lg shadow-lg"
+                [ngClass]="defaultCat.color + ' bg-opacity-90'">
+                {{ defaultCat.icon }}
+              </div>
+              <div>
+                <h3 class="font-semibold text-white text-lg">{{ defaultCat.label }}</h3>
+                <p class="text-sm text-gray-400 mt-0.5">{{ stats.totalCount }} total</p>
+              </div>
+            </div>
+
+            <!-- Badge prioritaire -->
+            <div *ngIf="stats.priorityCount > 0"
+              class="px-3 py-1.5 rounded-full text-sm font-medium flex items-center gap-2"
+              [ngClass]="getPriorityClass(stats.priorityCount) + ' bg-opacity-10'">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              {{ stats.priorityCount }}
+            </div>
+          </div>
+
+          <!-- Statistiques principales -->
+          <div class="space-y-4 mb-6">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-gray-400">En attente</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="font-medium text-lg"
+                  [ngClass]="stats.pendingCount > 0 ? 'text-yellow-400' : 'text-green-400'">
+                  {{ stats.pendingCount }}
+                </span>
+                <div *ngIf="getWorkloadIndicator(stats.pendingCount) as workload"
+                  class="px-2.5 py-1 rounded-full text-xs font-medium" [ngClass]="workload.color + ' bg-opacity-10'">
+                  {{ workload.label }}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between" *ngIf="stats.averageWaitTime > 0">
+              <div class="flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-gray-400">Temps moyen</span>
+              </div>
+              <span class="text-gray-300 font-medium">{{ formatWaitTime(stats.averageWaitTime) }}</span>
+            </div>
+          </div>
+
+          <!-- Barre de progression -->
+          <div class="w-full bg-gray-700/50 rounded-full h-2 mb-6 overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-300 bg-gradient-to-r" [ngClass]="{
+                'from-green-500 to-emerald-500': stats.pendingCount === 0,
+                'from-yellow-500 to-orange-500': stats.pendingCount > 0 && stats.pendingCount < 10,
+                'from-orange-500 to-red-500': stats.pendingCount >= 10
+              }"
+              [style.width.%]="stats.totalCount > 0 ? ((stats.totalCount - stats.pendingCount) / stats.totalCount) * 100 : 100">
+            </div>
+          </div>
+
+          <!-- Actions rapides -->
+          <div class="flex gap-3">
+            <button (click)="onCategorySelect(defaultCat.contentType); $event.stopPropagation()"
+              class="flex-1 bg-gray-700/50 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium"
+              [disabled]="stats.pendingCount === 0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Voir ({{ stats.pendingCount }})
+            </button>
+
+            <button *ngIf="stats.priorityCount > 0"
+              (click)="onPriorityQueueSelect(defaultCat.contentType); $event.stopPropagation()"
+              class="bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm font-medium">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              {{ stats.priorityCount }}
+            </button>
+          </div>
+
+          <!-- Timestamp de dernière mise à jour -->
+          <div class="mt-4 text-xs text-gray-500 flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {{ formatRelativeTime(stats.lastUpdate) }}
+          </div>
+        </div>
+
+        <!-- Indicateur de sélection -->
+        <div *ngIf="isCategorySelected(defaultCat.contentType)"
+          class="absolute -top-2 -right-2 w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center shadow-lg">
+          <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"></path>
+          </svg>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
+<!-- État vide -->
+<div class="container mx-auto px-4">
+  <div class="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-12 text-center"
+    *ngIf="!isLoading && !errorMessage && categories.length === 0">
+    <div class="w-20 h-20 rounded-xl bg-gray-700/50 flex items-center justify-center mx-auto mb-6">
+      <svg class="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    </div>
+    <h3 class="text-2xl font-semibold text-white mb-3">Aucune catégorie disponible</h3>
+    <p class="text-gray-400 mb-8 max-w-md mx-auto">Les catégories de modération n'ont pas pu être chargées. Veuillez
+      réessayer dans quelques instants.</p>
+    <button (click)="onRefresh()"
+      class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg transition-colors font-medium shadow-lg">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Actualiser
+    </button>
+  </div>
+</div>
+
+<!-- Résumé rapide en bas -->
+<div class="container mx-auto px-4">
+  <div class="mt-8 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6"
+    *ngIf="!isLoading && !errorMessage && hasPendingItems()">
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center">
+          <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.734 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+        <div>
+          <h4 class="text-lg font-semibold text-white">
+            {{ getTotalPending() }} élément(s) nécessitent votre attention
+          </h4>
+          <div class="flex items-center gap-3 mt-1 text-sm text-gray-400">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span>{{ getTotalPriority() }} prioritaire(s)</span>
+            </div>
+            <span *ngIf="getHighestPendingCategory() as highest" class="flex items-center gap-2">
+              <span class="text-gray-600">•</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              <span>{{ highest.label }} le plus chargé</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <button (click)="onRefresh()"
+        class="bg-gray-700/50 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 text-sm font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Actualiser les statistiques
+      </button>
+    </div>
+  </div>
+</div>

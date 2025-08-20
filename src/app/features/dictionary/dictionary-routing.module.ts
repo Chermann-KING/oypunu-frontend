@@ -5,6 +5,7 @@ import { WordDetailsComponent } from './components/word-details/word-details.com
 import { SearchResultsComponent } from './components/search-results/search-results.component';
 import { AddWordComponent } from './components/add-word/add-word.component';
 import { EditWordComponent } from './components/edit-word/edit-word.component';
+import { AddCategoryComponent } from './components/add-category/add-category.component';
 import { AuthGuard } from '../../core/guards/auth.guard';
 import { RoleGuard } from '../../core/guards/role.guard';
 import { UserRole } from '../../core/models/admin';
@@ -29,6 +30,15 @@ const routes: Routes = [
   {
     path: 'add',
     component: AddWordComponent,
+    canActivate: [AuthGuard, RoleGuard],
+    data: { 
+      minRole: UserRole.CONTRIBUTOR,
+      roles: [UserRole.CONTRIBUTOR, UserRole.ADMIN, UserRole.SUPERADMIN]
+    },
+  },
+  {
+    path: 'add-category',
+    component: AddCategoryComponent,
     canActivate: [AuthGuard, RoleGuard],
     data: { 
       minRole: UserRole.CONTRIBUTOR,

@@ -126,7 +126,7 @@
           
           <!-- Lien pour proposer une nouvelle langue -->
           <div class="mt-2">
-            <a routerLink="/admin/languages/add" 
+            <a routerLink="/languages/add" 
                class="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -170,6 +170,21 @@
             <option [ngValue]="''">Sélectionnez une catégorie (facultatif)</option>
             <option *ngFor="let category of categories" [ngValue]="category.id">{{ category.name }}</option>
           </select>
+          
+          <!-- Lien contextuel pour proposer une nouvelle catégorie -->
+          <div class="mt-2 flex items-center justify-between">
+            <div class="text-xs text-gray-500">
+              La catégorie n'existe pas encore pour cette langue ?
+            </div>
+            <a [routerLink]="['/categories/add']" 
+               [queryParams]="getAddCategoryParams()"
+               class="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Proposer une catégorie
+            </a>
+          </div>
         </div>
       </div>
 

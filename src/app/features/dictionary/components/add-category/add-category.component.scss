@@ -1,0 +1,35 @@
+// Styles pour le composant AddCategory
+// Utilise le même design pattern que AddWord
+
+.add-category-container {
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+// Override pour les styles de validation
+.ng-invalid.ng-touched {
+  border-color: #ef4444 !important;
+}
+
+.ng-valid.ng-touched {
+  border-color: #10b981 !important;
+}
+
+// Animation pour le loader
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+// Responsive design
+@media (max-width: 640px) {
+  .max-w-2xl {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+}

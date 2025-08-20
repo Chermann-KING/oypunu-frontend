@@ -21,6 +21,7 @@ import { UserRole } from './models/admin.models';
 import { AdminDashboardContainer } from './containers/admin-dashboard/admin-dashboard.container';
 import { UserAdminContainer } from './containers/user-admin/user-admin.container';
 import { ContentModerationContainer } from './containers/content-moderation/content-moderation.container';
+import { CategoryManagementContainer } from './containers/category-management/category-management.container';
 import { AnalyticsOverviewContainer } from './containers/analytics-overview/analytics-overview.container';
 import { SystemAdminContainer } from './containers/system-admin/system-admin.container';
 
@@ -87,6 +88,19 @@ const routes: Routes = [
         }
       },
 
+      // === GESTION DES CATÉGORIES ===
+      {
+        path: 'categories',
+        component: CategoryManagementContainer,
+        canActivate: [PermissionGuard],
+        data: {
+          title: 'Gestion des catégories',
+          breadcrumb: 'Catégories',
+          permission: Permission.MANAGE_CATEGORIES,
+          description: 'Gestion des catégories par langue pour l\'organisation du dictionnaire'
+        }
+      },
+
       // === ANALYTICS ET RAPPORTS ===
       {
         path: 'analytics',
@@ -110,6 +124,19 @@ const routes: Routes = [
           breadcrumb: 'Système',
           permission: Permission.MANAGE_SYSTEM,
           description: 'Configuration système, logs et maintenance'
+        }
+      },
+
+      // === GESTION DES LANGUES ===
+      {
+        path: 'languages',
+        loadChildren: () => import('../languages/languages.module').then(m => m.LanguagesModule),
+        canActivate: [PermissionGuard],
+        data: {
+          title: 'Gestion des langues',
+          breadcrumb: 'Langues',
+          permission: Permission.MANAGE_SYSTEM,
+          description: 'Proposition et gestion des langues du dictionnaire'
         }
       },
 
@@ -145,6 +172,7 @@ export class AdminRoutingModule {
       'dashboard - Tableau de bord multi-rôles',
       'users - Gestion des utilisateurs', 
       'moderation - Modération de contenu',
+      'categories - Gestion des catégories',
       'analytics - Analytics et rapports',
       'system - Administration système'
     ],

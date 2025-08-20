@@ -10,6 +10,7 @@
  */
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { UserManagementTableComponent } from '../../components/user-management/user-management-table.component';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import {
   takeUntil,
@@ -22,6 +23,7 @@ import {
 import { Router } from '@angular/router';
 import { AdminApiService } from '../../services/admin-api.service';
 import { PermissionService } from '../../services/permission.service';
+import { ToastService } from '../../../../core/services/toast.service';
 import {
   User,
   UserRole,
@@ -29,7 +31,11 @@ import {
   PaginatedResponse,
 } from '../../models/admin.models';
 import { Permission } from '../../models/permissions.models';
-import { UserTableAction, UserTableSort } from '../../components/user-management/user-management-table.component';
+import {
+  UserTableAction,
+  UserTableSort,
+} from '../../components/user-management/user-management-table.component';
+import { ConfirmationConfig } from '../../../../shared/components/confirmation-modal/confirmation-modal.component';
 
 /**
  * Interface pour l'état de la gestion utilisateur
@@ -77,10 +83,29 @@ export class UserAdminContainer implements OnInit, OnDestroy {
   public searchTerm = '';
   private readonly searchSubject = new Subject<string>();
 
+  // Modal de confirmation
+  public showConfirmationModal = false;
+  public confirmationConfig: ConfirmationConfig = {
+    title: '',
+    message: '',
+  };
+  private confirmationAction?: (inputValue?: string) => void;
+
+  // Modal de changement de rôle
+  public showRoleChangeModal = false;
+  public roleChangeUser: User | null = null;
+  public availableRoles: { value: UserRole; label: string }[] = [
+    { value: UserRole.USER, label: 'Utilisateur' },
+    { value: UserRole.CONTRIBUTOR, label: 'Contributeur' },
+    { value: UserRole.ADMIN, label: 'Administrateur' },
+    { value: UserRole.SUPERADMIN, label: 'Super-Administrateur' },
+  ];
+
   constructor(
     private readonly router: Router,
     private readonly adminApiService: AdminApiService,
-    private readonly permissionService: PermissionService
+    private readonly permissionService: PermissionService,
+    private readonly toastService: ToastService
   ) {
     this.userAdminState$ = this.userAdminStateSubject.asObservable();
 
@@ -214,18 +239,30 @@ export class UserAdminContainer implements OnInit, OnDestroy {
    * Actions sur les utilisateurs
    */
   public viewUserDetails(userId: string): void {
-    console.log('View user details:', userId);
+    console.log('🔍 Voir détails utilisateur:', userId);
+    this.toastService.warning(
+      'Fonctionnalité en cours de développement',
+      'La page de détail utilisateur sera bientôt disponible.'
+    );
   }
 
   public editUser(userId: string): void {
-    console.log('Edit user:', userId);
+    console.log('✏️ Éditer utilisateur:', userId);
+    this.toastService.warning(
+      'Fonctionnalité en cours de développement',
+      "La page d'édition utilisateur sera bientôt disponible."
+    );
   }
 
   /**
    * Export des utilisateurs
    */
   public exportUsers(): void {
-    console.log('Export users');
+    console.log('📤 Export utilisateurs');
+    this.toastService.warning(
+      'Fonctionnalité en cours de développement',
+      "L'export des utilisateurs sera bientôt disponible côté backend."
+    );
   }
 
   /**
@@ -274,27 +311,34 @@ export class UserAdminContainer implements OnInit, OnDestroy {
    * Gère les actions individuelles sur les utilisateurs
    */
   public handleUserAction(action: UserTableAction): void {
+    const userId = action.user.id;
+    console.log('🎯 Action reçue:', {
+      type: action.type,
+      userId,
+      payload: action.payload,
+    });
+
     switch (action.type) {
       case 'view':
-        this.viewUserDetails(action.user.id);
+        this.viewUserDetails(userId);
         break;
       case 'edit':
-        this.editUser(action.user.id);
+        this.editUser(userId);
         break;
       case 'suspend':
-        this.suspendUser(action.user.id);
+        this.suspendUser(userId);
         break;
       case 'activate':
-        this.activateUser(action.user.id);
+        this.activateUser(userId);
         break;
       case 'change_role':
-        this.changeUserRole(action.user.id, action.payload?.newRole);
+        this.openRoleChangeModal(userId, action.user);
         break;
       case 'permissions':
-        this.manageUserPermissions(action.user.id);
+        this.manageUserPermissions(userId);
         break;
       case 'delete':
-        this.deleteUser(action.user.id);
+        this.deleteUser(userId);
         break;
       default:
         console.warn('Action utilisateur non gérée:', action.type);
@@ -357,49 +401,135 @@ export class UserAdminContainer implements OnInit, OnDestroy {
   // ===== ACTIONS SPÉCIFIQUES SUR LES UTILISATEURS =====
 
   private suspendUser(userId: string): void {
-    if (confirm('Êtes-vous sûr de vouloir suspendre cet utilisateur ?')) {
-      this.adminApiService.suspendUser(userId)
+    this.confirmationConfig = {
+      title: 'Confirmer la suspension',
+      message: 'Êtes-vous sûr de vouloir suspendre cet utilisateur ?',
+      confirmText: 'Suspendre',
+      cancelText: 'Annuler',
+      type: 'warning',
+      showInput: true,
+      inputLabel: 'Raison de la suspension (optionnel)',
+      inputPlaceholder: 'Expliquez pourquoi vous suspendez cet utilisateur...',
+    };
+
+    this.confirmationAction = (inputValue?: string) => {
+      this.adminApiService
+        .suspendUser(userId, inputValue || '')
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
-            console.log('Utilisateur suspendu:', userId);
-            this.loadUsers(); // Recharger la liste
+            console.log('✅ Utilisateur suspendu:', userId);
+            this.toastService.success(
+              'Utilisateur suspendu',
+              "L'utilisateur a été suspendu avec succès."
+            );
+            this.loadUsers();
           },
           error: (error) => {
-            console.error('Erreur lors de la suspension:', error);
-          }
+            console.error('❌ Erreur lors de la suspension:', error);
+            this.toastService.error(
+              'Erreur de suspension',
+              "Vérifiez que vous avez les permissions nécessaires et que l'utilisateur n'est pas un superadmin."
+            );
+          },
         });
-    }
+    };
+
+    this.showConfirmationModal = true;
   }
 
   private activateUser(userId: string): void {
-    this.adminApiService.reactivateUser(userId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          console.log('Utilisateur activé:', userId);
-          this.loadUsers(); // Recharger la liste
-        },
-        error: (error) => {
-          console.error('Erreur lors de l\'activation:', error);
-        }
-      });
-  }
+    this.confirmationConfig = {
+      title: 'Confirmer la réactivation',
+      message: 'Êtes-vous sûr de vouloir réactiver cet utilisateur ?',
+      confirmText: 'Réactiver',
+      cancelText: 'Annuler',
+      type: 'info',
+      showInput: true,
+      inputLabel: 'Raison de la réactivation (optionnel)',
+      inputPlaceholder: 'Expliquez pourquoi vous réactivez cet utilisateur...',
+    };
 
-  private changeUserRole(userId: string, newRole: UserRole): void {
-    if (confirm(`Changer le rôle de cet utilisateur en ${newRole} ?`)) {
-      this.adminApiService.updateUserRole(userId, newRole)
+    this.confirmationAction = (inputValue?: string) => {
+      this.adminApiService
+        .reactivateUser(userId, inputValue || '')
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: () => {
-            console.log('Rôle utilisateur changé:', userId, newRole);
-            this.loadUsers(); // Recharger la liste
+            console.log('✅ Utilisateur activé:', userId);
+            this.toastService.success(
+              'Utilisateur réactivé',
+              "L'utilisateur a été réactivé avec succès."
+            );
+            this.loadUsers();
           },
           error: (error) => {
-            console.error('Erreur lors du changement de rôle:', error);
-          }
+            console.error("❌ Erreur lors de l'activation:", error);
+            this.toastService.error(
+              'Erreur de réactivation',
+              'Vérifiez que vous avez les permissions nécessaires.'
+            );
+          },
         });
-    }
+    };
+
+    this.showConfirmationModal = true;
+  }
+
+  private openRoleChangeModal(userId: string, user: User): void {
+    this.roleChangeUser = user;
+    this.showRoleChangeModal = true;
+  }
+
+  public onRoleChangeConfirm(newRole: UserRole): void {
+    if (!this.roleChangeUser) return;
+
+    const userId = this.roleChangeUser.id;
+    const roleLabels = {
+      [UserRole.USER]: 'Utilisateur',
+      [UserRole.CONTRIBUTOR]: 'Contributeur',
+      [UserRole.ADMIN]: 'Administrateur',
+      [UserRole.SUPERADMIN]: 'Super-Administrateur',
+    };
+
+    this.confirmationConfig = {
+      title: 'Confirmer le changement de rôle',
+      message: `Êtes-vous sûr de vouloir changer le rôle de "${this.roleChangeUser.username}" vers "${roleLabels[newRole]}" ?`,
+      confirmText: 'Changer le rôle',
+      cancelText: 'Annuler',
+      type: 'warning',
+    };
+
+    this.confirmationAction = (inputValue?: string) => {
+      this.adminApiService
+        .updateUserRole(userId, newRole)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.toastService.success(
+              'Rôle modifié',
+              "Le rôle de l'utilisateur a été modifié avec succès."
+            );
+            this.loadUsers();
+            this.showRoleChangeModal = false;
+            this.roleChangeUser = null;
+          },
+          error: () => {
+            this.toastService.error(
+              'Erreur de changement de rôle',
+              'Vérifiez que vous avez les permissions nécessaires.'
+            );
+          },
+        });
+    };
+
+    this.showRoleChangeModal = false;
+    this.showConfirmationModal = true;
+  }
+
+  public onRoleChangeCancel(): void {
+    this.showRoleChangeModal = false;
+    this.roleChangeUser = null;
   }
 
   private manageUserPermissions(userId: string): void {
@@ -408,71 +538,60 @@ export class UserAdminContainer implements OnInit, OnDestroy {
   }
 
   private deleteUser(userId: string): void {
-    if (confirm('ATTENTION: Cette action supprimera définitivement cet utilisateur. Continuer ?')) {
-      this.adminApiService.deleteUser(userId)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            console.log('Utilisateur supprimé:', userId);
-            this.loadUsers(); // Recharger la liste
-          },
-          error: (error) => {
-            console.error('Erreur lors de la suppression:', error);
-          }
-        });
-    }
+    this.confirmationConfig = {
+      title: 'Confirmer la suppression',
+      message:
+        'Êtes-vous sûr de vouloir supprimer définitivement cet utilisateur ? Cette action est irréversible.',
+      confirmText: 'Supprimer définitivement',
+      cancelText: 'Annuler',
+      type: 'danger',
+    };
+
+    this.confirmationAction = (inputValue?: string) => {
+      // Pour l'instant, afficher un toast d'information
+      this.toastService.warning(
+        'Fonctionnalité en cours de développement',
+        "La suppression d'utilisateurs sera bientôt disponible côté backend."
+      );
+      console.warn(
+        "⚠️ Tentative de suppression d'utilisateur - endpoint non disponible"
+      );
+    };
+
+    this.showConfirmationModal = true;
   }
 
   // ===== ACTIONS EN LOT =====
 
   private bulkSuspendUsers(userIds: string[]): void {
-    if (confirm(`Suspendre ${userIds.length} utilisateur(s) ?`)) {
-      this.adminApiService.bulkSuspendUsers(userIds)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            console.log('Utilisateurs suspendus:', userIds);
-            this.loadUsers();
-          },
-          error: (error) => {
-            console.error('Erreur lors de la suspension en lot:', error);
-          }
-        });
-    }
+    this.toastService.warning(
+      'Fonctionnalité en cours de développement',
+      'Les actions en lot seront bientôt disponibles côté backend.'
+    );
+    console.warn('⚠️ Tentative de suspension en lot - endpoint non disponible');
   }
 
   private bulkActivateUsers(userIds: string[]): void {
-    this.adminApiService.bulkReactivateUsers(userIds)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          console.log('Utilisateurs activés:', userIds);
-          this.loadUsers();
-        },
-        error: (error) => {
-          console.error('Erreur lors de l\'activation en lot:', error);
-        }
-      });
+    this.toastService.warning(
+      'Fonctionnalité en cours de développement',
+      'Les actions en lot seront bientôt disponibles côté backend.'
+    );
+    console.warn("⚠️ Tentative d'activation en lot - endpoint non disponible");
   }
 
   private bulkDeleteUsers(userIds: string[]): void {
-    if (confirm(`ATTENTION: Supprimer définitivement ${userIds.length} utilisateur(s) ?`)) {
-      this.adminApiService.bulkDeleteUsers(userIds)
-        .pipe(takeUntil(this.destroy$))
-        .subscribe({
-          next: () => {
-            console.log('Utilisateurs supprimés:', userIds);
-            this.loadUsers();
-          },
-          error: (error) => {
-            console.error('Erreur lors de la suppression en lot:', error);
-          }
-        });
-    }
+    this.toastService.warning(
+      'Fonctionnalité en cours de développement',
+      'Les actions en lot seront bientôt disponibles côté backend.'
+    );
+    console.warn(
+      '⚠️ Tentative de suppression en lot - endpoint non disponible'
+    );
   }
 
   private exportSelectedUsers(userIds: string[]): void {
-    this.adminApiService.exportUsers(userIds)
+    this.adminApiService
+      .exportUsers(userIds)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (data) => {
@@ -481,13 +600,66 @@ export class UserAdminContainer implements OnInit, OnDestroy {
           const url = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `users-export-${new Date().toISOString().split('T')[0]}.csv`;
+          link.download = `users-export-${
+            new Date().toISOString().split('T')[0]
+          }.csv`;
           link.click();
           window.URL.revokeObjectURL(url);
         },
         error: (error) => {
-          console.error('Erreur lors de l\'export:', error);
-        }
+          console.error("Erreur lors de l'export:", error);
+          this.toastService.error(
+            "Erreur d'export",
+            "Une erreur est survenue lors de l'export des utilisateurs."
+          );
+        },
       });
+  }
+
+  // ===== MÉTHODES POUR LA MODAL DE CONFIRMATION =====
+
+  /**
+   * Confirme l'action de la modal
+   */
+  public onConfirmAction(inputValue: string): void {
+    this.showConfirmationModal = false;
+    if (this.confirmationAction) {
+      this.confirmationAction(inputValue);
+      this.confirmationAction = undefined;
+    }
+  }
+
+  /**
+   * Annule l'action de la modal
+   */
+  public onCancelAction(): void {
+    this.showConfirmationModal = false;
+    this.confirmationAction = undefined;
+  }
+
+  /**
+   * Obtient le libellé d'un rôle
+   */
+  public getRoleLabel(role: string): string {
+    const labels: Record<string, string> = {
+      [UserRole.USER]: 'Utilisateur',
+      [UserRole.CONTRIBUTOR]: 'Contributeur',
+      [UserRole.ADMIN]: 'Administrateur',
+      [UserRole.SUPERADMIN]: 'Super-Administrateur',
+    };
+    return labels[role] || role;
+  }
+
+  /**
+   * Obtient la description d'un rôle
+   */
+  public getroleDescription(role: UserRole): string {
+    const descriptions: Record<UserRole, string> = {
+      [UserRole.USER]: 'Accès de base à la plateforme',
+      [UserRole.CONTRIBUTOR]: 'Peut contribuer aux contenus',
+      [UserRole.ADMIN]: 'Gestion avancée du système',
+      [UserRole.SUPERADMIN]: 'Accès complet administrateur',
+    };
+    return descriptions[role] || '';
   }
 }

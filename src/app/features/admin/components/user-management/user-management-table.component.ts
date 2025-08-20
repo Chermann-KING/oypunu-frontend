@@ -15,8 +15,16 @@ import {
   Output,
   EventEmitter,
   ChangeDetectionStrategy,
+  NgModule,
+  OnDestroy,
+  ChangeDetectorRef,
+  ElementRef,
+  HostListener,
 } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { User, UserRole, UserFilters } from '../../models/admin.models';
+import { DropdownService } from '../../services/dropdown.service';
+import { Observable } from 'rxjs';
 
 /**
  * Interface pour les actions sur les utilisateurs
@@ -64,7 +72,7 @@ export interface UserTablePagination {
   styleUrls: ['./user-management-table.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class UserManagementTableComponent {
+export class UserManagementTableComponent implements OnDestroy {
   // ===== INPUTS =====
 
   @Input() users: User[] | null = null;
@@ -91,20 +99,34 @@ export class UserManagementTableComponent {
 
   // ===== PROPRIÉTÉS INTERNES =====
 
-  private openDropdowns = new Set<string>();
+  public openDropdownId: string | null = null; // ID du dropdown actuellement ouvert
+
+  constructor(
+    private dropdownService: DropdownService,
+    private cdr: ChangeDetectorRef,
+    private elementRef: ElementRef
+  ) {}
+
+  ngOnDestroy(): void {
+    // Rien à nettoyer
+  }
 
   // ===== MÉTHODES PUBLIQUES =====
 
   /**
    * Gestion des actions sur un utilisateur
    */
-  public onAction(type: UserTableAction['type'], user: User | null): void {
+  public onAction(
+    type: UserTableAction['type'],
+    user: User | null,
+    payload?: any
+  ): void {
     if (!user && type !== 'export') return;
-
-    this.actionClicked.emit({
-      type,
-      user: user!,
-    });
+    
+    // Fermer le dropdown après l'action
+    this.openDropdownId = null;
+    
+    this.actionClicked.emit({ type, user: user!, payload });
   }
 
   /**
@@ -135,6 +157,8 @@ export class UserManagementTableComponent {
    * Sélection d'un utilisateur individuel
    */
   public onSelectUser(userId: string, event: Event): void {
+    if (!userId) return; // Sécurité si userId est undefined
+    
     const target = event.target as HTMLInputElement;
     const newSelection = target.checked
       ? [...this.selectedUsers, userId]
@@ -195,20 +219,36 @@ export class UserManagementTableComponent {
   /**
    * Toggle dropdown menu
    */
-  public toggleDropdown(userId: string): void {
-    if (this.openDropdowns.has(userId)) {
-      this.openDropdowns.delete(userId);
-    } else {
-      this.openDropdowns.clear(); // Ferme les autres dropdowns
-      this.openDropdowns.add(userId);
+  public toggleDropdown(event: Event, userId: string): void {
+    if (!userId) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Simple logique: si c'est déjà ouvert, fermer, sinon ouvrir
+    this.openDropdownId = this.openDropdownId === userId ? null : userId;
+    console.log('🔧 DEBUG: openDropdownId maintenant:', this.openDropdownId);
+  }
+
+  /**
+   * Host listener pour fermer le dropdown au clic extérieur
+   */
+  @HostListener('document:click', ['$event'])
+  onClickOutside(event: Event): void {
+    if (this.openDropdownId && !this.elementRef.nativeElement.contains(event.target)) {
+      this.openDropdownId = null;
+      console.log('🔧 DEBUG: Dropdown fermé par clic extérieur');
     }
   }
+
 
   /**
    * Vérifie si un dropdown est ouvert
    */
   public isDropdownOpen(userId: string): boolean {
-    return this.openDropdowns.has(userId);
+    const isOpen = this.openDropdownId === userId;
+    console.log('🔧 DEBUG: isDropdownOpen pour', userId, ':', isOpen);
+    return isOpen;
   }
 
   /**
@@ -266,7 +306,7 @@ export class UserManagementTableComponent {
    * TrackBy function pour optimiser les performances
    */
   public trackByUserId(index: number, user: User): string {
-    return user.id;
+    return user.id || user._id;
   }
 
   /**

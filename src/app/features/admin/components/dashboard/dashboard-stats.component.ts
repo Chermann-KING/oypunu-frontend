@@ -209,9 +209,9 @@ export class DashboardStatsComponent {
 
   private calculateUserTrend(): number {
     if (!this.stats) return 0;
-    // Calcul basé sur la croissance hebdomadaire
+    // Calcul basé sur la croissance mensuelle
     return Math.round(
-      (this.stats.newUsersThisWeek / this.stats.totalUsers) * 100
+      (this.stats.newUsersThisMonth / this.stats.totalUsers) * 100
     );
   }
 
@@ -238,8 +238,9 @@ export class DashboardStatsComponent {
 
   private calculateCommunityTrend(): number {
     if (!this.stats) return 0;
+    // Utiliser les messages comme métrique alternative
     return Math.round(
-      (this.stats.newCommunitiesThisMonth / this.stats.totalCommunities) * 100
+      (this.stats.totalMessages / this.stats.totalCommunities) * 10
     );
   }
 
@@ -251,17 +252,11 @@ export class DashboardStatsComponent {
   }
 
   private getSystemHealthScore(): number {
-    if (!this.stats?.systemHealthStatus) return 100;
-
-    switch (this.stats.systemHealthStatus) {
-      case 'healthy':
-        return 100;
-      case 'warning':
-        return 85;
-      case 'critical':
-        return 60;
-      default:
-        return 100;
-    }
+    if (!this.stats) return 100;
+    // Calcul basé sur les métriques disponibles
+    const approvalRate = this.stats.totalWords > 0 
+      ? (this.stats.approvedWords / this.stats.totalWords) * 100
+      : 100;
+    return Math.round(approvalRate);
   }
 }

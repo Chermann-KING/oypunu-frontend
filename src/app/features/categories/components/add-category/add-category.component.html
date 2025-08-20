@@ -1,0 +1,165 @@
+<div class="min-h-screen bg-gray-950 text-white">
+  <div class="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+
+    <!-- En-tête -->
+    <div class="mb-8">
+      <a [routerLink]="selectedLanguageId ? ['/dictionary/add'] : ['/dictionary']"
+        [queryParams]="selectedLanguageId ? { languageId: selectedLanguageId } : null"
+        class="inline-flex items-center text-gray-400 hover:text-gray-300 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd"
+            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+            clip-rule="evenodd" />
+        </svg>
+        Retour
+      </a>
+
+      <h1 class="text-3xl font-bold">📂 Proposer une nouvelle catégorie</h1>
+      <p class="text-gray-400 mt-2">
+        Enrichissez O'Ypunu en proposant une catégorie qui n'existe pas encore
+        <span *ngIf="selectedLanguage" class="text-blue-400">pour {{ selectedLanguage.name }}</span>.
+      </p>
+    </div>
+
+    <!-- Messages d'erreur et de succès -->
+    <div *ngIf="errorMessage" class="bg-red-900/50 rounded-lg p-4 mb-6 text-red-200 border border-red-800">
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="successMessage" class="bg-green-900/50 rounded-lg p-4 mb-6 text-green-200 border border-green-800">
+      {{ successMessage }}
+    </div>
+
+    <!-- Information contextuelle -->
+    <div *ngIf="selectedLanguage" class="bg-blue-900/30 rounded-lg p-4 mb-6 border border-blue-700">
+      <div class="flex items-start gap-3">
+        <svg class="h-6 w-6 text-blue-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2"
+          viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <h3 class="text-lg font-medium text-blue-100 mb-1">🌍 Langue sélectionnée</h3>
+          <p class="text-blue-100 text-sm">
+            Vous créez une catégorie pour <strong>{{ selectedLanguage.name }}</strong> ({{ selectedLanguage.nativeName
+            }}).
+            Cette catégorie sera disponible lors de l'ajout de mots dans cette langue.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Formulaire -->
+    <form [formGroup]="categoryForm" (ngSubmit)="onSubmit()" class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+
+      <!-- Sélection de la langue (si pas en contexte) -->
+      <div *ngIf="!selectedLanguage" class="mb-6">
+        <label for="languageId" class="block text-sm font-medium text-gray-300 mb-2">
+          Langue pour cette catégorie*
+        </label>
+        <div class="relative">
+          <select id="languageId" formControlName="languageId" (change)="onLanguageChange($any($event.target).value)"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [ngClass]="{'border-red-500': categoryForm.get('languageId')?.invalid && categoryForm.get('languageId')?.touched}">
+            <option value="" disabled>Sélectionnez une langue</option>
+            <option *ngFor="let language of availableLanguages" [value]="language._id">
+              {{ language.name }} ({{ language.nativeName }})
+            </option>
+          </select>
+          <div *ngIf="isLoadingLanguages" class="absolute right-3 top-3">
+            <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
+            </svg>
+          </div>
+        </div>
+        <div *ngIf="categoryForm.get('languageId')?.invalid && categoryForm.get('languageId')?.touched"
+          class="text-red-500 text-xs mt-1">
+          La sélection d'une langue est requise
+        </div>
+      </div>
+
+      <!-- Nom de la catégorie -->
+      <div class="mb-6">
+        <label for="name" class="block text-sm font-medium text-gray-300 mb-2">
+          Nom de la catégorie*
+        </label>
+        <input type="text" id="name" formControlName="name"
+          class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          [ngClass]="{'border-red-500': categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched}"
+          placeholder="ex: Salutations, Nourriture, Transport...">
+        <div *ngIf="categoryForm.get('name')?.invalid && categoryForm.get('name')?.touched"
+          class="text-red-500 text-xs mt-1">
+          Le nom de la catégorie est requis (minimum 2 caractères)
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="mb-6">
+        <label for="description" class="block text-sm font-medium text-gray-300 mb-2">
+          Description (optionnel)
+        </label>
+        <textarea id="description" formControlName="description" rows="3"
+          class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Décrivez brièvement cette catégorie, les types de mots qu'elle contiendra..."></textarea>
+        <div class="text-xs text-gray-500 mt-1">
+          Une description claire aide les autres contributeurs à mieux comprendre l'usage de cette catégorie
+        </div>
+      </div>
+
+      <!-- Bouton de soumission -->
+      <div class="flex justify-end">
+        <button type="submit" [disabled]="isSubmitting || categoryForm.invalid"
+          class="px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2">
+          <span *ngIf="!isSubmitting">🚀 Proposer la catégorie</span>
+          <span *ngIf="isSubmitting" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+              viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+              </path>
+            </svg>
+            Soumission en cours...
+          </span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Exemples de catégories -->
+    <div class="mt-8 p-4 bg-gray-800/60 rounded-lg">
+      <h3 class="text-lg font-medium text-gray-300 mb-3">💡 Exemples de catégories utiles :</h3>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+        <div class="text-gray-400">• Salutations</div>
+        <div class="text-gray-400">• Famille</div>
+        <div class="text-gray-400">• Nourriture</div>
+        <div class="text-gray-400">• Transport</div>
+        <div class="text-gray-400">• Émotions</div>
+        <div class="text-gray-400">• Couleurs</div>
+        <div class="text-gray-400">• Nombres</div>
+        <div class="text-gray-400">• Temps</div>
+        <div class="text-gray-400">• Nature</div>
+      </div>
+    </div>
+
+    <!-- Note informative -->
+    <div class="mt-8 p-4 bg-purple-900/60 border border-purple-700 rounded-lg flex items-start gap-3">
+      <svg class="h-6 w-6 text-purple-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div>
+        <h3 class="text-lg font-medium text-purple-100 mb-1">📋 Processus de validation</h3>
+        <p class="text-purple-100 text-sm">
+          Votre proposition sera examinée par notre équipe de modérateurs.
+          Nous vérifions l'utilité de la catégorie, son nom et sa pertinence pour la langue sélectionnée.
+          Vous serez notifié du résultat et pourrez ensuite ajouter des mots dans cette catégorie une fois approuvée.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

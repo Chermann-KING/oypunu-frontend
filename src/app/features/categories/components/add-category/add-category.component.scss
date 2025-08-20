@@ -1,0 +1,50 @@
+// Styles spécifiques au composant AddCategory
+.form-section {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideInUp 0.5s ease-out forwards;
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Amélioration des inputs
+input, select, textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  
+  &:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+}
+
+// Animation pour les messages d'erreur
+.error-message {
+  animation: shake 0.4s ease-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+// Style pour le contexte de langue
+.language-context {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .examples-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .form-button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,92 @@
+// Styles spécifiques au composant AddLanguage
+.step-indicator {
+  transition: all 0.3s ease;
+  
+  &.active {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+  }
+  
+  &.completed {
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+  }
+}
+
+.form-section {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: slideInUp 0.5s ease-out forwards;
+}
+
+@keyframes slideInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.progress-bar {
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-array-item {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+.form-array-item.removing {
+  animation: fadeOutScale 0.2s ease-in forwards;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fadeOutScale {
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+// Amélioration des inputs
+input, select, textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  
+  &:focus {
+    box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+  }
+}
+
+// Animation pour les messages d'erreur
+.error-message {
+  animation: shake 0.4s ease-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .step-navigation {
+    flex-direction: column;
+    gap: 0.5rem;
+    
+    button {
+      width: 100%;
+    }
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
