@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core'
 import { LoggerService } from './logger.service';;
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, BehaviorSubject, Subject } from 'rxjs';
+import { Observable, of, BehaviorSubject, Subject, throwError } from 'rxjs';
 import { map, catchError, tap, switchMap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Word } from '../models/word';
@@ -19,7 +19,13 @@ interface MongoDBCategory {
   _id: string;
   name: string;
   description?: string;
-  language: string;
+  language?: string;
+  languageId?: string;
+  isActive?: boolean;
+  order?: number;
+  systemStatus?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Interfaces pour les révisions
@@ -499,6 +505,124 @@ export class DictionaryService {
     );
   }
 
+  // Proposer une nouvelle catégorie (contributeurs+)
+  proposeCategory(categoryData: {
+    name: string;
+    description?: string;
+    languageId: string;
+  }): Observable<Category | null> {
+    if (!this._authService.isAuthenticated()) {
+      return of(null);
+    }
+
+    const url = `${environment.apiUrl}/categories/propose`;
+    
+    console.log('📤 Proposition de catégorie via endpoint contributeur:', url);
+    
+    return this._http.post<MongoDBCategory>(url, categoryData).pipe(
+      map((response) => {
+        if (response) {
+          console.log('✅ Catégorie proposée avec succès:', response);
+          // Transformer la réponse MongoDB en format Category
+          return {
+            id: response._id,
+            _id: response._id,
+            name: response.name,
+            description: response.description || '',
+            languageId: response.languageId || '',
+            language: response.language || '',
+            isActive: response.isActive || false,
+            order: response.order || 0,
+            systemStatus: response.systemStatus || 'pending',
+            createdAt: response.createdAt || '',
+            updatedAt: response.updatedAt || ''
+          } as Category;
+        }
+        return null;
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la proposition de catégorie:', error);
+        return throwError(error);
+      })
+    );
+  }
+
+  // Soumettre une nouvelle catégorie (suit le même flow que les mots et langues - ADMIN ONLY)
+  submitCategory(categoryData: {
+    name: string;
+    description?: string;
+    languageId: string;
+    order?: number;
+    isActive?: boolean;
+  }): Observable<Category | null> {
+    if (!this._authService.isAuthenticated()) {
+      return of(null);
+    }
+
+    // Le endpoint /categories ne permet pas les POST (403 Forbidden)
+    // Utilisons l'endpoint admin qui fonctionne pour les superadmin/admin
+    let url = `${environment.apiUrl}/admin/categories`;
+    
+    console.log('📤 Tentative de création de catégorie via endpoint admin:', url);
+    
+    return this._http.post<MongoDBCategory>(url, categoryData).pipe(
+      map((response) => {
+        if (response) {
+          console.log('✅ Catégorie créée avec succès:', response);
+          // Transformer la réponse MongoDB en format Category
+          return {
+            id: response._id,
+            _id: response._id,
+            name: response.name,
+            description: response.description,
+            language: response.language
+          } as Category;
+        }
+        return null;
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur lors de la création de catégorie:', error);
+        this.logger.error('Error submitting new category:', error);
+        
+        // Si l'endpoint direct ne marche pas, peut-être essayer avec /propose
+        if (error.status === 404 && !url.includes('/propose')) {
+          console.log('🔄 Tentative avec /propose...');
+          return this.retryWithProposeEndpoint(categoryData);
+        }
+        
+        return of(null);
+      })
+    );
+  }
+
+  /**
+   * Méthode de fallback pour essayer l'endpoint /propose
+   */
+  private retryWithProposeEndpoint(categoryData: any): Observable<Category | null> {
+    const proposeUrl = `${this._CATEGORIES_API_URL}/propose`;
+    console.log('📤 Retry avec endpoint propose:', proposeUrl);
+    
+    return this._http.post<MongoDBCategory>(proposeUrl, categoryData).pipe(
+      map((response) => {
+        if (response) {
+          console.log('✅ Catégorie proposée avec succès:', response);
+          return {
+            id: response._id,
+            _id: response._id,
+            name: response.name,
+            description: response.description,
+            language: response.language
+          } as Category;
+        }
+        return null;
+      }),
+      catchError((error) => {
+        console.error('❌ Erreur aussi avec /propose:', error);
+        return of(null);
+      })
+    );
+  }
+
   // Méthodes pour la gestion des révisions
   canUserEditWord(wordId: string): Observable<EditPermissionsResponse> {
     if (!this._authService.isAuthenticated()) {
@@ -849,12 +973,47 @@ export class DictionaryService {
    * ✨ NOUVELLE MÉTHODE : Récupère les langues disponibles avec comptage des mots
    */
   getAvailableLanguages(): Observable<any[]> {
-    return this._http.get<any[]>(`${this._WORDS_API_URL}/available-languages`).pipe(
+    // Utiliser l'endpoint correct des langues actives
+    return this._http.get<any[]>(`${environment.apiUrl}/languages`).pipe(
+      map(response => {
+        // Transformer la réponse backend vers le format attendu par le frontend
+        const languages = Array.isArray(response) ? response : [];
+        
+        console.log('🔍 Debug: Réponse brute du backend /languages:', languages.length, 'langues');
+        
+        // Filtrer selon la structure réelle de la base de données
+        const filteredLanguages = languages.filter((lang: any) => {
+          // Langues visibles ET avec systemStatus "active"
+          const isAvailable = lang.isVisible === true && lang.systemStatus === 'active';
+          
+          console.log(`🔍 Debug: Langue "${lang.name}" - isVisible: ${lang.isVisible}, systemStatus: ${lang.systemStatus}, disponible: ${isAvailable}`);
+          
+          return isAvailable;
+        });
+        
+        console.log('🔍 Debug: Langues filtrées:', filteredLanguages.length);
+        
+        return filteredLanguages.map((lang: any) => ({
+          id: lang._id || lang.id,
+          code: lang.scripts?.[0]?.code?.toLowerCase() || lang.name.toLowerCase().slice(0, 2),
+          name: lang.name,
+          nativeName: lang.nativeName,
+          wordCount: lang.wordCount || 0
+        }));
+      }),
       tap(languages => {
         this.logger.debug('🌍 Langues disponibles récupérées:', languages);
+        console.log('🔍 Debug: Langues disponibles détail:', JSON.stringify(languages, null, 2));
+        
+        if (languages.length === 0) {
+          console.warn('⚠️ Debug: Aucune langue chargée (0)');
+        } else {
+          console.log(`✅ Debug: ${languages.length} langue(s) chargée(s)`);
+        }
       }),
       catchError(error => {
         this.logger.error('❌ Erreur lors de la récupération des langues:', error);
+        console.error('❌ Détails de l\'erreur getAvailableLanguages:', error);
         // Retourner une liste vide en cas d'erreur
         return of([]);
       })
