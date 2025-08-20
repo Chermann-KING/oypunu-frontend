@@ -1,0 +1,404 @@
+<div class="min-h-screen bg-gray-950 text-white">
+  <div class="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    
+    <!-- En-tête -->
+    <div class="mb-8">
+      <a routerLink="/dictionary/add" class="inline-flex items-center text-gray-400 hover:text-gray-300 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd"
+            d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+            clip-rule="evenodd" />
+        </svg>
+        Retour à l'ajout de mot
+      </a>
+      <h1 class="text-3xl font-bold">🌍 Proposer une nouvelle langue</h1>
+      <p class="text-gray-400 mt-2">
+        Enrichissez O'Ypunu en proposant une langue qui n'est pas encore disponible.
+        Votre proposition sera examinée par notre équipe de modérateurs.
+      </p>
+    </div>
+
+    <!-- Messages d'erreur et de succès -->
+    <div *ngIf="errorMessage" class="bg-red-900/50 rounded-lg p-4 mb-6 text-red-200 border border-red-800">
+      {{ errorMessage }}
+    </div>
+
+    <div *ngIf="successMessage" class="bg-green-900/50 rounded-lg p-4 mb-6 text-green-200 border border-green-800">
+      {{ successMessage }}
+    </div>
+
+    <!-- Indicateur de progression -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Progression</h2>
+        <span class="text-sm text-gray-400">{{ getProgressPercentage() }}% terminé</span>
+      </div>
+      
+      <!-- Barre de progression -->
+      <div class="bg-gray-800 rounded-full h-2 mb-6">
+        <div class="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full transition-all duration-300"
+             [style.width.%]="getProgressPercentage()"></div>
+      </div>
+      
+      <!-- Navigation par étapes -->
+      <div class="flex justify-center space-x-4">
+        <button 
+          *ngFor="let step of [1, 2, 3]" 
+          (click)="goToStep(step)"
+          [ngClass]="getStepClass(step)"
+          class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center space-x-2">
+          <span>{{ getStepIcon(step) }}</span>
+          <span>Étape {{ step }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulaire multi-étapes -->
+    <form [formGroup]="languageForm" (ngSubmit)="onSubmit()" 
+          class="bg-gray-900 p-6 rounded-lg border border-gray-800">
+
+      <!-- ÉTAPE 1: Informations de base -->
+      <div *ngIf="currentStep === 1" class="space-y-6">
+        <div class="text-center mb-6">
+          <h3 class="text-2xl font-bold text-purple-400">📝 Informations de base</h3>
+          <p class="text-gray-400 mt-2">Commençons par les informations essentielles de votre langue</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Nom de la langue -->
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-300 mb-1">
+              Nom de la langue*
+            </label>
+            <input 
+              type="text" 
+              id="name" 
+              formControlName="name"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              [ngClass]="{'border-red-500': languageForm.get('name')?.invalid && languageForm.get('name')?.touched}"
+              placeholder="ex: Français, Swahili, Wolof">
+            <div *ngIf="languageForm.get('name')?.invalid && languageForm.get('name')?.touched" 
+                 class="text-red-500 text-xs mt-1">
+              Le nom de la langue est requis (minimum 2 caractères)
+            </div>
+          </div>
+
+          <!-- Nom natif -->
+          <div>
+            <label for="nativeName" class="block text-sm font-medium text-gray-300 mb-1">
+              Nom natif*
+            </label>
+            <input 
+              type="text" 
+              id="nativeName" 
+              formControlName="nativeName"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              [ngClass]="{'border-red-500': languageForm.get('nativeName')?.invalid && languageForm.get('nativeName')?.touched}"
+              placeholder="ex: Français, Kiswahili, Wolof">
+            <div *ngIf="languageForm.get('nativeName')?.invalid && languageForm.get('nativeName')?.touched" 
+                 class="text-red-500 text-xs mt-1">
+              Le nom natif est requis (minimum 2 caractères)
+            </div>
+          </div>
+
+          <!-- Région -->
+          <div>
+            <label for="region" class="block text-sm font-medium text-gray-300 mb-1">
+              Région*
+            </label>
+            <select 
+              id="region" 
+              formControlName="region"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              [ngClass]="{'border-red-500': languageForm.get('region')?.invalid && languageForm.get('region')?.touched}">
+              <option value="" disabled>Sélectionnez une région</option>
+              <option *ngFor="let region of regions" [value]="region">{{ region }}</option>
+            </select>
+            <div *ngIf="languageForm.get('region')?.invalid && languageForm.get('region')?.touched" 
+                 class="text-red-500 text-xs mt-1">
+              La région est requise
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="block text-sm font-medium text-gray-300 mb-1">
+            Description (optionnel)
+          </label>
+          <textarea 
+            id="description" 
+            formControlName="description" 
+            rows="3"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="Décrivez brièvement cette langue, son histoire, ses particularités..."></textarea>
+        </div>
+      </div>
+
+      <!-- ÉTAPE 2: Classification et codes -->
+      <div *ngIf="currentStep === 2" class="space-y-6">
+        <div class="text-center mb-6">
+          <h3 class="text-2xl font-bold text-blue-400">🏷️ Classification linguistique</h3>
+          <p class="text-gray-400 mt-2">Spécifiez les détails techniques et le statut de la langue</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Codes ISO -->
+          <div>
+            <label for="iso639_1" class="block text-sm font-medium text-gray-300 mb-1">
+              Code ISO 639-1
+            </label>
+            <input 
+              type="text" 
+              id="iso639_1" 
+              formControlName="iso639_1"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              [ngClass]="{'border-red-500': languageForm.get('iso639_1')?.invalid && languageForm.get('iso639_1')?.touched}"
+              placeholder="ex: fr, sw, wo"
+              maxlength="2">
+            <div class="text-xs text-gray-500 mt-1">2 lettres minuscules</div>
+          </div>
+
+          <div>
+            <label for="iso639_2" class="block text-sm font-medium text-gray-300 mb-1">
+              Code ISO 639-2
+            </label>
+            <input 
+              type="text" 
+              id="iso639_2" 
+              formControlName="iso639_2"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="ex: fra, swa, wol"
+              maxlength="3">
+            <div class="text-xs text-gray-500 mt-1">3 lettres minuscules</div>
+          </div>
+
+          <div>
+            <label for="iso639_3" class="block text-sm font-medium text-gray-300 mb-1">
+              Code ISO 639-3
+            </label>
+            <input 
+              type="text" 
+              id="iso639_3" 
+              formControlName="iso639_3"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="ex: fra, swa, wol"
+              maxlength="3">
+            <div class="text-xs text-gray-500 mt-1">3 lettres minuscules</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Statut -->
+          <div>
+            <label for="status" class="block text-sm font-medium text-gray-300 mb-1">
+              Statut de la langue*
+            </label>
+            <select 
+              id="status" 
+              formControlName="status"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <option *ngFor="let option of statusOptions" [value]="option.value">
+                {{ option.label }} - {{ option.description }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Statut d'endangement -->
+          <div>
+            <label for="endangermentStatus" class="block text-sm font-medium text-gray-300 mb-1">
+              Statut de préservation
+            </label>
+            <select 
+              id="endangermentStatus" 
+              formControlName="endangermentStatus"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+              <option *ngFor="let option of endangermentOptions" [value]="option.value">
+                {{ option.label }} - {{ option.description }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Nombre de locuteurs -->
+        <div>
+          <label for="speakerCount" class="block text-sm font-medium text-gray-300 mb-1">
+            Nombre approximatif de locuteurs
+          </label>
+          <input 
+            type="number" 
+            id="speakerCount" 
+            formControlName="speakerCount"
+            class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="ex: 280000000"
+            min="1">
+          <div class="text-xs text-gray-500 mt-1">
+            Estimation du nombre de personnes parlant cette langue (natifs + non-natifs)
+          </div>
+        </div>
+      </div>
+
+      <!-- ÉTAPE 3: Informations complémentaires -->
+      <div *ngIf="currentStep === 3" class="space-y-6">
+        <div class="text-center mb-6">
+          <h3 class="text-2xl font-bold text-green-400">🌐 Informations complémentaires</h3>
+          <p class="text-gray-400 mt-2">Ajoutez des détails supplémentaires pour enrichir la fiche</p>
+        </div>
+
+        <!-- Pays où la langue est parlée -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="block text-sm font-medium text-gray-300">Pays où la langue est parlée</label>
+            <button 
+              type="button" 
+              (click)="addCountry()"
+              class="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm">
+              + Ajouter un pays
+            </button>
+          </div>
+          
+          <div formArrayName="countries" class="space-y-2">
+            <div *ngFor="let country of countries.controls; let i = index" class="flex gap-2">
+              <select 
+                [formControlName]="i"
+                class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <option value="">Sélectionnez un pays</option>
+                <option *ngFor="let countryCode of availableCountries" [value]="countryCode">
+                  {{ countryCode }}
+                </option>
+              </select>
+              <button 
+                type="button" 
+                (click)="removeCountry(i)"
+                class="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div *ngIf="countries.length === 0" class="text-sm text-gray-500 mt-2">
+            Aucun pays ajouté. Cliquez sur "Ajouter un pays" pour commencer.
+          </div>
+        </div>
+
+        <!-- Noms alternatifs -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="block text-sm font-medium text-gray-300">Noms alternatifs</label>
+            <button 
+              type="button" 
+              (click)="addAlternativeName()"
+              class="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm">
+              + Ajouter un nom
+            </button>
+          </div>
+          
+          <div formArrayName="alternativeNames" class="space-y-2">
+            <div *ngFor="let name of alternativeNames.controls; let i = index" class="flex gap-2">
+              <input 
+                [formControlName]="i"
+                type="text"
+                class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Nom alternatif de la langue">
+              <button 
+                type="button" 
+                (click)="removeAlternativeName(i)"
+                class="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Liens de référence -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label for="wikipediaUrl" class="block text-sm font-medium text-gray-300 mb-1">
+              Lien Wikipedia
+            </label>
+            <input 
+              type="url" 
+              id="wikipediaUrl" 
+              formControlName="wikipediaUrl"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="https://fr.wikipedia.org/wiki/...">
+          </div>
+
+          <div>
+            <label for="ethnologueUrl" class="block text-sm font-medium text-gray-300 mb-1">
+              Lien Ethnologue
+            </label>
+            <input 
+              type="url" 
+              id="ethnologueUrl" 
+              formControlName="ethnologueUrl"
+              class="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              placeholder="https://www.ethnologue.com/language/...">
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation et soumission -->
+      <div class="flex justify-between items-center mt-8 pt-6 border-t border-gray-800">
+        <button 
+          *ngIf="currentStep > 1"
+          type="button" 
+          (click)="previousStep()"
+          class="px-6 py-3 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors flex items-center space-x-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+          <span>Précédent</span>
+        </button>
+
+        <div *ngIf="currentStep === 1"></div> <!-- Spacer pour le premier step -->
+
+        <button 
+          *ngIf="currentStep < totalSteps"
+          type="button" 
+          (click)="nextStep()"
+          [disabled]="!isCurrentStepValid()"
+          class="px-6 py-3 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2">
+          <span>Suivant</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+
+        <button 
+          *ngIf="currentStep === totalSteps"
+          type="submit" 
+          [disabled]="isSubmitting || languageForm.invalid"
+          class="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2">
+          <span *ngIf="!isSubmitting">🚀 Soumettre la proposition</span>
+          <span *ngIf="isSubmitting" class="flex items-center">
+            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Soumission en cours...
+          </span>
+        </button>
+      </div>
+    </form>
+
+    <!-- Note informative -->
+    <div class="mt-8 p-4 bg-blue-900/60 border border-blue-700 rounded-lg flex items-start gap-3">
+      <svg class="h-6 w-6 text-blue-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div>
+        <h3 class="text-lg font-medium text-blue-100 mb-1">📋 Processus de validation</h3>
+        <p class="text-blue-100 text-sm">
+          Votre proposition sera examinée par notre équipe de modérateurs linguistes. 
+          Nous vérifions l'exactitude des informations, la pertinence de la langue 
+          et sa conformité aux standards internationaux. Vous serez notifié du résultat par email.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
