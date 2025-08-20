@@ -1,125 +1,981 @@
-<div class="admin-dashboard" *ngIf="dashboardState$ | async as state">
+<div class="min-h-screen bg-gray-900 text-white" *ngIf="dashboardState$ | async as state">
   <!-- Header avec informations utilisateur -->
-  <div class="dashboard-header">
-    <h1 class="dashboard-title">
-      {{ getDashboardTitle(state.dashboardType) }}
-    </h1>
-    <div class="user-info" *ngIf="currentUser$ | async as user">
-      <span class="user-role" *ngIf="user.role">{{ user.role | roleDisplay }}</span>
-      <span class="user-name">{{ user.firstName }} {{ user.lastName }}</span>
-    </div>
-  </div>
-
-  <!-- Indicateur de chargement -->
-  <div class="loading-indicator" *ngIf="state.isLoading">
-    <p>Chargement du dashboard...</p>
-  </div>
-
-  <!-- Gestion des erreurs -->
-  <div class="error-message" *ngIf="state.error" role="alert">
-    <h3>Erreur de chargement</h3>
-    <p>{{ state.error }}</p>
-    <button (click)="retryLoad()" class="retry-button">
-      Réessayer
-    </button>
-  </div>
-
-  <!-- Contenu principal selon le type de dashboard -->
-  <div class="dashboard-content" *ngIf="!state.isLoading && !state.error && state.data">
-
-    <!-- Dashboard Contributeur -->
-    <div *ngIf="state.dashboardType === 'contributor'" class="contributor-dashboard">
-      <div class="stats-grid" *ngIf="getContributorData(state.data) as contributorData">
-        <div class="stat-card">
-          <h3>Mots en attente</h3>
-          <span class="stat-number">{{ contributorData.pendingWords }}</span>
-        </div>
-        <div class="stat-card">
-          <h3>Mots approuvés</h3>
-          <span class="stat-number">{{ contributorData.approvedWords }}</span>
-        </div>
-        <div class="stat-card">
-          <h3>Mots rejetés</h3>
-          <span class="stat-number">{{ contributorData.rejectedWords }}</span>
-        </div>
-        <div class="stat-card">
-          <h3>Nouveaux cette semaine</h3>
-          <span class="stat-number">{{ contributorData.newWordsThisWeek }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Dashboard Admin -->
-    <div *ngIf="state.dashboardType === 'admin'" class="admin-dashboard-content">
-      <div class="stats-overview" *ngIf="getAdminData(state.data) as adminData">
-        <div class="stat-card">
-          <h3>Utilisateurs actifs</h3>
-          <span class="stat-number">{{ adminData.activeUsers }}</span>
-        </div>
-        <div class="stat-card">
-          <h3>Nouveaux utilisateurs</h3>
-          <span class="stat-number">{{ adminData.newUsersToday }}</span>
-        </div>
-        <div class="stat-card">
-          <h3>Alertes</h3>
-          <span class="stat-number alert">{{ adminData.alertsCount }}</span>
-        </div>
-        <div class="stat-card">
-          <h3>Rapports en attente</h3>
-          <span class="stat-number">{{ adminData.pendingReports }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Dashboard Super Admin -->
-    <div *ngIf="state.dashboardType === 'superadmin'" class="superadmin-dashboard">
-      <div class="system-health" *ngIf="getSuperAdminData(state.data) as superAdminData">
-        <h3>État du système</h3>
-        <div class="health-metrics" *ngIf="superAdminData.systemHealth">
-          <div class="metric">
-            <label>Uptime:</label>
-            <span>{{ formatUptime(superAdminData.systemHealth.uptime) }}</span>
+  <div class="container mx-auto px-4 py-8">
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div
+            class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
           </div>
-          <div class="metric">
-            <label>Mémoire:</label>
-            <span>{{ superAdminData.systemHealth.memory.used }}MB / {{ superAdminData.systemHealth.memory.total }}MB</span>
+          <div>
+            <h1 class="text-3xl font-bold text-white">
+              {{ getDashboardTitle(state.dashboardType) }}
+            </h1>
+            <p class="text-gray-400">Panneau d'administration</p>
           </div>
-          <div class="metric">
-            <label>Version Node:</label>
-            <span>{{ superAdminData.systemHealth.nodeVersion }}</span>
+        </div>
+        <div class="user-info" *ngIf="currentUser$ | async as user">
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <div class="text-white font-semibold">{{ user.firstName }} {{ user.lastName }}</div>
+              <div class="text-gray-400 text-sm">{{ user.role | roleDisplay }}</div>
+            </div>
+            <div
+              class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+              <span class="text-white font-semibold text-sm">{{ getInitials(user) }}</span>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Dashboard par défaut avec composant présentationnel -->
-    <div *ngIf="state.dashboardType === 'default'" class="default-dashboard">
-      <app-dashboard-stats
-        [stats]="getDashboardStatsData(state.data)"
-        [userRole]="(currentUser$ | async)?.role"
-        [isLoading]="state.isLoading"
-        [errorMessage]="state.error"
-        (actionClicked)="handleDashboardAction($event)">
-      </app-dashboard-stats>
+    <!-- Indicateur de chargement -->
+    <div class="flex justify-center items-center py-16" *ngIf="state.isLoading">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p class="text-gray-400">Chargement du dashboard...</p>
+      </div>
     </div>
-  </div>
 
-  <!-- Actions rapides -->
-  <div class="quick-actions" *ngIf="!state.isLoading && !state.error">
-    <h3>Actions rapides</h3>
-    <div class="action-buttons">
-      <button *appHasPermission="'canViewUsers'" routerLink="/admin/users" class="action-button">
-        Gérer les utilisateurs
-      </button>
-      <button *appHasPermission="'canModerateContent'" routerLink="/admin/moderation" class="action-button">
-        Modération
-      </button>
-      <button *appHasPermission="'canViewAnalytics'" routerLink="/admin/analytics" class="action-button">
-        Analytics
-      </button>
-      <button *appHasPermission="'canManageSystem'" routerLink="/admin/system" class="action-button">
-        Administration système
-      </button>
+    <!-- Gestion des erreurs -->
+    <div class="bg-red-900 border border-red-700 rounded-lg p-6 mb-6" *ngIf="state.error" role="alert">
+      <div class="flex items-start gap-3">
+        <svg class="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="flex-1">
+          <h3 class="text-red-400 font-semibold mb-2">Erreur de chargement</h3>
+          <p class="text-red-300 mb-4">{{ state.error }}</p>
+          <button (click)="retryLoad()"
+            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Réessayer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenu principal selon le type de dashboard -->
+    <div class="dashboard-content" *ngIf="!state.isLoading && !state.error && state.data">
+
+      <!-- Dashboard Contributeur -->
+      <div *ngIf="state.dashboardType === 'contributor'" class="contributor-dashboard">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+          *ngIf="getContributorData(state.data) as contributorData">
+          <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-medium text-gray-400 mb-2">Mots en attente</h3>
+                <span class="text-3xl font-bold text-yellow-400">{{ contributorData.pendingWords }}</span>
+              </div>
+              <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-medium text-gray-400 mb-2">Mots approuvés</h3>
+                <span class="text-3xl font-bold text-green-400">{{ contributorData.approvedWords }}</span>
+              </div>
+              <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-medium text-gray-400 mb-2">Mots rejetés</h3>
+                <span class="text-3xl font-bold text-red-400">{{ contributorData.rejectedWords }}</span>
+              </div>
+              <div class="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-medium text-gray-400 mb-2">Nouveaux cette semaine</h3>
+                <span class="text-3xl font-bold text-blue-400">{{ contributorData.newWordsThisWeek }}</span>
+              </div>
+              <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Admin -->
+      <div *ngIf="state.dashboardType === 'admin'" class="admin-dashboard-content">
+        <ng-container *ngIf="getAdminData(state.data) as adminData">
+
+          <!-- Statistiques Admin -->
+          <div class="mb-8" *ngIf="adminData.stats">
+            <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+              <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Statistiques administrateur
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Utilisateurs totaux</h4>
+                    <span class="text-3xl font-bold text-white">{{ adminData.stats.totalUsers || 0 }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Utilisateurs actifs</h4>
+                    <span class="text-3xl font-bold text-green-400">{{ adminData.stats.activeUsers || 0 }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Nouveaux ce mois</h4>
+                    <span class="text-3xl font-bold text-blue-400">{{ adminData.stats.newUsersThisMonth || 0 }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Mots en attente</h4>
+                    <span class="text-3xl font-bold text-yellow-400">{{ adminData.stats.pendingWords || 0 }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Mots approuvés</h4>
+                    <span class="text-3xl font-bold text-green-400">{{ adminData.stats.approvedWords || 0 }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Communautés actives</h4>
+                    <span class="text-3xl font-bold text-purple-400">{{ adminData.stats.activeCommunities || 0 }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activité récente Admin -->
+          <div class="bg-gray-800 rounded-lg p-6"
+            *ngIf="adminData.recentActivity && adminData.recentActivity.length > 0">
+            <h3 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
+              <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Activité récente
+            </h3>
+            <div class="space-y-4">
+              <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-650 transition-colors"
+                *ngFor="let activity of adminData.recentActivity.slice(0, 10)">
+                <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-blue-400 font-semibold text-xs">{{ activity.type || 'ACT' }}</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-white font-medium mb-1">{{ activity.description }}</div>
+                    <div class="flex items-center gap-4 text-sm text-gray-400">
+                      <span *ngIf="activity.user" class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {{ activity.user.username || activity.user }}
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ activity.timestamp | date:'short' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-800 rounded-lg p-6"
+            *ngIf="!adminData.recentActivity || adminData.recentActivity.length === 0">
+            <h3 class="text-xl font-semibold text-white mb-4 flex items-center gap-3">
+              <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Activité récente
+            </h3>
+            <div class="text-center py-8">
+              <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p class="text-gray-400">Aucune activité récente à afficher</p>
+            </div>
+          </div>
+
+        </ng-container>
+      </div>
+
+      <!-- Dashboard Super Admin -->
+      <div *ngIf="state.dashboardType === 'superadmin'" class="superadmin-dashboard">
+        <ng-container *ngIf="getSuperAdminData(state.data) as superAdminData">
+
+          <!-- Statistiques générales SuperAdmin par groupes -->
+          <div class="mb-8" *ngIf="superAdminData.stats">
+            <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-3">
+              <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              Statistiques générales
+            </h2>
+
+            <!-- 👥 UTILISATEURS -->
+            <div class="mb-8">
+              <h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                </svg>
+                Utilisateurs
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Utilisateurs totaux</h4>
+                      <span class="text-3xl font-bold text-white">{{ superAdminData.stats.totalUsers || 0 }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Utilisateurs actifs</h4>
+                      <span class="text-3xl font-bold text-green-400">{{ superAdminData.stats.activeUsers || 0 }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Utilisateurs suspendus</h4>
+                      <span class="text-3xl font-bold text-red-400">{{ superAdminData.stats.suspendedUsers || 0
+                        }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-red-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18.364 5.636M5.636 18.364l12.728-12.728" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Nouveaux ce mois</h4>
+                      <span class="text-3xl font-bold text-blue-400">{{ superAdminData.stats.newUsersThisMonth || 0
+                        }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 📚 CONTENU & MOTS -->
+            <div class="mb-8">
+              <h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                Contenu & Mots
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Mots totaux</h4>
+                      <span class="text-3xl font-bold text-purple-400">{{ superAdminData.stats.totalWords || 0 }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Mots en attente</h4>
+                      <span class="text-3xl font-bold text-yellow-400">{{ superAdminData.stats.pendingWords || 0
+                        }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Mots approuvés</h4>
+                      <span class="text-3xl font-bold text-green-400">{{
+                        getApprovedWords(superAdminData.stats.totalWords, superAdminData.stats.pendingWords) }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 🌐 COMMUNAUTÉS -->
+            <div class="mb-8">
+              <h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Communautés
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Communautés totales</h4>
+                      <span class="text-3xl font-bold text-cyan-400">{{ superAdminData.stats.totalCommunities || 0
+                        }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Communautés actives</h4>
+                      <span class="text-3xl font-bold text-green-400">{{
+                        getActiveCommunities(superAdminData.stats.totalCommunities) }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Nouvelles ce mois</h4>
+                      <span class="text-3xl font-bold text-blue-400">{{
+                        getNewCommunitiesThisMonth(superAdminData.stats.totalCommunities) }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 💬 COMMUNICATION -->
+            <div class="mb-8">
+              <h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                Communication
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Messages totaux</h4>
+                      <span class="text-3xl font-bold text-indigo-400">{{ superAdminData.stats.totalMessages || 0
+                        }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Messages ce mois</h4>
+                      <span class="text-3xl font-bold text-blue-400">{{
+                        getMessagesThisMonth(superAdminData.stats.totalMessages) }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-sm font-medium text-gray-400 mb-2">Messages privés</h4>
+                      <span class="text-3xl font-bold text-purple-400">{{
+                        getPrivateMessages(superAdminData.stats.totalMessages) }}</span>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                      <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 🌐 LANGUES -->
+          <div class="mb-8" *ngIf="superAdminData.languageStats || true">
+            <h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+              </svg>
+              Langues
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Langues totales</h4>
+                    <span class="text-3xl font-bold text-emerald-400">{{ getLanguageCount('total',
+                      superAdminData.languageStats) }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Langues actives</h4>
+                    <span class="text-3xl font-bold text-green-400">{{ getLanguageCount('active',
+                      superAdminData.languageStats) }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Langues en attente</h4>
+                    <span class="text-3xl font-bold text-yellow-400">{{ getLanguageCount('pending',
+                      superAdminData.languageStats) }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Langues approuvées</h4>
+                    <span class="text-3xl font-bold text-blue-400">{{ getLanguageCount('approved',
+                      superAdminData.languageStats) }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top langues par mots - DONNÉES RÉELLES -->
+            <div class="mt-6 bg-gray-800 rounded-lg p-6" *ngIf="superAdminData.contentStats?.wordsByLanguage">
+              <h4 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                Répartition des mots par langue
+                <span class="text-sm text-gray-400">({{ superAdminData.contentStats.wordsByLanguage.length }}
+                  langues)</span>
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div *ngFor="let lang of superAdminData.contentStats.wordsByLanguage; let i = index"
+                  class="bg-gray-700 rounded-lg p-4 text-center hover:bg-gray-650 transition-colors"
+                  [class]="getLanguageCardClass(i)">
+                  <div class="text-2xl font-bold mb-1" [class]="getLanguageTextClass(i)">{{ lang.count }}</div>
+                  <div class="text-gray-300 text-sm capitalize">{{ lang.language }}</div>
+                  <div class="text-gray-500 text-xs">{{ Math.round(lang.percentage) }}%</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Message si pas de données -->
+            <div class="mt-6 bg-gray-800 rounded-lg p-6 text-center"
+              *ngIf="!superAdminData.contentStats?.wordsByLanguage">
+              <div class="text-gray-400">
+                <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                <p class="text-sm">Chargement des données des langues...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 📂 CATÉGORIES -->
+          <div class="mb-8" *ngIf="superAdminData.categoryStats || true">
+            <h3 class="text-lg font-semibold text-gray-300 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              Catégories
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Catégories totales</h4>
+                    <span class="text-3xl font-bold text-orange-400">{{ getCategoryCount('total',
+                      superAdminData.categoryStats) }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-orange-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Catégories actives</h4>
+                    <span class="text-3xl font-bold text-green-400">{{ getCategoryCount('active',
+                      superAdminData.categoryStats) }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Catégories en attente</h4>
+                    <span class="text-3xl font-bold text-yellow-400">{{ getCategoryCount('pending',
+                      superAdminData.categoryStats) }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h4 class="text-sm font-medium text-gray-400 mb-2">Catégories approuvées</h4>
+                    <span class="text-3xl font-bold text-blue-400">{{ getCategoryCount('approved',
+                      superAdminData.categoryStats) }}</span>
+                  </div>
+                  <div class="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top catégories par mots - DONNÉES RÉELLES -->
+            <div class="mt-6 bg-gray-800 rounded-lg p-6" *ngIf="superAdminData.contentStats?.wordsByCategory">
+              <h4 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Répartition des mots par catégorie
+                <span class="text-sm text-gray-400">({{ superAdminData.contentStats.wordsByCategory.length }}
+                  catégories)</span>
+              </h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div *ngFor="let cat of superAdminData.contentStats.wordsByCategory; let i = index"
+                  class="bg-gray-700 rounded-lg p-4 text-center hover:bg-gray-650 transition-colors"
+                  [class]="getCategoryCardClass(i)">
+                  <div class="text-2xl font-bold mb-1" [class]="getCategoryTextClass(i)">{{ cat.count }}</div>
+                  <div class="text-gray-300 text-sm capitalize">{{ cat.category }}</div>
+                  <div class="text-gray-500 text-xs">{{ Math.round(cat.percentage) }}%</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Message si pas de données -->
+            <div class="mt-6 bg-gray-800 rounded-lg p-6 text-center"
+              *ngIf="!superAdminData.contentStats?.wordsByCategory">
+              <div class="text-gray-400">
+                <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <p class="text-sm">Chargement des données des catégories...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- État du système -->
+          <div class="bg-gray-800 rounded-lg p-6 mb-8" *ngIf="superAdminData.systemHealth">
+            <h3 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
+              <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              État du système
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="bg-gray-700 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <label class="text-sm font-medium text-gray-400">Uptime</label>
+                    <div class="text-lg font-semibold text-green-400 mt-1">{{
+                      formatUptime(superAdminData.systemHealth.uptime * 1000) }}</div>
+                  </div>
+                  <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-700 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <label class="text-sm font-medium text-gray-400">Mémoire</label>
+                    <div class="text-lg font-semibold text-blue-400 mt-1">{{
+                      formatMemory(superAdminData.systemHealth.memory.heapUsed, superAdminData.systemHealth.memory.rss)
+                      }}
+                    </div>
+                  </div>
+                  <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="bg-gray-700 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <label class="text-sm font-medium text-gray-400">Version Node</label>
+                    <div class="text-lg font-semibold text-purple-400 mt-1">{{ superAdminData.systemHealth.nodeVersion
+                      }}</div>
+                  </div>
+                  <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activité récente SuperAdmin -->
+          <div class="bg-gray-800 rounded-lg p-6"
+            *ngIf="superAdminData.recentActivity && superAdminData.recentActivity.length > 0">
+            <h3 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
+              <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Activité récente
+            </h3>
+            <div class="space-y-4">
+              <div class="bg-gray-700 rounded-lg p-4 hover:bg-gray-650 transition-colors"
+                *ngFor="let activity of superAdminData.recentActivity.slice(0, 5)">
+                <div class="flex items-start gap-4">
+                  <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <span class="text-purple-400 font-semibold text-xs">{{ activity.type || 'ACT' }}</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-white font-medium mb-1">{{ activity.description }}</div>
+                    <div class="flex items-center gap-4 text-sm text-gray-400">
+                      <span *ngIf="activity.user" class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        {{ activity.user.username || activity.user }}
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ activity.timestamp | date:'short' }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-gray-800 rounded-lg p-6"
+            *ngIf="!superAdminData.recentActivity || superAdminData.recentActivity.length === 0">
+            <h3 class="text-xl font-semibold text-white mb-4 flex items-center gap-3">
+              <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Activité récente
+            </h3>
+            <div class="text-center py-8">
+              <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p class="text-gray-400">Aucune activité récente à afficher</p>
+            </div>
+          </div>
+
+        </ng-container>
+      </div>
+
+      <!-- Dashboard par défaut avec composant présentationnel -->
+      <div *ngIf="state.dashboardType === 'default'" class="default-dashboard">
+        <app-dashboard-stats [stats]="getDashboardStatsData(state.data)" [userRole]="(currentUser$ | async)?.role"
+          [isLoading]="state.isLoading" [errorMessage]="state.error" (actionClicked)="handleDashboardAction($event)">
+        </app-dashboard-stats>
+      </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="bg-gray-800 rounded-lg p-6 mt-8" *ngIf="!state.isLoading && !state.error">
+      <h3 class="text-xl font-semibold text-white mb-6 flex items-center gap-3">
+        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+        Actions rapides
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <button *appHasPermission="'canViewUsers'" routerLink="/admin/users"
+          class="flex items-center gap-3 p-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <div class="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+            </svg>
+          </div>
+          <div class="text-left">
+            <div class="text-white font-medium">Utilisateurs</div>
+            <div class="text-gray-400 text-sm">Gérer les comptes</div>
+          </div>
+        </button>
+
+        <button *appHasPermission="'canModerateContent'" routerLink="/admin/moderation"
+          class="flex items-center gap-3 p-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <div class="w-10 h-10 bg-orange-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          </div>
+          <div class="text-left">
+            <div class="text-white font-medium">Modération</div>
+            <div class="text-gray-400 text-sm">Examiner le contenu</div>
+          </div>
+        </button>
+
+        <button *appHasPermission="'canManageCategories'" routerLink="/admin/categories"
+          class="flex items-center gap-3 p-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <div class="w-10 h-10 bg-indigo-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+          <div class="text-left">
+            <div class="text-white font-medium">Catégories</div>
+            <div class="text-gray-400 text-sm">Gérer les catégories</div>
+          </div>
+        </button>
+
+        <button *appHasPermission="'canViewAnalytics'" routerLink="/admin/analytics"
+          class="flex items-center gap-3 p-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <div class="w-10 h-10 bg-green-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div class="text-left">
+            <div class="text-white font-medium">Analytics</div>
+            <div class="text-gray-400 text-sm">Statistiques avancées</div>
+          </div>
+        </button>
+
+        <button *appHasPermission="'canManageSystem'" routerLink="/admin/system"
+          class="flex items-center gap-3 p-4 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg">
+          <div class="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div class="text-left">
+            <div class="text-white font-medium">Système</div>
+            <div class="text-gray-400 text-sm">Administration</div>
+          </div>
+        </button>
+      </div>
     </div>
   </div>
 </div>

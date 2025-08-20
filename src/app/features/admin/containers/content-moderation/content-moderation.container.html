@@ -1,101 +1,219 @@
-<div class="content-moderation" *ngIf="moderationState$ | async as state">
-  <!-- Header avec statistiques -->
-  <div class="moderation-header">
-    <div class="header-title">
-      <h1>Modération de contenu</h1>
-      <p class="subtitle">{{ state.totalWords }} mot(s) en attente de validation</p>
-    </div>
+<div class="min-h-screen bg-gray-900 text-white" *ngIf="moderationState$ | async as state">
+  
+  <!-- Navigation de retour (affichée seulement si pas sur la vue des catégories) -->
+  <div class="container mx-auto px-4 py-4" *ngIf="state.currentView !== 'categories'">
+    <button (click)="returnToCategories()" 
+      class="flex items-center text-gray-400 hover:text-white mb-4 transition-colors">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Retour aux catégories
+    </button>
+  </div>
 
-    <div class="moderation-stats">
-      <div class="stat-card pending">
-        <span class="stat-number">{{ getPendingCount(state.pendingWords) }}</span>
-        <span class="stat-label">En attente</span>
+  <!-- Vue des catégories (par défaut) -->
+  <div class="container mx-auto px-4 py-8" *ngIf="state.currentView === 'categories'">
+    <!-- Header avec informations et actions -->
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold text-white">Modération de Contenu</h1>
+            <p class="text-gray-400">Système de modération multi-types intégré</p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+          <button (click)="refreshCategories()"
+            class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+            [disabled]="state.isLoading">
+            <svg class="w-4 h-4" [ngClass]="{'animate-spin': state.isLoading}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {{ state.isLoading ? 'Actualisation...' : 'Actualiser' }}
+          </button>
+        </div>
       </div>
-      <div class="stat-card today">
-        <span class="stat-number">{{ getTodayModerationCount() }}</span>
-        <span class="stat-label">Modérés aujourd'hui</span>
+    </div>
+
+    <!-- Composant des catégories de modération -->
+    <app-moderation-categories
+      [categories]="state.categoryStats"
+      [selectedCategory]="state.selectedCategory"
+      [isLoading]="state.isLoading"
+      [errorMessage]="state.error"
+      (categorySelected)="onCategorySelected($event)"
+      (refreshRequested)="refreshCategories()"
+      (priorityQueueRequested)="onPriorityQueueRequested($event)">
+    </app-moderation-categories>
+  </div>
+
+  <!-- Vue de la liste de contenu d'une catégorie -->
+  <div class="container mx-auto px-4 py-8" *ngIf="state.currentView === 'content_list'">
+    <!-- Header de la catégorie -->
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-green-600 flex items-center justify-center text-lg">
+          <!-- Icône dynamique selon la catégorie -->
+          {{ state.selectedCategory === 'word' ? '📝' : 
+             state.selectedCategory === 'language' ? '🌍' :
+             state.selectedCategory === 'community_post' ? '💬' : 
+             state.selectedCategory === 'private_message' ? '📩' : 
+             state.selectedCategory === 'user_profile' ? '👤' : 
+             state.selectedCategory === 'comment' ? '💭' : 
+             state.selectedCategory === 'media_content' ? '🎵' : 
+             state.selectedCategory === 'report' ? '🤖' : '📄' }}
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-white">
+            Modération : {{ state.selectedCategory | titlecase }}
+          </h1>
+          <p class="text-gray-400">
+            {{ state.allModerationContent.length }} élément(s) à modérer
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtres pour le contenu -->
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+      <h3 class="text-lg font-semibold text-white mb-4">Filtres</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Recherche -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Recherche</label>
+          <input type="text" 
+            placeholder="Rechercher dans le contenu..." 
+            [value]="searchTerm"
+            (input)="onSearchChange($event)"
+            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500">
+        </div>
+
+        <!-- Sévérité (si applicable) -->
+        <div>
+          <label class="block text-sm font-medium text-gray-300 mb-2">Sévérité</label>
+          <select [value]="state.contentFilters.severity || ''"
+            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+            <option value="">Toutes les sévérités</option>
+            <option value="low">Faible</option>
+            <option value="medium">Moyenne</option>
+            <option value="high">Haute</option>
+            <option value="critical">Critique</option>
+          </select>
+        </div>
+
+        <!-- Bouton effacer -->
+        <div class="flex items-end">
+          <button (click)="clearFilters()"
+            class="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors">
+            Effacer filtres
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Liste du contenu à modérer -->
+    <div class="bg-gray-800 rounded-lg p-6" *ngIf="!state.isLoading && !state.error">
+      <div class="space-y-4" *ngIf="state.allModerationContent.length > 0; else emptyContent">
+        <div *ngFor="let content of state.allModerationContent; trackBy: trackByContentId" 
+          class="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer"
+          (click)="openContentDetail(content)">
+          
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <!-- Titre/identifiant du contenu -->
+              <h4 class="text-white font-medium mb-2">
+                {{ getContentTitle(content) }}
+              </h4>
+              
+              <!-- Extrait du contenu -->
+              <p class="text-gray-300 text-sm mb-2 line-clamp-2">
+                {{ getContentPreview(content) }}
+              </p>
+              
+              <!-- Métadonnées -->
+              <div class="flex items-center gap-4 text-xs text-gray-400">
+                <span>ID: {{ content.id }}</span>
+                <span>•</span>
+                <span>{{ formatDate(getContentDate(content)) }}</span>
+                <span *ngIf="getContentAuthor(content)">•</span>
+                <span *ngIf="getContentAuthor(content)">{{ getContentAuthor(content) }}</span>
+              </div>
+            </div>
+            
+            <!-- Actions rapides -->
+            <div class="flex items-center gap-2 ml-4">
+              <!-- Badge de priorité si applicable -->
+              <span *ngIf="getContentPriority(content) === 'high' || getContentPriority(content) === 'critical'"
+                class="px-2 py-1 bg-red-600 text-white text-xs rounded-full">
+                🔥 Priorité
+              </span>
+              
+              <!-- Boutons d'action -->
+              <button (click)="openContentDetail(content); $event.stopPropagation()"
+                class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 text-xs rounded transition-colors">
+                Détails
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- État vide pour la liste de contenu -->
+      <ng-template #emptyContent>
+        <div class="text-center py-12">
+          <svg class="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h3 class="text-xl font-semibold text-white mb-2">Aucun contenu à modérer</h3>
+          <p class="text-gray-400">Cette catégorie ne contient aucun élément en attente de modération.</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Indicateur de chargement pour le contenu -->
+    <div class="flex justify-center items-center py-16" *ngIf="state.isLoading">
+      <div class="text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+        <p class="text-gray-400">Chargement du contenu...</p>
       </div>
     </div>
   </div>
 
-  <!-- Filtres et recherche -->
-  <div class="filters-section">
-    <div class="search-bar">
-      <input type="text" placeholder="Rechercher par mot, définition ou auteur..." [value]="searchTerm"
-        (input)="onSearchChange($event)" class="search-input">
-    </div>
-
-    <div class="filter-controls">
-      <select [value]="state.filters.language || ''" (change)="onLanguageFilterChange($event)" class="filter-select">
-        <option value="">Toutes les langues</option>
-        <option value="fr">Français</option>
-        <option value="en">Anglais</option>
-        <option value="es">Espagnol</option>
-      </select>
-
-      <select [value]="state.filters.status || ''" (change)="onStatusFilterChange($event)" class="filter-select">
-        <option value="">Tous les statuts</option>
-        <option value="pending">En attente</option>
-        <option value="approved">Approuvé</option>
-        <option value="rejected">Rejeté</option>
-      </select>
-
-      <button (click)="clearFilters()" class="btn btn-outline" [disabled]="!hasActiveFilters(state.filters)">
-        Effacer les filtres
-      </button>
+  <!-- Gestion des erreurs globales -->
+  <div class="container mx-auto px-4 py-8" *ngIf="state.error && state.currentView !== 'categories'">
+    <div class="bg-red-900 border border-red-700 rounded-lg p-6" role="alert">
+      <div class="flex items-start gap-3">
+        <svg class="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="flex-1">
+          <h3 class="text-red-400 font-semibold mb-2">Erreur de chargement</h3>
+          <p class="text-red-300 mb-4">{{ state.error }}</p>
+          <button (click)="retryLoad()"
+            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Réessayer
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Indicateur de chargement -->
-  <div class="loading-indicator" *ngIf="state.isLoading">
-    <p>Chargement des mots en attente...</p>
-  </div>
-
-  <!-- Gestion des erreurs -->
-  <div class="error-message" *ngIf="state.error" role="alert">
-    <h3>Erreur de chargement</h3>
-    <p>{{ state.error }}</p>
-    <button (click)="retryLoad()" class="retry-button">
-      Réessayer
-    </button>
-  </div>
-
-  <!-- Moderation Panel Component -->
-  <app-moderation-panel *ngIf="!state.isLoading && !state.error" [items]="convertToModerationItems(state.pendingWords)" [filters]="state.filters"
-    [selectedItems]="state.selectedWords" [pagination]="{
-      page: state.currentPage,
-      pageSize: state.pageSize,
-      total: state.totalWords
-    }" [isLoading]="state.isLoading" [errorMessage]="state.error" (actionClicked)="handleModerationAction($event)"
-    (bulkActionClicked)="handleBulkModerationAction($event)" (pageChanged)="goToPage($event)">
-  </app-moderation-panel>
-
-  <!-- Pagination -->
-  <div class="pagination-container" *ngIf="!state.isLoading && !state.error && state.pendingWords.length > 0">
-    <button (click)="goToPage(state.currentPage - 1)" [disabled]="state.currentPage <= 1" class="btn btn-outline">
-      Précédent
-    </button>
-
-    <span class="page-info">
-      Page {{ state.currentPage }} sur {{ getTotalPages(state) }}
-    </span>
-
-    <button (click)="goToPage(state.currentPage + 1)" [disabled]="!hasNextPage(state)" class="btn btn-outline">
-      Suivant
-    </button>
-  </div>
-
-  <!-- État vide -->
-  <div class="empty-state" *ngIf="!state.isLoading && !state.error && state.pendingWords.length === 0">
-    <h3>Aucun mot en attente</h3>
-    <p *ngIf="hasActiveFilters(state.filters); else noWordsAtAll">
-      Aucun mot ne correspond aux critères de recherche.
-      <button (click)="clearFilters()" class="btn btn-link">
-        Effacer les filtres
-      </button>
-    </p>
-    <ng-template #noWordsAtAll>
-      <p>Tous les mots ont été traités. Excellent travail !</p>
-    </ng-template>
-  </div>
 </div>
+
+<!-- Modal de détail du contenu -->
+<app-content-detail-modal
+  [isVisible]="(moderationState$ | async)?.currentView === 'detail'"
+  [content]="(moderationState$ | async)?.selectedContent || null"
+  [isLoading]="(moderationState$ | async)?.isLoading || false"
+  (actionTaken)="onContentModerationAction($event)"
+  (modalClosed)="closeContentDetail()">
+</app-content-detail-modal>
