@@ -1,6 +1,16 @@
-import { Component, Input, Output, EventEmitter, OnInit, forwardRef } from '@angular/core';
+import {
+  Component,
+  Input,
+  Output,
+  EventEmitter,
+  OnInit,
+  forwardRef,
+} from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { LanguagesService, Language } from '../../../core/services/languages.service';
+import {
+  LanguagesService,
+  Language,
+} from '../../../core/services/languages.service';
 
 @Component({
   selector: 'app-language-autocomplete',
@@ -11,11 +21,13 @@ import { LanguagesService, Language } from '../../../core/services/languages.ser
     {
       provide: NG_VALUE_ACCESSOR,
       useExisting: forwardRef(() => LanguageAutocompleteComponent),
-      multi: true
-    }
-  ]
+      multi: true,
+    },
+  ],
 })
-export class LanguageAutocompleteComponent implements OnInit, ControlValueAccessor {
+export class LanguageAutocompleteComponent
+  implements OnInit, ControlValueAccessor
+{
   @Input() placeholder: string = 'Sélectionnez ou tapez une langue...';
   @Input() disabled: boolean = false;
   @Output() languageSelected = new EventEmitter<Language>();
@@ -47,7 +59,7 @@ export class LanguageAutocompleteComponent implements OnInit, ControlValueAccess
       error: (error) => {
         console.error('Erreur lors du chargement des langues:', error);
         this.isLoading = false;
-      }
+      },
     });
   }
 
@@ -84,11 +96,12 @@ export class LanguageAutocompleteComponent implements OnInit, ControlValueAccess
 
     const searchLower = this.searchTerm.toLowerCase();
     this.filteredLanguages = this.languages
-      .filter(language => 
-        language.name.toLowerCase().includes(searchLower) ||
-        language.nativeName?.toLowerCase().includes(searchLower) ||
-        language.iso639_1?.toLowerCase().includes(searchLower) ||
-        language.iso639_2?.toLowerCase().includes(searchLower)
+      .filter(
+        (language) =>
+          language.name.toLowerCase().includes(searchLower) ||
+          language.nativeName?.toLowerCase().includes(searchLower) ||
+          language.iso639_1?.toLowerCase().includes(searchLower) ||
+          language.iso639_2?.toLowerCase().includes(searchLower)
       )
       .slice(0, 10); // Limite à 10 résultats
   }
@@ -111,7 +124,7 @@ export class LanguageAutocompleteComponent implements OnInit, ControlValueAccess
   // ControlValueAccessor methods
   writeValue(value: any): void {
     if (value) {
-      const language = this.languages.find(lang => lang._id === value);
+      const language = this.languages.find((lang) => lang._id === value);
       if (language) {
         this.selectedLanguage = language;
         this.searchTerm = language.name;
@@ -131,5 +144,9 @@ export class LanguageAutocompleteComponent implements OnInit, ControlValueAccess
 
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
+  }
+
+  public getIsoCode(language: Language | null): string {
+    return language?.iso639_1?.toUpperCase() || '';
   }
 }
