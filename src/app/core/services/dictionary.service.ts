@@ -995,7 +995,7 @@ export class DictionaryService {
         
         return filteredLanguages.map((lang: any) => ({
           id: lang._id || lang.id,
-          code: lang.scripts?.[0]?.code?.toLowerCase() || lang.name.toLowerCase().slice(0, 2),
+          code: lang.iso639_1 || lang.iso639_2 || lang.iso639_3 || lang.name.toLowerCase().slice(0, 2),
           name: lang.name,
           nativeName: lang.nativeName,
           wordCount: lang.wordCount || 0
