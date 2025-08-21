@@ -404,13 +404,20 @@ export class AdminApiService {
   moderateContributorRequest(
     requestId: string,
     action: {
-      decision: 'approve' | 'reject';
-      adminComments?: string;
-      reasonCode?: string;
+      status: 'approved' | 'rejected' | 'under_review';
+      reviewNotes?: string;
+      rejectionReason?: string;
     }
   ): Observable<ApiResponse> {
+    // Transform to match backend DTO format
+    const body = {
+      status: action.status,
+      reviewNotes: action.reviewNotes,
+      rejectionReason: action.rejectionReason,
+    };
+
     return this.http
-      .patch<ApiResponse>(`${environment.apiUrl}/contributor-requests/${requestId}/review`, action)
+      .patch<ApiResponse>(`${environment.apiUrl}/contributor-requests/${requestId}/review`, body)
       .pipe(retry(this.retryCount), catchError(this.handleError));
   }
 
