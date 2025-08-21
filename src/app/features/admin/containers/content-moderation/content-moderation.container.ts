@@ -10,12 +10,14 @@
  */
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Observable, Subject, BehaviorSubject, of } from 'rxjs';
 import {
   takeUntil,
   catchError,
   debounceTime,
   distinctUntilChanged,
+  map,
 } from 'rxjs/operators';
 
 import { AdminApiService } from '../../services/admin-api.service';
@@ -105,7 +107,8 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
 
   constructor(
     private readonly adminApiService: AdminApiService,
-    private readonly permissionService: PermissionService
+    private readonly permissionService: PermissionService,
+    private readonly route: ActivatedRoute
   ) {
     this.moderationState$ = this.moderationStateSubject.asObservable();
 
@@ -131,6 +134,27 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Charger les statistiques des catégories au lieu des mots directement
     this.loadCategoryStats();
+
+    // Gérer les paramètres URL pour l'ouverture directe de demandes de contributeur
+    // Format URL attendu: /admin/moderation?type=contributor_request&id=68a7427892bdc1be97f15542
+    this.route.queryParams.pipe(takeUntil(this.destroy$)).subscribe(params => {
+      if (params['type'] === 'contributor_request') {
+        console.log('🔗 Ouverture directe de demande de contributeur depuis URL:', params);
+        
+        // Sélectionner automatiquement la catégorie des demandes de contributeur
+        this.onCategorySelected({
+          contentType: ModerableContentType.CONTRIBUTOR_REQUEST,
+          filters: undefined
+        });
+
+        // Si un ID spécifique est fourni, l'ouvrir dans le modal après un délai
+        if (params['id']) {
+          setTimeout(() => {
+            this.openContributorRequestById(params['id']);
+          }, 1000); // Attendre que la liste soit chargée
+        }
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -242,6 +266,19 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
       this.adminApiService
         .getAllPendingModerationContent(1, 1, ModerableContentType.REPORT)
         .pipe(catchError(() => of({ data: [], total: 0 }))),
+      // Demandes de contributeur - utiliser les paramètres par défaut
+      this.adminApiService
+        .getPendingContributorRequests(undefined, undefined, { status: 'pending' })
+        .pipe(
+          map(response => {
+            console.log('🤝 Debug - Réponse API des demandes de contributeur:', response);
+            return response;
+          }),
+          catchError((error) => {
+            console.error('❌ Debug - Erreur API des demandes de contributeur:', error);
+            return of({ data: [], total: 0 });
+          })
+        ),
     ];
 
     Promise.all(statsPromises.map((obs) => obs.toPromise()))
@@ -256,7 +293,8 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
           comments,
           mediaContent,
           reports,
-        ] = results;
+          contributorRequests,
+        ] = results as any[];
 
         console.log('📊 Résultats des statistiques de modération:', {
           words: words?.total || 0,
@@ -268,6 +306,7 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
           comments: comments?.total || 0,
           mediaContent: mediaContent?.total || 0,
           reports: reports?.total || 0,
+          contributorRequests: contributorRequests?.total || 0,
         });
 
         // Transformer les données en format ModerationCategoryStats[]
@@ -367,6 +406,17 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
             color: 'bg-red-500',
             totalCount: reports?.total || 0,
             pendingCount: reports?.total || 0,
+            priorityCount: 0,
+            averageWaitTime: 0,
+            lastUpdate: new Date(),
+          },
+          {
+            contentType: ModerableContentType.CONTRIBUTOR_REQUEST,
+            label: 'Demandes de Contributeur',
+            icon: '🤝',
+            color: 'bg-emerald-500',
+            totalCount: contributorRequests?.total || 0,
+            pendingCount: contributorRequests?.total || 0,
             priorityCount: 0,
             averageWaitTime: 0,
             lastUpdate: new Date(),
@@ -720,6 +770,58 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
 
           this.moderationStateSubject.next(finalState);
         });
+    } else if (contentType === ModerableContentType.CONTRIBUTOR_REQUEST) {
+      // Pour les demandes de contributeur, utiliser l'endpoint spécifique
+      console.log(
+        '🤝 Container - Chargement du contenu des demandes de contributeur pour la liste...'
+      );
+
+      this.adminApiService
+        .getPendingContributorRequests(1, 20, { status: 'pending' })
+        .pipe(
+          takeUntil(this.destroy$),
+          catchError((error) => {
+            console.error(
+              '❌ Container - Erreur lors du chargement des demandes de contributeur en attente:',
+              error
+            );
+            this.moderationStateSubject.next({
+              ...newState,
+              isLoading: false,
+              error: 'Impossible de charger les demandes de contributeur en attente',
+            });
+            return [];
+          })
+        )
+        .subscribe((response) => {
+          console.log(
+            '🤝 Container - Demandes de contributeur chargées pour la liste:',
+            response.data
+          );
+          console.log(
+            '🔍 Debug - Contenu complet de la réponse:',
+            JSON.stringify(response, null, 2)
+          );
+
+          const finalState = {
+            ...newState,
+            isLoading: false,
+            error: null,
+            allModerationContent: response.data || [],
+          };
+
+          console.log(
+            '🔍 Debug - Nouvel état du container pour les demandes de contributeur:',
+            {
+              currentView: finalState.currentView,
+              selectedCategory: finalState.selectedCategory,
+              contentCount: finalState.allModerationContent.length,
+              content: finalState.allModerationContent,
+            }
+          );
+
+          this.moderationStateSubject.next(finalState);
+        });
     } else {
       // Pour les autres types, utiliser l'endpoint de contenu signalé
       console.log(`📊 Container - Chargement du contenu ${contentType}...`);
@@ -847,7 +949,47 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
   }
 
   public trackByContentId(index: number, content: ModerableContent): string {
-    return content.id;
+    return (content as any).id || (content as any)._id || index.toString();
+  }
+
+  /**
+   * Ouvre une demande de contributeur spécifique par ID (pour les liens email)
+   */
+  private openContributorRequestById(requestId: string): void {
+    console.log('🔗 Recherche de la demande de contributeur avec ID:', requestId);
+
+    const currentState = this.moderationStateSubject.value;
+    
+    // Chercher dans la liste chargée
+    const request = currentState.allModerationContent.find(
+      (content: any) => (content.id === requestId || content._id === requestId)
+    );
+
+    if (request) {
+      console.log('✅ Demande de contributeur trouvée, ouverture du modal:', request);
+      this.openContentDetail(request);
+    } else {
+      console.log('⚠️ Demande de contributeur non trouvée dans la liste actuelle, rechargement...');
+      // Recharger la catégorie et essayer à nouveau
+      this.onCategorySelected({
+        contentType: ModerableContentType.CONTRIBUTOR_REQUEST,
+        filters: undefined
+      });
+      
+      setTimeout(() => {
+        const newState = this.moderationStateSubject.value;
+        const foundRequest = newState.allModerationContent.find(
+          (content: any) => (content.id === requestId || content._id === requestId)
+        );
+        
+        if (foundRequest) {
+          console.log('✅ Demande trouvée après rechargement:', foundRequest);
+          this.openContentDetail(foundRequest);
+        } else {
+          console.error('❌ Demande de contributeur introuvable même après rechargement');
+        }
+      }, 2000);
+    }
   }
 
   // ===== MÉTHODES UTILITAIRES POUR LE TEMPLATE =====
@@ -865,6 +1007,14 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
     if ('targetType' in content) return `Commentaire sur ${content.targetType}`;
     if ('filename' in content) return `Média : ${content.filename}`;
     if ('aiModel' in content) return 'Contenu détecté par IA';
+    
+    // Demandes de contributeur - selon le format MongoDB
+    if ('username' in content && 'motivation' in content && 'status' in content) {
+      return `Demande de contributeur : ${(content as any).username}`;
+    }
+    if ('firstName' in content && 'lastName' in content && 'motivation' in content)
+      return `Demande de contributeur : ${(content as any).firstName} ${(content as any).lastName}`;
+      
     return 'Contenu à modérer';
   }
 
@@ -912,6 +1062,31 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
       return `Fichier ${(content as any).mediaType}: ${
         (content as any).filename
       }`;
+    // Demandes de contributeur - selon le format MongoDB
+    if ('username' in content && 'motivation' in content && 'email' in content) {
+      const contributorRequest = content as any;
+      const languages = contributorRequest.languages 
+        ? (typeof contributorRequest.languages === 'string' 
+           ? contributorRequest.languages 
+           : contributorRequest.languages.map((lang: any) => lang.name || lang).join(', '))
+        : 'Non spécifiées';
+      const motivation = contributorRequest.motivation
+        ? contributorRequest.motivation.substring(0, 100) + (contributorRequest.motivation.length > 100 ? '...' : '')
+        : 'Aucune motivation fournie';
+      return `Email: ${contributorRequest.email} | Langues: ${languages} | Motivation: ${motivation}`;
+    }
+    
+    // Demandes de contributeur - format alternatif
+    if ('firstName' in content && 'lastName' in content && 'motivation' in content) {
+      const contributorRequest = content as any;
+      const languages = contributorRequest.languages && contributorRequest.languages.length > 0
+        ? contributorRequest.languages.map((lang: any) => lang.name || lang).join(', ')
+        : 'Non spécifiées';
+      const motivation = contributorRequest.motivation
+        ? contributorRequest.motivation.substring(0, 100) + '...'
+        : 'Aucune motivation fournie';
+      return `Langues: ${languages} | Motivation: ${motivation}`;
+    }
     return 'Aucun aperçu disponible';
   }
 
@@ -923,6 +1098,10 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
     if ('createdAt' in content) return content.createdAt;
     if ('reportedAt' in content) return content.reportedAt;
     if ('detectedAt' in content) return content.detectedAt;
+    // Demandes de contributeur - selon le format MongoDB
+    if ('createdAt' in content && 'username' in content && 'motivation' in content) 
+      return new Date((content as any).createdAt);
+    if ('requestedAt' in content) return new Date((content as any).requestedAt);
     return new Date();
   }
 
@@ -935,6 +1114,15 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
     if ('author' in content) return content.author.username;
     if ('sender' in content) return content.sender.username;
     if ('uploadedBy' in content) return content.uploadedBy.username;
+    // Demandes de contributeur - selon le format MongoDB
+    if ('username' in content && 'motivation' in content) 
+      return (content as any).username;
+    // Demandes de contributeur - utiliser le nom complet
+    if ('firstName' in content && 'lastName' in content)
+      return `${(content as any).firstName} ${(content as any).lastName}`;
+    // Ou utiliser l'utilisateur si disponible
+    if ('user' in content && (content as any).user && typeof (content as any).user === 'object')
+      return (content as any).user.username || (content as any).user.email;
     return '';
   }
 
@@ -1118,6 +1306,31 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
           reason,
           notes
         );
+      }
+    } else if (
+      ('firstName' in content && 'lastName' in content && 'motivation' in content) ||
+      ('username' in content && 'motivation' in content && 'email' in content)
+    ) {
+      // Pour les demandes de contributeur, utiliser l'endpoint spécifique
+      contentType = ModerableContentType.CONTRIBUTOR_REQUEST;
+      // Pour les demandes de contributeur, seules les actions 'approve' et 'reject' sont supportées
+      if (type === 'escalate') {
+        console.warn(
+          'Action escalate non supportée pour les demandes de contributeur, conversion en reject'
+        );
+        const requestId = (content as any).id || (content as any)._id;
+        apiCall = this.adminApiService.moderateContributorRequest(requestId, {
+          decision: 'reject',
+          adminComments: notes,
+          reasonCode: reason || 'Escaladé pour révision'
+        });
+      } else {
+        const requestId = (content as any).id || (content as any)._id;
+        apiCall = this.adminApiService.moderateContributorRequest(requestId, {
+          decision: type as 'approve' | 'reject',
+          adminComments: notes,
+          reasonCode: reason
+        });
       }
     } else {
       // Pour les autres types de contenu signalé, utiliser l'endpoint de modération générale
