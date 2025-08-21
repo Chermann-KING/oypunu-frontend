@@ -249,10 +249,76 @@ export class AdminApiService {
     }
 
     return this.http
-      .get<PaginatedResponse<PendingWord>>(`${this.baseUrl}/words/pending`, {
+      .get<any>(`${this.baseUrl}/words/pending`, {
         params,
       })
-      .pipe(retry(this.retryCount), catchError(this.handleError));
+      .pipe(
+        map(response => {
+          const currentPage = response.page || page;
+          const totalItems = response.total || 0;
+          const pageSize = response.limit || limit;
+          const totalPagesCount = response.totalPages || Math.ceil(totalItems / pageSize);
+          
+          return {
+            data: response.words?.map((word: any) => ({
+              id: word._id,
+              _id: word._id,
+              word: word.word,
+              language: word.language || 'Langue inconnue',
+              definition: word.meanings?.[0]?.definitions?.[0]?.definition || word.word,
+              meanings: word.meanings || [],
+              examples: word.meanings?.flatMap((m: any) => m.examples || []) || [],
+              etymology: word.etymology,
+              status: word.status,
+              submittedBy: {
+                id: word.createdBy?._id || word.createdBy,
+                _id: word.createdBy?._id || word.createdBy,
+                username: word.createdBy?.username || 'Utilisateur inconnu',
+                email: word.createdBy?.email || '',
+                role: word.createdBy?.role || UserRole.USER,
+                status: 'active' as const,
+                isActive: true,
+                createdAt: new Date(word.createdBy?.createdAt || Date.now()),
+                updatedAt: new Date(word.createdBy?.updatedAt || Date.now())
+              },
+              createdBy: {
+                id: word.createdBy?._id || word.createdBy,
+                _id: word.createdBy?._id || word.createdBy,
+                username: word.createdBy?.username || 'Utilisateur inconnu',
+                email: word.createdBy?.email || '',
+                role: word.createdBy?.role || UserRole.USER,
+                status: 'active' as const,
+                isActive: true,
+                createdAt: new Date(word.createdBy?.createdAt || Date.now()),
+                updatedAt: new Date(word.createdBy?.updatedAt || Date.now())
+              },
+              submittedAt: new Date(word.createdAt),
+              createdAt: new Date(word.createdAt),
+              moderatedBy: word.moderatedBy ? {
+                id: word.moderatedBy._id,
+                _id: word.moderatedBy._id,
+                username: word.moderatedBy.username,
+                email: word.moderatedBy.email || '',
+                role: word.moderatedBy.role,
+                status: 'active' as const,
+                isActive: true,
+                createdAt: new Date(word.moderatedBy.createdAt || Date.now()),
+                updatedAt: new Date(word.moderatedBy.updatedAt || Date.now())
+              } : undefined,
+              moderatedAt: word.moderatedAt ? new Date(word.moderatedAt) : undefined,
+              moderationReason: word.moderationReason
+            })) || [],
+            total: totalItems,
+            page: currentPage,
+            limit: pageSize,
+            totalPages: totalPagesCount,
+            hasNextPage: currentPage < totalPagesCount,
+            hasPrevPage: currentPage > 1
+          };
+        }),
+        retry(this.retryCount), 
+        catchError(this.handleError)
+      );
   }
 
   /**
@@ -265,6 +331,86 @@ export class AdminApiService {
   ): Observable<ApiResponse> {
     return this.http
       .patch<ApiResponse>(`${this.baseUrl}/words/${wordId}/moderate`, action)
+      .pipe(retry(this.retryCount), catchError(this.handleError));
+  }
+
+  /**
+   * Récupère les demandes de contributeur en attente
+   * GET /contributor-requests
+   */
+  getPendingContributorRequests(
+    page: number = 1,
+    limit: number = 20,
+    filters?: {
+      status?: string;
+      priority?: string;
+      search?: string;
+    }
+  ): Observable<PaginatedResponse<any>> {
+    let params = new HttpParams();
+
+    // Seulement ajouter les paramètres si ils ne sont pas par défaut
+    if (page && page !== 1) {
+      params = params.set('page', page.toString());
+    }
+    if (limit && limit !== 20) {
+      params = params.set('limit', limit.toString());
+    }
+
+    if (filters?.status) {
+      params = params.set('status', filters.status);
+    }
+    if (filters?.priority) {
+      params = params.set('priority', filters.priority);
+    }
+    if (filters?.search) {
+      params = params.set('search', filters.search);
+    }
+
+    return this.http
+      .get<any>(`${environment.apiUrl}/contributor-requests`, {
+        params,
+      })
+      .pipe(
+        map(response => {
+          console.log('🤝 Debug - Réponse brute API:', response);
+          // Transform the response to match PaginatedResponse interface
+          const requests = response.requests || response.data || response || [];
+          // Ensure each request has an 'id' property for compatibility
+          const normalizedRequests = requests.map((req: any) => ({
+            ...req,
+            id: req.id || req._id || req.requestId
+          }));
+          
+          return {
+            data: normalizedRequests,
+            total: response.total || (response.requests ? response.requests.length : 0) || 0,
+            page: response.page || page,
+            limit: response.limit || limit,
+            totalPages: response.totalPages || Math.ceil((response.total || 0) / limit),
+            hasNextPage: response.hasNextPage || false,
+            hasPrevPage: response.hasPrevPage || page > 1
+          };
+        }),
+        retry(this.retryCount),
+        catchError(this.handleError)
+      );
+  }
+
+  /**
+   * Modère une demande de contributeur (approbation ou rejet)
+   * PATCH /contributor-requests/:id/review
+   */
+  moderateContributorRequest(
+    requestId: string,
+    action: {
+      decision: 'approve' | 'reject';
+      adminComments?: string;
+      reasonCode?: string;
+    }
+  ): Observable<ApiResponse> {
+    return this.http
+      .patch<ApiResponse>(`${environment.apiUrl}/contributor-requests/${requestId}/review`, action)
       .pipe(retry(this.retryCount), catchError(this.handleError));
   }
 
@@ -1452,4 +1598,5 @@ export class AdminApiService {
       .post(`${this.baseUrl}/categories/export`, body, { responseType: 'text' })
       .pipe(retry(this.retryCount), catchError(this.handleError));
   }
+
 }
