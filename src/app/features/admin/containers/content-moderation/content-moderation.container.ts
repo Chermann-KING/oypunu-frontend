@@ -1320,16 +1320,16 @@ export class ContentModerationContainer implements OnInit, OnDestroy {
         );
         const requestId = (content as any).id || (content as any)._id;
         apiCall = this.adminApiService.moderateContributorRequest(requestId, {
-          decision: 'reject',
-          adminComments: notes,
-          reasonCode: reason || 'Escaladé pour révision'
+          status: 'rejected',
+          reviewNotes: notes,
+          rejectionReason: reason || 'Escaladé pour révision'
         });
       } else {
         const requestId = (content as any).id || (content as any)._id;
         apiCall = this.adminApiService.moderateContributorRequest(requestId, {
-          decision: type as 'approve' | 'reject',
-          adminComments: notes,
-          reasonCode: reason
+          status: type === 'approve' ? 'approved' : 'rejected',
+          reviewNotes: notes,
+          rejectionReason: reason
         });
       }
     } else {
