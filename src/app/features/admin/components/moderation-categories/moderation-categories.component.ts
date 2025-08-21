@@ -145,6 +145,12 @@ export class ModerationCategoriesComponent {
       icon: '📂',
       color: 'bg-orange-500',
     },
+    {
+      contentType: ModerableContentType.CONTRIBUTOR_REQUEST,
+      label: 'Demandes de Contributeur',
+      icon: '🤝',
+      color: 'bg-emerald-500',
+    },
   ];
 
   // ===== MÉTHODES PUBLIQUES =====

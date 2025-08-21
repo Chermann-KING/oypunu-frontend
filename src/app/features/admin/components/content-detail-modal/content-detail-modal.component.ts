@@ -244,6 +244,19 @@ export class ContentDetailModalComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Type guard pour les demandes de contributeur
+   */
+  public isContributorRequest(content: ModerableContent): boolean {
+    return (
+      'username' in content &&
+      'motivation' in content &&
+      'email' in content &&
+      'status' in content &&
+      ('priority' in content || 'reviewCount' in content)
+    );
+  }
+
+  /**
    * Vérifie si le contenu est auto-détecté par IA
    */
   public isAIFlaggedContent(
@@ -272,6 +285,9 @@ export class ContentDetailModalComponent implements OnInit, OnDestroy {
     }
     if (this.isPendingCategory(this.content)) {
       return `Catégorie : ${this.content.name}`;
+    }
+    if (this.isContributorRequest(this.content)) {
+      return `Demande de contributeur : ${this.getContributorUsername(this.content)}`;
     }
     if (this.isPendingCommunityPost(this.content)) {
       return `Post : ${this.content.title}`;
@@ -304,6 +320,7 @@ export class ContentDetailModalComponent implements OnInit, OnDestroy {
     if (this.isPendingWord(this.content)) return '📝';
     if (this.isPendingLanguage(this.content)) return '🌍';
     if (this.isPendingCategory(this.content)) return '📂';
+    if (this.isContributorRequest(this.content)) return '🤝';
     if (this.isPendingCommunityPost(this.content)) return '💬';
     if (this.isReportedPrivateMessage(this.content)) return '📩';
     if (this.isReportedUserProfile(this.content)) return '👤';
@@ -415,6 +432,7 @@ export class ContentDetailModalComponent implements OnInit, OnDestroy {
     if (this.isPendingWord(content)) return 'word';
     if (this.isPendingLanguage(content)) return 'language';
     if (this.isPendingCategory(content)) return 'category';
+    if (this.isContributorRequest(content)) return 'contributor_request';
     if (this.isPendingCommunityPost(content)) return 'community_post';
     if (this.isReportedPrivateMessage(content)) return 'private_message';
     if (this.isReportedUserProfile(content)) return 'user_profile';
@@ -535,9 +553,131 @@ export class ContentDetailModalComponent implements OnInit, OnDestroy {
   }
 
   /**
+   * Obtient la classe CSS pour le statut des demandes de contributeur
+   */
+  public getContributorStatusClass(status: string): string {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      case 'under_review':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  /**
+   * Obtient le label du statut des demandes de contributeur
+   */
+  public getContributorStatusLabel(status: string): string {
+    switch (status) {
+      case 'pending':
+        return 'En attente';
+      case 'approved':
+        return 'Approuvé';
+      case 'rejected':
+        return 'Rejeté';
+      case 'under_review':
+        return 'En révision';
+      default:
+        return status;
+    }
+  }
+
+  /**
+   * Obtient la classe CSS pour la priorité des demandes de contributeur
+   */
+  public getContributorPriorityClass(priority: string): string {
+    switch (priority) {
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'high':
+        return 'bg-orange-100 text-orange-800';
+      case 'urgent':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  }
+
+  /**
+   * Méthodes helper pour les demandes de contributeur
+   */
+  public getContributorProperty(content: ModerableContent, property: string): any {
+    return (content as any)[property];
+  }
+
+  public getContributorUsername(content: ModerableContent): string {
+    return (content as any).username || '';
+  }
+
+  public getContributorEmail(content: ModerableContent): string {
+    return (content as any).email || '';
+  }
+
+  public getContributorLinkedIn(content: ModerableContent): string {
+    return (content as any).linkedIn || '';
+  }
+
+  public getContributorPortfolio(content: ModerableContent): string {
+    return (content as any).portfolio || '';
+  }
+
+  public getContributorMotivation(content: ModerableContent): string {
+    return (content as any).motivation || '';
+  }
+
+  public getContributorExperience(content: ModerableContent): string {
+    return (content as any).experience || 'Aucune experience fournie';
+  }
+
+  public getContributorLanguages(content: ModerableContent): string {
+    return (content as any).languages || 'Non specifiees';
+  }
+
+  public getContributorStatus(content: ModerableContent): string {
+    return (content as any).status || '';
+  }
+
+  public getContributorPriority(content: ModerableContent): string {
+    return (content as any).priority || '';
+  }
+
+  public getContributorScore(content: ModerableContent): number {
+    return (content as any).evaluationScore || 0;
+  }
+
+  public getContributorReviewCount(content: ModerableContent): number {
+    return (content as any).reviewCount || 0;
+  }
+
+  public isContributorCommitted(content: ModerableContent): boolean {
+    return (content as any).commitment || false;
+  }
+
+  public getContributorExpiresAt(content: ModerableContent): Date {
+    return new Date((content as any).expiresAt);
+  }
+
+  public getContributorJoinDate(content: ModerableContent): Date {
+    return new Date((content as any).userJoinDate);
+  }
+
+  /**
    * Obtient l'auteur du contenu
    */
   public getContentAuthor(content: ModerableContent): string {
+    // Vérifier les demandes de contributeur
+    if (this.isContributorRequest(content)) {
+      return (content as any).username || (content as any).email || 'Nom utilisateur manquant';
+    }
+
     // Vérifier proposedBy pour les catégories (nom réel de la propriété côté backend)
     if (
       'proposedBy' in content &&

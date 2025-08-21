@@ -167,7 +167,8 @@ export enum ModerableContentType {
   MEDIA_CONTENT = 'media_content',
   LANGUAGE = 'language',
   CATEGORY = 'category',
-  REPORT = 'report'
+  REPORT = 'report',
+  CONTRIBUTOR_REQUEST = 'contributor_request'
 }
 
 /**

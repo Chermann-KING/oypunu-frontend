@@ -264,7 +264,7 @@
                 class="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
                 <option value="">Sélectionnez un pays</option>
                 <option *ngFor="let countryCode of availableCountries" [value]="countryCode">
-                  {{ countryCode }}
+                  {{ getCountryName(countryCode) }}
                 </option>
               </select>
               <button 
