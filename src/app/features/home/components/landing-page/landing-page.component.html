@@ -1,6 +1,6 @@
 <!-- Landing Page pour Visiteurs Non-Inscrits -->
 <div class="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white">
-  
+
   <!-- Hero Section avec Animation -->
   <section class="relative py-20 overflow-hidden">
     <!-- Animations de fond -->
@@ -9,20 +9,18 @@
       <div class="absolute top-40 right-20 w-16 h-16 bg-blue-500 rounded-full animate-bounce"></div>
       <div class="absolute bottom-20 left-1/4 w-12 h-12 bg-green-500 rounded-full animate-ping"></div>
     </div>
-    
+
     <div class="container mx-auto px-4 relative z-10">
-      <div class="max-w-4xl mx-auto text-center"
-           [class.opacity-0]="!showHero"
-           [class.transform]="!showHero"
-           [class.translate-y-10]="!showHero"
-           class="transition-all duration-1000 ease-out">
-        
+      <div class="max-w-4xl mx-auto text-center" [class.opacity-0]="!showHero" [class.transform]="!showHero"
+        [class.translate-y-10]="!showHero" class="transition-all duration-1000 ease-out">
+
         <!-- Value Proposition -->
-        <h1 class="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+        <h1
+          class="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
           Le Premier Dictionnaire
           <span class="block">Social Multilingue</span>
         </h1>
-        
+
         <p class="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
           Découvrez, contribuez et apprenez avec une communauté passionnée de
           <span class="text-purple-400 font-semibold">{{ statistics.onlineUsers }} contributeurs en ligne</span>
@@ -34,21 +32,18 @@
             <label class="block text-sm text-gray-400 mb-3 text-left">
               ✨ Démo Interactive - Recherche en Temps Réel
             </label>
-            
+
             <div class="relative">
-              <input 
-                type="text" 
-                [(ngModel)]="demoQuery"
-                (keyup.enter)="onDemoSearch()"
+              <input type="text" [(ngModel)]="demoQuery" (keyup.enter)="onDemoSearch()"
                 [placeholder]="currentDemoPlaceholder"
                 class="w-full py-4 px-6 pr-16 rounded-xl bg-gray-900 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg placeholder-gray-500">
-              
-              <button 
-                (click)="onDemoSearch()"
-                [disabled]="isSearchingDemo"
+
+              <button (click)="onDemoSearch()" [disabled]="isSearchingDemo"
                 class="absolute right-2 top-2 p-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
-                <svg *ngIf="!isSearchingDemo" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <svg *ngIf="!isSearchingDemo" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <div *ngIf="isSearchingDemo" class="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
               </button>
@@ -57,21 +52,19 @@
             <!-- Suggestions rapides -->
             <div class="flex flex-wrap gap-2 mt-4">
               <span class="text-xs text-gray-500">Essayez:</span>
-              <button 
-                *ngFor="let suggestion of demoSuggestions" 
-                (click)="useDemoSuggestion(suggestion)"
+              <button *ngFor="let suggestion of demoSuggestions" (click)="useDemoSuggestion(suggestion)"
                 class="px-3 py-1 bg-gray-700 hover:bg-purple-600 rounded-full text-sm transition-colors">
                 {{ suggestion }}
               </button>
             </div>
 
             <!-- Résultats de démo -->
-            <div *ngIf="showDemoResults && demoResults.length > 0" 
-                 class="mt-6 p-4 bg-gray-900/80 rounded-xl border border-green-500/30 transform transition-all duration-500 ease-out">
+            <div *ngIf="showDemoResults && demoResults.length > 0"
+              class="mt-6 p-4 bg-gray-900/80 rounded-xl border border-green-500/30 transform transition-all duration-500 ease-out">
               <div class="flex items-center mb-3">
                 <span class="text-green-400 text-sm font-medium">🎉 Résultats trouvés !</span>
               </div>
-              
+
               <div *ngFor="let result of demoResults" class="mb-3 last:mb-0">
                 <div class="flex items-center justify-between">
                   <span class="text-white font-medium">{{ result.word }}</span>
@@ -81,14 +74,15 @@
                   </div>
                 </div>
               </div>
-              
+
               <div class="mt-4 text-center">
-                <button 
-                  (click)="onExploreClick()"
+                <button (click)="onExploreClick()"
                   class="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm transition-colors">
                   🔍 Explorer tous les résultats
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    <path fill-rule="evenodd"
+                      d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                      clip-rule="evenodd" />
                   </svg>
                 </button>
               </div>
@@ -98,13 +92,11 @@
 
         <!-- CTAs Principaux -->
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
-          <button 
-            (click)="onSignupClick()"
+          <button (click)="onSignupClick()"
             class="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-lg">
             🚀 Créer mon compte gratuit
           </button>
-          <button 
-            (click)="onExploreClick()"
+          <button (click)="onExploreClick()"
             class="px-8 py-4 bg-gray-800 hover:bg-gray-700 border border-gray-600 rounded-xl font-semibold text-lg transition-all duration-300">
             👀 Explorer sans inscription
           </button>
@@ -116,12 +108,9 @@
   <!-- Social Proof Section -->
   <section class="py-16 bg-gray-900/50 backdrop-blur-sm">
     <div class="container mx-auto px-4">
-      <div class="max-w-6xl mx-auto"
-           [class.opacity-0]="!showStats"
-           [class.transform]="!showStats"
-           [class.translate-y-10]="!showStats"
-           class="transition-all duration-1000 ease-out delay-300">
-        
+      <div class="max-w-6xl mx-auto" [class.opacity-0]="!showStats" [class.transform]="!showStats"
+        [class.translate-y-10]="!showStats" class="transition-all duration-1000 ease-out delay-300">
+
         <!-- Statistiques en Temps Réel -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
           <div class="text-center p-6 bg-gray-800/50 rounded-xl border border-gray-700">
@@ -131,7 +120,7 @@
             <div class="text-gray-400 text-sm">Mots ajoutés</div>
             <div class="text-green-400 text-xs mt-1">📈 +{{ statistics.todayContributions }} aujourd'hui</div>
           </div>
-          
+
           <div class="text-center p-6 bg-gray-800/50 rounded-xl border border-gray-700">
             <div class="text-3xl font-bold text-blue-400 mb-2 flex items-center justify-center">
               <span class="animate-pulse">{{ statistics.onlineUsers }}</span>
@@ -139,14 +128,14 @@
             </div>
             <div class="text-gray-400 text-sm">En ligne maintenant</div>
           </div>
-          
+
           <div class="text-center p-6 bg-gray-800/50 rounded-xl border border-gray-700">
             <div class="text-3xl font-bold text-green-400 mb-2">
               {{ statistics.totalLanguages }}
             </div>
             <div class="text-gray-400 text-sm">Langues disponibles</div>
           </div>
-          
+
           <div class="text-center p-6 bg-gray-800/50 rounded-xl border border-gray-700">
             <div class="text-3xl font-bold text-yellow-400 mb-2">
               100%
@@ -163,18 +152,23 @@
               <h3 class="text-xl font-semibold">Activité en Temps Réel</h3>
             </div>
           </div>
-          
+
           <div class="space-y-3">
-            <div *ngFor="let activity of realTimeActivities; trackBy: trackActivity" 
-                 class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg transition-all duration-500 ease-out">
-              <div class="flex items-center">
-                <span class="text-2xl mr-3">{{ activity.flag }}</span>
-                <div>
-                  <span class="text-white font-medium">{{ activity.username }}</span>
-                  <span class="text-gray-300 ml-2">{{ activity.message }}</span>
+            <div *ngFor="let activity of realTimeActivities; trackBy: trackActivity"
+              class="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg transition-all duration-500 ease-out">
+              <div class="flex items-center min-w-0">
+                <span class="text-2xl mr-3">{{ activity.displayIcon || activity.flag }}</span>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-white font-medium truncate">{{ activity.username }}</span>
+                    <span class="text-gray-300">{{ activity.message }}</span>
+                  </div>
+                  <div class="text-xs mt-1" [ngClass]="activity.typeColor || 'text-gray-400'">
+                    {{ activity.displayLabel || (activity.activityType | titlecase) }}
+                  </div>
                 </div>
               </div>
-              <span class="text-gray-500 text-sm">{{ activity.timeAgo }}</span>
+              <span class="text-gray-500 text-sm flex-shrink-0 ml-3">{{ activity.timeAgo }}</span>
             </div>
           </div>
         </div>
@@ -185,20 +179,18 @@
   <!-- Features Showcase Interactif -->
   <section class="py-20">
     <div class="container mx-auto px-4">
-      <div class="max-w-6xl mx-auto"
-           [class.opacity-0]="!showFeatures"
-           [class.transform]="!showFeatures"
-           [class.translate-y-10]="!showFeatures"
-           class="transition-all duration-1000 ease-out delay-500">
-        
+      <div class="max-w-6xl mx-auto" [class.opacity-0]="!showFeatures" [class.transform]="!showFeatures"
+        [class.translate-y-10]="!showFeatures" class="transition-all duration-1000 ease-out delay-500">
+
         <h2 class="text-4xl font-bold text-center mb-16">
           Pourquoi O'Ypunu révolutionne l'apprentissage ?
         </h2>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <!-- Feature 1: Recherche Intelligente -->
-          <div class="group p-8 bg-gray-800/30 rounded-2xl border border-gray-700 hover:border-purple-500 transition-all duration-300 cursor-pointer"
-               (click)="exploreFeature('search')">
+          <div
+            class="group p-8 bg-gray-800/30 rounded-2xl border border-gray-700 hover:border-purple-500 transition-all duration-300 cursor-pointer"
+            (click)="exploreFeature('search')">
             <div class="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">🧠</div>
             <h3 class="text-xl font-semibold mb-4 text-purple-400">Recherche Contextuelle</h3>
             <p class="text-gray-300 mb-6">
@@ -210,8 +202,9 @@
           </div>
 
           <!-- Feature 2: Communauté -->
-          <div class="group p-8 bg-gray-800/30 rounded-2xl border border-gray-700 hover:border-blue-500 transition-all duration-300 cursor-pointer"
-               (click)="exploreFeature('community')">
+          <div
+            class="group p-8 bg-gray-800/30 rounded-2xl border border-gray-700 hover:border-blue-500 transition-all duration-300 cursor-pointer"
+            (click)="exploreFeature('community')">
             <div class="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">🌍</div>
             <h3 class="text-xl font-semibold mb-4 text-blue-400">Communauté Mondiale</h3>
             <p class="text-gray-300 mb-6">
@@ -223,8 +216,9 @@
           </div>
 
           <!-- Feature 3: Contribution -->
-          <div class="group p-8 bg-gray-800/30 rounded-2xl border border-gray-700 hover:border-green-500 transition-all duration-300 cursor-pointer"
-               (click)="exploreFeature('contribute')">
+          <div
+            class="group p-8 bg-gray-800/30 rounded-2xl border border-gray-700 hover:border-green-500 transition-all duration-300 cursor-pointer"
+            (click)="exploreFeature('contribute')">
             <div class="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">✨</div>
             <h3 class="text-xl font-semibold mb-4 text-green-400">Contribution Valorisée</h3>
             <p class="text-gray-300 mb-6">
@@ -244,7 +238,7 @@
     <div class="container mx-auto px-4">
       <div class="max-w-4xl mx-auto text-center">
         <h2 class="text-3xl font-bold mb-12">Le problème que nous résolvons</h2>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
           <!-- Problème -->
           <div class="p-6 bg-red-900/20 rounded-xl border border-red-700/50">
@@ -273,13 +267,11 @@
         <div class="mt-16">
           <h3 class="text-2xl font-semibold mb-6">Prêt à transformer votre apprentissage ?</h3>
           <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <button 
-              (click)="onSignupClick()"
+            <button (click)="onSignupClick()"
               class="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105">
               🚀 Commencer gratuitement
             </button>
-            <button 
-              (click)="onLoginClick()"
+            <button (click)="onLoginClick()"
               class="px-8 py-4 text-purple-400 hover:text-white border border-purple-400 hover:bg-purple-600 rounded-xl font-semibold text-lg transition-all duration-300">
               J'ai déjà un compte
             </button>
